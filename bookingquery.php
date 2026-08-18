@@ -105,16 +105,27 @@ foreach ($listings as $listing) {
     ];
 }
 
-// --- Admin Query History (show all employees) ---
+// --- Admin Query History (show all employees + generated query records) ---
 try {
-    $historyStmt = $conn->prepare("SELECT aql.id, aql.agent_id, aql.employee_username, aql.created_by_user_id, aql.created_by_role, COALESCE(u.username, aql.employee_username) AS created_by_username, aql.generated_at, aql.lock_until, aql.query_text,
-                                          aql.hotel_name, aql.room_category, aql.check_in, aql.check_out, aql.adults, aql.children, aql.rooms, aql.total_amount, aql.status, aql.booking_status,
-                                          ad.name AS agent_name, ad.phone AS agent_phone FROM agent_query_locks aql
-                                          JOIN agents_details ad ON aql.agent_id = ad.id
-                                          LEFT JOIN users u ON u.id = aql.created_by_user_id
-                                          ORDER BY aql.generated_at DESC LIMIT 200");
+    $historyStmt = $conn->prepare("SELECT bqh.id, bqh.created_by_user_id, bqh.created_by_username, bqh.created_by_role, bqh.generated_at, bqh.query_text,
+                                          bqh.location, bqh.hotel_category, bqh.check_in, bqh.check_out,
+                                          bqh.nights, bqh.adults, bqh.children, bqh.rooms, bqh.budget, bqh.matched_hotels_json,
+                                          COALESCE(NULLIF(bqh.created_by_username, ''), 'Unknown') AS employee_name,
+                                          '' AS agent_name, '' AS agent_phone
+                                          FROM booking_query_history bqh
+                                          ORDER BY bqh.generated_at DESC LIMIT 200");
     $historyStmt->execute();
     $admin_history = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
+    if (!$admin_history) {
+        $legacyStmt = $conn->prepare("SELECT aql.id, aql.agent_id, aql.employee_username, aql.created_by_user_id, aql.created_by_role, COALESCE(u.username, aql.employee_username) AS created_by_username, aql.generated_at, aql.lock_until, aql.query_text,
+                                              aql.hotel_name, aql.room_category, aql.check_in, aql.check_out, aql.adults, aql.children, aql.rooms, aql.total_amount, aql.status, aql.booking_status,
+                                              ad.name AS agent_name, ad.phone AS agent_phone FROM agent_query_locks aql
+                                              JOIN agents_details ad ON aql.agent_id = ad.id
+                                              LEFT JOIN users u ON u.id = aql.created_by_user_id
+                                              ORDER BY aql.generated_at DESC LIMIT 200");
+        $legacyStmt->execute();
+        $admin_history = $legacyStmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 } catch (PDOException $e) {
     $admin_history = [];
 }
@@ -192,7 +203,7 @@ try {
         <li class="nav-item"><a class="nav-link" href="/agents-details.php"><i class="bi bi-person-badge"></i> Agents Details</a></li>
         <li class="nav-item"><a class="nav-link" href="/booking-details.php"><i class="bi bi-calendar-check"></i> Bookings Details</a></li>
         <li class="nav-item"><a class="nav-link active" href="/bookingquery.php"><i class="bi bi-chat-dots"></i> Booking Query</a></li>
-        <li class="nav-item"><a class="nav-link" href="#queryHistorySection" onclick="scrollToQueryHistory(event)"><i class="bi bi-clock-history"></i> Query History</a></li>
+        <li class="nav-item"><a class="nav-link" href="/query-history.php"><i class="bi bi-clock-history"></i> Query History</a></li>
         <li class="nav-item"><a class="nav-link" href="/employees-detail.php"><i class="bi bi-person-vcard"></i> Employees Details</a></li>
         <li class="nav-item"><a class="nav-link" href="/accounts-detail.php"><i class="bi bi-wallet2"></i> Accounts Details</a></li>
         <li class="nav-item"><a class="nav-link" href="/listing.php"><i class="bi bi-building"></i> Hotel Listings</a></li>
@@ -230,6 +241,15 @@ try {
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     <?php endif; ?>
+
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <a href="/bookingquery.php" class="btn btn-primary fw-semibold px-3 py-2">
+            <i class="bi bi-chat-dots me-2"></i>Booking Query
+        </a>
+        <a href="/query-history.php" class="btn btn-outline-primary fw-semibold px-3 py-2">
+            <i class="bi bi-clock-history me-2"></i>Query History
+        </a>
+    </div>
 
     <div class="panel">
         <div class="mb-4">
@@ -329,51 +349,6 @@ try {
     </div>
 
 </div><!-- /.main-wrapper -->
-
-    <div class="main-wrapper" style="margin-left:232px;">
-        <div class="panel mt-3" id="queryHistorySection">
-            <h5 class="mb-3 fw-bold">Query History (All Employees)</h5>
-            <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
-                <button type="button" class="btn btn-sm btn-primary admin-query-history-filter active" data-history-filter="all">All</button>
-                <button type="button" class="btn btn-sm btn-outline-primary admin-query-history-filter" data-history-filter="today">Today</button>
-                <button type="button" class="btn btn-sm btn-outline-primary admin-query-history-filter" data-history-filter="week">This Week</button>
-                <button type="button" class="btn btn-sm btn-outline-primary admin-query-history-filter" data-history-filter="month">This Month</button>
-                <input type="search" class="form-control form-control-sm ms-auto" style="max-width:240px" id="adminQueryHistorySearch" placeholder="Filter history...">
-            </div>
-            <div id="adminGeneratedQueryHistory" class="mb-3"></div>
-            <div class="table-responsive">
-                <table class="table table-sm table-hover">
-                    <thead class="table-light"><tr><th>Agent</th><th>Phone</th><th>Hotel</th><th>Room Category</th><th>Dates</th><th>Pax</th><th>Amount</th><th>Employee</th><th>Generated At</th><th>Lock Until</th><th>Actions</th></tr></thead>
-                    <tbody>
-                        <?php foreach ($admin_history as $item): ?>
-                        <tr class="admin-history-row" data-history-date="<?php echo htmlspecialchars($item['generated_at'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" data-history-text="<?php echo htmlspecialchars(strtolower((string)($item['query_text'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>">
-                            <td><?php echo htmlspecialchars($item['agent_name']); ?></td>
-                            <td><?php echo htmlspecialchars($item['agent_phone']); ?></td>
-                            <td><?php echo htmlspecialchars($item['hotel_name'] ?? ''); ?></td>
-                            <td><?php echo htmlspecialchars($item['room_category'] ?? ''); ?></td>
-                            <td><?php echo htmlspecialchars(($item['check_in'] ?? '') . (isset($item['check_out']) && $item['check_out'] ? ' - ' . $item['check_out'] : '')); ?></td>
-                            <td><?php echo 'A:' . ((int)($item['adults'] ?? 1)) . ' C:' . ((int)($item['children'] ?? 0)) . ' R:' . ((int)($item['rooms'] ?? 1)); ?></td>
-                            <td>₹<?php echo number_format((float)($item['total_amount'] ?? 0),0); ?></td>
-                            <td><?php echo htmlspecialchars($item['created_by_username'] ?? $item['employee_username']); ?></td>
-                            <td><?php echo htmlspecialchars($item['generated_at']); ?></td>
-                            <td><?php echo htmlspecialchars($item['lock_until']); ?></td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-primary" onclick="viewAdminQuery(<?php echo (int)$item['id']; ?>)">View</button>
-                                <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('<?php echo htmlspecialchars(addslashes($item['query_text'] ?? '')); ?>')">Copy</button>
-                                <a class="btn btn-sm btn-success" target="_blank" href="https://wa.me/<?php echo preg_replace('/\D/','',($item['agent_phone'] ?? '')); ?>?text=<?php echo urlencode($item['query_text'] ?? ''); ?>">WA</a>
-                                <form method="post" style="display:inline-block; margin:0;">
-                                    <input type="hidden" name="action" value="unlock_query">
-                                    <input type="hidden" name="query_id" value="<?php echo (int) $item['id']; ?>">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">Unlock</button>
-                                </form>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/assets/js/ui-common.js"></script>

@@ -15,6 +15,7 @@ $navItems = [
     'agents'        => ['label' => 'Agents',         'icon' => 'bi-person-badge',  'href' => '/agents-details.php'],
     'bookings'      => ['label' => 'Bookings',       'icon' => 'bi-calendar-check','href' => '/booking-details.php'],
     'query'         => ['label' => 'Booking Query',  'icon' => 'bi-chat-dots',     'href' => '/bookingquery.php'],
+    'query-history' => ['label' => 'Query History',  'icon' => 'bi-clock-history', 'href' => '/query-history.php'],
     'employees'     => ['label' => 'Employees',      'icon' => 'bi-person-vcard',  'href' => '/employees-detail.php'],
     'accounts'      => ['label' => 'Accounts',       'icon' => 'bi-wallet2',       'href' => '/accounts-detail.php'],
     'listing'       => ['label' => 'Hotel Listings', 'icon' => 'bi-building',      'href' => '/listing.php'],
