@@ -105,20 +105,82 @@ try {
             </a>
         </div>
 
+        <div class="row g-2 mb-3">
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Employee</label>
+                <input type="text" class="form-control form-control-sm" id="adminHistoryEmployeeFilter" placeholder="Employee name">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Hotel</label>
+                <input type="text" class="form-control form-control-sm" id="adminHistoryHotelFilter" placeholder="Hotel name">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Location</label>
+                <input type="text" class="form-control form-control-sm" id="adminHistoryLocationFilter" placeholder="Location">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Category</label>
+                <input type="text" class="form-control form-control-sm" id="adminHistoryCategoryFilter" placeholder="Hotel category">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Room</label>
+                <input type="text" class="form-control form-control-sm" id="adminHistoryRoomFilter" placeholder="Room category">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Budget</label>
+                <input type="number" class="form-control form-control-sm" id="adminHistoryBudgetFilter" placeholder="Min budget">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Check-in</label>
+                <input type="date" class="form-control form-control-sm" id="adminHistoryCheckInFilter">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Check-out</label>
+                <input type="date" class="form-control form-control-sm" id="adminHistoryCheckOutFilter">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Date From</label>
+                <input type="date" class="form-control form-control-sm" id="adminHistoryFromFilter">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Date To</label>
+                <input type="date" class="form-control form-control-sm" id="adminHistoryToFilter">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="button" class="btn btn-sm btn-outline-secondary w-100" id="adminHistoryResetFilters">Reset</button>
+            </div>
+        </div>
+
         <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
             <button type="button" class="btn btn-sm btn-primary admin-query-history-filter active" data-history-filter="all">All</button>
             <button type="button" class="btn btn-sm btn-outline-primary admin-query-history-filter" data-history-filter="today">Today</button>
             <button type="button" class="btn btn-sm btn-outline-primary admin-query-history-filter" data-history-filter="week">This Week</button>
             <button type="button" class="btn btn-sm btn-outline-primary admin-query-history-filter" data-history-filter="month">This Month</button>
-            <input type="search" class="form-control form-control-sm ms-auto" style="max-width:240px" id="adminQueryHistorySearch" placeholder="Filter history...">
+            <input type="search" class="form-control form-control-sm ms-auto" style="max-width:240px" id="adminQueryHistorySearch" placeholder="Quick search...">
         </div>
 
         <div class="table-responsive">
             <table class="table table-sm table-hover">
-                <thead class="table-light"><tr><th>Agent</th><th>Phone</th><th>Hotel</th><th>Room Category</th><th>Dates</th><th>Pax</th><th>Amount</th><th>Employee</th><th>Generated At</th><th>Lock Until</th><th>Actions</th></tr></thead>
+                <thead class="table-light"><tr><th>Employee</th><th>Agent</th><th>Phone</th><th>Hotel</th><th>Room Category</th><th>Dates</th><th>Pax</th><th>Amount</th><th>Location</th><th>Generated At</th><th>Lock Until</th><th>Actions</th></tr></thead>
                 <tbody>
                     <?php foreach ($admin_history as $item): ?>
-                    <tr class="admin-history-row" data-history-date="<?php echo htmlspecialchars($item['generated_at'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" data-history-text="<?php echo htmlspecialchars(strtolower((string)($item['query_text'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>">
+                    <tr class="admin-history-row"
+                        data-employee="<?php echo htmlspecialchars(strtolower((string)($item['created_by_username'] ?? $item['employee_name'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>"
+                        data-hotel="<?php echo htmlspecialchars(strtolower((string)($item['hotel_name'] ?? ($item['hotel_category'] ?? ''))), ENT_QUOTES, 'UTF-8'); ?>"
+                        data-location="<?php echo htmlspecialchars(strtolower((string)($item['location'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>"
+                        data-category="<?php echo htmlspecialchars(strtolower((string)($item['hotel_category'] ?? ($item['room_category'] ?? ''))), ENT_QUOTES, 'UTF-8'); ?>"
+                        data-room="<?php echo htmlspecialchars(strtolower((string)($item['room_category'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>"
+                        data-budget="<?php echo htmlspecialchars((string)((float)($item['total_amount'] ?? $item['budget'] ?? 0)), ENT_QUOTES, 'UTF-8'); ?>"
+                        data-checkin="<?php echo htmlspecialchars((string)($item['check_in'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
+                        data-checkout="<?php echo htmlspecialchars((string)($item['check_out'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
+                        data-nights="<?php echo htmlspecialchars((string)($item['nights'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>"
+                        data-adults="<?php echo htmlspecialchars((string)($item['adults'] ?? 1), ENT_QUOTES, 'UTF-8'); ?>"
+                        data-children="<?php echo htmlspecialchars((string)($item['children'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>"
+                        data-rooms="<?php echo htmlspecialchars((string)($item['rooms'] ?? 1), ENT_QUOTES, 'UTF-8'); ?>"
+                        data-hotels="<?php echo htmlspecialchars($item['matched_hotels_json'] ?? '[]', ENT_QUOTES, 'UTF-8'); ?>"
+                        data-history-date="<?php echo htmlspecialchars($item['generated_at'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                        data-history-text="<?php echo htmlspecialchars(strtolower((string)($item['query_text'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>">>
+                        <td><?php echo htmlspecialchars($item['created_by_username'] ?? $item['employee_name'] ?? ''); ?></td>
                         <td><?php echo htmlspecialchars($item['agent_name'] ?? ($item['employee_name'] ?? '')); ?></td>
                         <td><?php echo htmlspecialchars($item['agent_phone'] ?? ''); ?></td>
                         <td><?php echo htmlspecialchars($item['hotel_name'] ?? ($item['hotel_category'] ?? '')); ?></td>
@@ -126,13 +188,13 @@ try {
                         <td><?php echo htmlspecialchars(($item['check_in'] ?? '') . (isset($item['check_out']) && $item['check_out'] ? ' - ' . $item['check_out'] : '')); ?></td>
                         <td><?php echo 'A:' . ((int)($item['adults'] ?? 1)) . ' C:' . ((int)($item['children'] ?? 0)) . ' R:' . ((int)($item['rooms'] ?? 1)); ?></td>
                         <td>₹<?php echo number_format((float)($item['total_amount'] ?? $item['budget'] ?? 0),0); ?></td>
-                        <td><?php echo htmlspecialchars($item['created_by_username'] ?? $item['employee_name'] ?? ''); ?></td>
+                        <td><?php echo htmlspecialchars($item['location'] ?? ''); ?></td>
                         <td><?php echo htmlspecialchars($item['generated_at']); ?></td>
                         <td><?php echo htmlspecialchars($item['lock_until'] ?? ''); ?></td>
                         <td>
                             <?php if (!empty($item['agent_phone'])): ?>
                                 <button class="btn btn-sm btn-outline-primary" onclick="viewAdminQuery(<?php echo (int)$item['id']; ?>)">View</button>
-                                <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('<?php echo htmlspecialchars(addslashes($item['query_text'] ?? '')); ?>')">Copy</button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('', this)">Copy</button>
                                 <a class="btn btn-sm btn-success" target="_blank" href="https://wa.me/<?php echo preg_replace('/\D/','',($item['agent_phone'] ?? '')); ?>?text=<?php echo urlencode($item['query_text'] ?? ''); ?>">WA</a>
                                 <form method="post" style="display:inline-block; margin:0;">
                                     <input type="hidden" name="action" value="unlock_query">
@@ -140,7 +202,7 @@ try {
                                     <button type="submit" class="btn btn-sm btn-outline-danger">Unlock</button>
                                 </form>
                             <?php else: ?>
-                                <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('<?php echo htmlspecialchars(addslashes($item['query_text'] ?? '')); ?>')">Copy</button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('', this)">Copy</button>
                             <?php endif; ?>
                         </td>
                     </tr>
@@ -154,18 +216,48 @@ try {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/assets/js/ui-common.js"></script>
 <script>
+function getAdminHistoryControls() {
+    return {
+        employee: document.getElementById('adminHistoryEmployeeFilter')?.value.trim().toLowerCase() || '',
+        hotel: document.getElementById('adminHistoryHotelFilter')?.value.trim().toLowerCase() || '',
+        location: document.getElementById('adminHistoryLocationFilter')?.value.trim().toLowerCase() || '',
+        category: document.getElementById('adminHistoryCategoryFilter')?.value.trim().toLowerCase() || '',
+        room: document.getElementById('adminHistoryRoomFilter')?.value.trim().toLowerCase() || '',
+        budget: Number(document.getElementById('adminHistoryBudgetFilter')?.value || 0),
+        checkIn: document.getElementById('adminHistoryCheckInFilter')?.value || '',
+        checkOut: document.getElementById('adminHistoryCheckOutFilter')?.value || '',
+        from: document.getElementById('adminHistoryFromFilter')?.value || '',
+        to: document.getElementById('adminHistoryToFilter')?.value || ''
+    };
+}
+
 function applyAdminQueryHistoryFilter(filter) {
     const now = new Date();
     const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const weekStart = new Date(dayStart);
     weekStart.setDate(dayStart.getDate() - dayStart.getDay());
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const search = (document.getElementById('adminQueryHistorySearch')?.value || '').toLowerCase().trim();
+    const quickSearch = (document.getElementById('adminQueryHistorySearch')?.value || '').toLowerCase().trim();
+    const controls = getAdminHistoryControls();
+
     document.querySelectorAll('.admin-history-row').forEach((row) => {
         const date = new Date(row.dataset.historyDate);
         const dateMatch = filter === 'today' ? date >= dayStart : filter === 'week' ? date >= weekStart : filter === 'month' ? date >= monthStart : true;
-        row.style.display = dateMatch && (!search || row.dataset.historyText.includes(search) || row.textContent.toLowerCase().includes(search)) ? '' : 'none';
+        const employeeMatch = !controls.employee || (row.dataset.employee || '').includes(controls.employee);
+        const hotelMatch = !controls.hotel || (row.dataset.hotel || '').includes(controls.hotel);
+        const locationMatch = !controls.location || (row.dataset.location || '').includes(controls.location);
+        const categoryMatch = !controls.category || (row.dataset.category || '').includes(controls.category);
+        const roomMatch = !controls.room || (row.dataset.room || '').includes(controls.room);
+        const budgetMatch = !controls.budget || Number(row.dataset.budget || 0) >= controls.budget;
+        const checkInMatch = !controls.checkIn || (row.dataset.checkin || '') === controls.checkIn;
+        const checkOutMatch = !controls.checkOut || (row.dataset.checkout || '') === controls.checkOut;
+        const fromMatch = !controls.from || (row.dataset.historyDate || '').slice(0, 10) >= controls.from;
+        const toMatch = !controls.to || (row.dataset.historyDate || '').slice(0, 10) <= controls.to;
+        const quickMatch = !quickSearch || row.dataset.historyText.includes(quickSearch) || row.textContent.toLowerCase().includes(quickSearch);
+
+        row.style.display = dateMatch && employeeMatch && hotelMatch && locationMatch && categoryMatch && roomMatch && budgetMatch && checkInMatch && checkOutMatch && fromMatch && toMatch && quickMatch ? '' : 'none';
     });
+
     document.querySelectorAll('.admin-query-history-filter').forEach((button) => {
         const active = button.dataset.historyFilter === filter;
         button.classList.toggle('active', active);
@@ -178,7 +270,122 @@ document.addEventListener('click', (event) => {
     const button = event.target.closest('.admin-query-history-filter');
     if (button) applyAdminQueryHistoryFilter(button.dataset.historyFilter || 'all');
 });
+["adminHistoryEmployeeFilter","adminHistoryHotelFilter","adminHistoryLocationFilter","adminHistoryCategoryFilter","adminHistoryRoomFilter","adminHistoryBudgetFilter","adminHistoryCheckInFilter","adminHistoryCheckOutFilter","adminHistoryFromFilter","adminHistoryToFilter"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', () => applyAdminQueryHistoryFilter('all'));
+    if (el) el.addEventListener('change', () => applyAdminQueryHistoryFilter('all'));
+});
 document.getElementById('adminQueryHistorySearch')?.addEventListener('input', () => applyAdminQueryHistoryFilter('all'));
+document.getElementById('adminHistoryResetFilters')?.addEventListener('click', () => {
+    ["adminHistoryEmployeeFilter","adminHistoryHotelFilter","adminHistoryLocationFilter","adminHistoryCategoryFilter","adminHistoryRoomFilter","adminHistoryBudgetFilter","adminHistoryCheckInFilter","adminHistoryCheckOutFilter","adminHistoryFromFilter","adminHistoryToFilter"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    document.getElementById('adminQueryHistorySearch').value = '';
+    applyAdminQueryHistoryFilter('all');
+});
+
+function copyQueryText(queryText, buttonElement) {
+    // Find the row containing this button
+    const row = buttonElement ? buttonElement.closest('.admin-history-row') : (event && event.target ? event.target.closest('.admin-history-row') : null);
+    
+    if (!row) {
+        // Fallback: just copy the query text if provided
+        if (queryText) {
+            navigator.clipboard.writeText(queryText).then(() => {
+                alert('Query copied to clipboard!');
+            }).catch(() => {
+                alert('Failed to copy: ' + queryText.substring(0, 100));
+            });
+        }
+        return;
+    }
+    
+    // Extract query details from data attributes
+    const checkIn = row.dataset.checkin || '';
+    const checkOut = row.dataset.checkout || '';
+    const location = row.dataset.location || '';
+    const category = row.dataset.category || '';
+    const nights = row.dataset.nights || '0';
+    const adults = row.dataset.adults || '1';
+    const children = row.dataset.children || '0';
+    const rooms = row.dataset.rooms || '1';
+    const budget = row.dataset.budget || '0';
+    const hotelJson = row.dataset.hotels || '[]';
+    
+    try {
+        let hotels = [];
+        try {
+            hotels = JSON.parse(hotelJson);
+        } catch (e) {
+            // JSON parsing failed, try to use as-is if it's already an array
+        }
+        
+        let formattedText = 'Booking Query\n';
+        formattedText += 'Location: ' + location + '\n';
+        formattedText += 'Hotel Category: ' + category + '\n';
+        formattedText += 'Check-In: ' + checkIn + '\n';
+        formattedText += 'Check-Out: ' + checkOut + '\n';
+        formattedText += 'Nights: ' + nights + '\n';
+        formattedText += 'Adults: ' + adults + '\n';
+        formattedText += 'Children: ' + children + '\n';
+        formattedText += 'Rooms: ' + rooms + '\n';
+        formattedText += 'Budget per Night: ₹' + number_format(budget) + '\n\n';
+        
+        // Add hotels and rooms
+        let hotelCounter = 1;
+        if (Array.isArray(hotels)) {
+            hotels.forEach((hotel) => {
+                if (hotel.rooms && hotel.rooms.length > 0) {
+                    hotel.rooms.forEach((room) => {
+                        formattedText += hotelCounter + '. ' + (hotel.name || 'N/A') + '\n';
+                        formattedText += 'Room Category: ' + (room.category || 'N/A') + '\n';
+                        const mealPlans = (room.mealPlans || []).join(', ') || 'N/A';
+                        formattedText += 'Meal Plans: ' + mealPlans + '\n';
+                        formattedText += 'Location: ' + (hotel.city || 'N/A') + ', ' + (hotel.state || 'N/A') + '\n';
+                        formattedText += 'Price per Night: ₹' + number_format(room.basePrice || 0) + '\n\n';
+                        hotelCounter++;
+                    });
+                }
+            });
+        }
+        
+        // Try to copy to clipboard
+        navigator.clipboard.writeText(formattedText).then(() => {
+            alert('✅ Complete query details copied to clipboard!');
+        }).catch(() => {
+            // Fallback: create hidden textarea and copy
+            const textarea = document.createElement('textarea');
+            textarea.value = formattedText;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                alert('✅ Query details copied to clipboard!');
+            } catch (err) {
+                alert('✅ Query formatted (copy manually):\n\n' + formattedText.substring(0, 500));
+            }
+            document.body.removeChild(textarea);
+        });
+    } catch (e) {
+        // If anything fails, fall back to copying the query text
+        if (queryText) {
+            navigator.clipboard.writeText(queryText).then(() => {
+                alert('Query copied to clipboard!');
+            }).catch(() => {
+                alert('Error formatting query: ' + e.message);
+            });
+        } else {
+            alert('Error: ' + e.message);
+        }
+    }
+}
+
+function number_format(num) {
+    return new Intl.NumberFormat('en-IN').format(num);
+}
 
 function toggleSidebarMenu(open) {
     const sidebar = document.getElementById('adminSidebar');

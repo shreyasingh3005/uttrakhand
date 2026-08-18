@@ -160,7 +160,7 @@ foreach (['booking_rooms','hotel_bookings','room_availability','room_prices','ho
 $pdo->exec("SET FOREIGN_KEY_CHECKS=1");
 out('✓ Old data cleared','ok');
 
-$hStmt  = $pdo->prepare("INSERT INTO hotels (hotel_code,name,city,state,address,pincode,phone,email,website,star_rating,description,status) VALUES (?,?,?,?,?,?,?,?,?,?,?,'active')");
+$hStmt  = $pdo->prepare("INSERT INTO hotels (hotel_code,name,city,state,address,pin_code,phone,contact_details,email,website,star_rating,property_category,description,image_urls,status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'active')");
 $rcStmt = $pdo->prepare("INSERT INTO hotel_room_categories (hotel_id,name,bed_type,room_size,total_rooms,available_rooms,booked_rooms,blocked_rooms,extra_bed_allowed,extra_bed_price,max_extra_beds,status) VALUES (?,?,?,?,?,?,0,0,?,?,?,'active')");
 $bpStmt = $pdo->prepare("INSERT INTO room_prices (hotel_id,room_category_id,meal_plan_id,base_price,rate_date,date_wise_price) VALUES (?,?,?,?,NULL,NULL) ON DUPLICATE KEY UPDATE base_price=VALUES(base_price)");
 $drStmt = $pdo->prepare("INSERT INTO room_prices (hotel_id,room_category_id,meal_plan_id,base_price,rate_date,date_wise_price) VALUES (?,?,?,0,?,?) ON DUPLICATE KEY UPDATE date_wise_price=VALUES(date_wise_price)");
@@ -178,7 +178,8 @@ $pdo->beginTransaction();
 try {
     foreach ($hotelsData as $hd) {
         [$code,$name,$city,$state,$addr,$pin,$phone,$email,$web,$stars,$desc] = $hd;
-        $hStmt->execute([$code,$name,$city,$state,$addr,$pin,$phone,$email,$web,$stars,$desc]);
+        $propertyCategory = $stars > 0 ? $stars . ' Star' : 'Resort';
+        $hStmt->execute([$code,$name,$city,$state,$addr,$pin,$phone,$phone,$email,$web,$stars,$propertyCategory,$desc,null]);
         $hId    = (int)$pdo->lastInsertId();
         $sm     = $starMul[$stars] ?? 1.0;
         $hotelRooms[$hId] = [];

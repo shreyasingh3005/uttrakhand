@@ -592,10 +592,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $locationTokens = array_filter(preg_split('/\s+/', trim($filterLocation)));
             if ($locationTokens) {
                 $tokenClauses = [];
+                $paramIndex = 0;
                 foreach (array_values($locationTokens) as $i => $token) {
-                    $key = ':loc' . $i;
-                    $tokenClauses[] = "(LOWER(TRIM(h.city)) LIKE LOWER($key) OR LOWER(TRIM(h.state)) LIKE LOWER($key))";
-                    $params[$key] = '%' . $token . '%';
+                    $keyCity = ':locc' . $paramIndex;
+                    $keyState = ':locs' . $paramIndex;
+                    $tokenClauses[] = "(LOWER(TRIM(h.city)) LIKE $keyCity OR LOWER(TRIM(h.state)) LIKE $keyState)";
+                    $params[$keyCity] = '%' . strtolower($token) . '%';
+                    $params[$keyState] = '%' . strtolower($token) . '%';
+                    $paramIndex++;
                 }
                 $where[] = '(' . implode(' AND ', $tokenClauses) . ')';
             }
@@ -766,8 +770,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $children = max(0, (int)($_POST['children'] ?? 0));
         $rooms = max(1, (int)($_POST['rooms'] ?? 1));
         $budget = max(0, (float)($_POST['budget'] ?? 0));
+        $hotelName = sanitize_input($_POST['hotel_name'] ?? '');
+        $roomCategory = sanitize_input($_POST['room_category'] ?? '');
         $matchedHotels = json_decode($_POST['matched_hotels'] ?? '[]', true);
         $matchedHotels = is_array($matchedHotels) ? $matchedHotels : [];
+
+        if ($hotelName === '' && !empty($matchedHotels)) {
+            $hotelName = sanitize_input((string)($matchedHotels[0]['name'] ?? ''));
+        }
+        if ($roomCategory === '' && !empty($matchedHotels)) {
+            $roomCategory = sanitize_input((string)($matchedHotels[0]['room_name'] ?? ''));
+        }
 
         $lines = [
             'Booking Query',
@@ -793,18 +806,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         try {
             $saveStmt = $conn->prepare('INSERT INTO booking_query_history (
-                created_by_user_id, created_by_username, created_by_role, location, hotel_category,
-                check_in, check_out, nights, adults, children, rooms, budget, query_text, matched_hotels_json
+                created_by_user_id, created_by_username, created_by_role, employee_id, location, hotel_category,
+                hotel_name, room_category, check_in, check_out, nights, adults, children, rooms, budget,
+                query_text, matched_hotels_json, query_date
             ) VALUES (
-                :user_id, :username, :role, :location, :category, :check_in, :check_out, :nights,
-                :adults, :children, :rooms, :budget, :query_text, :matched_hotels_json
+                :user_id, :username, :role, :employee_id, :location, :category, :hotel_name, :room_category,
+                :check_in, :check_out, :nights, :adults, :children, :rooms, :budget,
+                :query_text, :matched_hotels_json, NOW()
             )');
             $saveStmt->execute([
                 ':user_id' => $user_id,
                 ':username' => $username,
                 ':role' => $user_role === 'admin' ? 'admin' : 'employee',
+                ':employee_id' => $user_id,
                 ':location' => $location ?: null,
                 ':category' => $category ?: 'All Categories',
+                ':hotel_name' => $hotelName ?: null,
+                ':room_category' => $roomCategory ?: null,
                 ':check_in' => $checkIn ?: null,
                 ':check_out' => $checkOut ?: null,
                 ':nights' => $nights,

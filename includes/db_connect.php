@@ -576,6 +576,8 @@ function ensure_booking_query_history_table(PDO $conn) {
             children INT DEFAULT 0,
             rooms INT DEFAULT 1,
             budget DECIMAL(12,2) DEFAULT 0,
+            hotel_name VARCHAR(255) DEFAULT NULL,
+            room_category VARCHAR(150) DEFAULT NULL,
             query_text TEXT NOT NULL,
             matched_hotels_json LONGTEXT DEFAULT NULL,
             generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -585,7 +587,37 @@ function ensure_booking_query_history_table(PDO $conn) {
     } catch (PDOException $e) { /* non-blocking */ }
 }
 
+function ensure_booking_query_history_columns(PDO $conn) {
+    try {
+        $columns = [];
+        $colStmt = $conn->query('SHOW COLUMNS FROM booking_query_history');
+        foreach ($colStmt->fetchAll(PDO::FETCH_ASSOC) as $col) {
+            $columns[$col['Field']] = true;
+        }
+
+        $additions = [
+            'employee_id' => 'ADD COLUMN employee_id INT DEFAULT NULL AFTER created_by_user_id',
+            'hotel_name' => 'ADD COLUMN hotel_name VARCHAR(255) DEFAULT NULL AFTER budget',
+            'room_category' => 'ADD COLUMN room_category VARCHAR(150) DEFAULT NULL AFTER hotel_name',
+            'query_date' => 'ADD COLUMN query_date DATETIME DEFAULT NULL AFTER generated_at',
+        ];
+
+        foreach ($additions as $field => $sql) {
+            if (!isset($columns[$field])) {
+                $conn->exec('ALTER TABLE booking_query_history ' . $sql);
+            }
+        }
+
+        if (!isset($columns['employee_id']) && isset($columns['created_by_user_id'])) {
+            $conn->exec('UPDATE booking_query_history SET employee_id = created_by_user_id WHERE employee_id IS NULL');
+        }
+    } catch (PDOException $e) {
+        // Non-blocking: history schema is optional for legacy installs
+    }
+}
+
 ensure_booking_query_history_table($conn);
+ensure_booking_query_history_columns($conn);
 
 // Helper functions
 function sanitize_input($data) {
