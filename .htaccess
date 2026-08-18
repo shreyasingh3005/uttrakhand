@@ -1,0 +1,65 @@
+# Uttarakhand Ventures CRM — Security & URL Rewrites
+# ──────────────────────────────────────────────────
+
+# Force HTTPS (uncomment when SSL is configured)
+# RewriteEngine On
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+RewriteEngine On
+RewriteBase /
+
+# ── Block sensitive files ──────────────────────────────────────────────
+RewriteRule ^\.env\.php$ - [F,L]
+RewriteRule ^\.env$ - [F,L]
+RewriteRule ^\.git - [F,L]
+RewriteRule ^\.htaccess$ - [F,L]
+RewriteRule ^\.htpasswd$ - [F,L]
+
+# ── Block database and SQL files ──────────────────────────────────────
+RewriteRule ^database/ - [F,L]
+RewriteRule ^scripts/ - [F,L]
+RewriteRule ^.*\.sql$ - [F,L]
+
+# ── Block backup files ────────────────────────────────────────────────
+RewriteRule ^.*\.bak$ - [F,L]
+RewriteRule ^.*\.old$ - [F,L]
+RewriteRule ^.*\.orig$ - [F,L]
+RewriteRule ^.*\.save$ - [F,L]
+RewriteRule ^.*\.swp$ - [F,L]
+RewriteRule ^.*~$ - [F,L]
+
+# ── Block directory listing ────────────────────────────────────────────
+Options -Indexes
+
+# ── Security headers ──────────────────────────────────────────────────
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data:; connect-src 'self'"
+</IfModule>
+
+# ── Prevent PHP from exposing errors ──────────────────────────────────
+php_flag display_errors Off
+php_flag expose_php Off
+php_value error_log "C:\xampp\php\logs\crm_error.log"
+
+# ── File caching ──────────────────────────────────────────────────────
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType text/css "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/webp "access plus 1 month"
+</IfModule>
+
+# ── Block suspicious bots ─────────────────────────────────────────────
+<IfModule mod_rewrite.c>
+    RewriteCond %{HTTP_USER_AGENT} (ahrefs|semrush|mj12bot|dotbot|petalbot) [NC]
+    RewriteRule .* - [F,L]
+</IfModule>

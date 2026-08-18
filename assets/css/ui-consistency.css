@@ -1,0 +1,86 @@
+/* Shared UI consistency layer for authenticated admin/employee pages */
+
+:root {
+  --uv-ui-font: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --uv-ui-border: #e2e8f0;
+  --uv-ui-bg: #f8fafc;
+  --uv-ui-surface: #ffffff;
+  --uv-ui-text: #0f172a;
+  --uv-ui-muted: #64748b;
+  --uv-ui-brand: #4f46e5;
+}
+
+body {
+  font-family: var(--uv-ui-font);
+  background: var(--uv-ui-bg);
+  color: var(--uv-ui-text);
+}
+
+.top-header {
+  min-height: 58px;
+  border-bottom: 1px solid var(--uv-ui-border);
+}
+
+.panel,
+.summary-card,
+.agent-card,
+.employee-card {
+  border-color: var(--uv-ui-border);
+}
+
+.btn,
+.form-control,
+.form-select,
+.dropdown-menu,
+.table {
+  font-family: var(--uv-ui-font);
+}
+
+.sidebar .nav-link,
+.left-sidebar .nav-link {
+  min-height: 44px;
+  align-items: center;
+  font-weight: 500;
+}
+
+.sidebar .nav-link i,
+.left-sidebar .nav-link i {
+  width: 18px;
+  text-align: center;
+}
+
+.user-menu-corner .dropdown-toggle {
+  border-radius: 10px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.user-menu-corner .dropdown-menu {
+  border-radius: 12px;
+  border: 1px solid var(--uv-ui-border);
+  padding: 6px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.user-menu-corner .dropdown-item {
+  border-radius: 8px;
+  font-size: 0.84rem;
+  padding: 8px 10px;
+}
+
+.user-menu-corner .dropdown-item:hover {
+  background: #f1f5f9;
+}
+
+@media (max-width: 992px) {
+  .main-wrapper {
+    margin-left: 0;
+  }
+
+  .top-header {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}

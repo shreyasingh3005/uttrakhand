@@ -1,0 +1,131 @@
+@import url('/assets/css/ui-consistency.css');
+
+/* ── Shared Sidebar CSS — must be included AFTER CSS variables ── */
+
+.sidebar {
+	width: 232px;
+	min-height: 100vh;
+	background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+	position: fixed;
+	left: 0;
+	top: 0;
+	z-index: 1000;
+	border-right: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.sidebar-brand {
+	color: #fff;
+	font-size: 1.2rem;
+	font-weight: 700;
+	padding: 26px 26px 20px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.sidebar-brand .brand-icon {
+	width: 34px;
+	height: 34px;
+	border-radius: 10px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: linear-gradient(135deg, var(--brand, #4f46e5), var(--accent, #06b6d4));
+	font-size: 16px;
+	color: #fff;
+	margin-right: 8px;
+}
+
+.sidebar-brand small {
+	font-size: 16px;
+	font-weight: 600;
+	margin-left: 8px;
+	opacity: .95;
+	vertical-align: middle;
+}
+
+.sidebar .nav {
+	padding: 18px 16px;
+	gap: 8px;
+	display: flex;
+	flex-direction: column;
+}
+
+.sidebar .nav-link {
+	color: var(--muted, #94a3b8);
+	border-radius: 12px;
+	padding: 14px 16px;
+	font-weight: 500;
+	font-size: .92rem;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	transition: .25s ease;
+	text-decoration: none;
+}
+
+.sidebar .nav-link i {
+	font-size: 18px;
+}
+
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+	color: #fff;
+	background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-close-btn {
+	display: none;
+}
+
+.sidebar-backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(7, 13, 35, 0.45);
+	backdrop-filter: blur(2px);
+	z-index: 999;
+	display: none;
+}
+
+.sidebar-backdrop.show {
+	display: block;
+}
+
+@media (max-width: 992px) {
+	.sidebar {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: min(82vw, 280px);
+		height: 100vh;
+		transform: translateX(-100%);
+		transition: transform .25s ease;
+		z-index: 1000;
+	}
+	.sidebar.open {
+		transform: translateX(0);
+	}
+	.sidebar-close-btn {
+		display: inline-flex;
+		width: 32px;
+		height: 32px;
+		align-items: center;
+		justify-content: center;
+		border-radius: 8px;
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		color: #fff;
+		background: rgba(255, 255, 255, 0.08);
+		cursor: pointer;
+	}
+	.sidebar-backdrop.show {
+		display: block;
+	}
+}
+
+@media (max-width: 576px) {
+	.sidebar-brand {
+		font-size: 1rem;
+		padding: 14px;
+	}
+}
