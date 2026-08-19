@@ -6033,7 +6033,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         }
     };
     </script>
-<script src="/assets/js/quotation-template.js"></script>
+<script src="/assets/js/quotation-template.js?v=20260820-2"></script>
 <script src="/assets/js/ui-common.js"></script>
 </body>
 
