@@ -167,6 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'create_agent') {
         $agent_name = sanitize_input($_POST['agentName'] ?? '');
         $company_name = sanitize_input($_POST['companyName'] ?? '');
+        $gst_number = sanitize_input($_POST['gstNumber'] ?? '');
         $email = sanitize_input($_POST['email'] ?? '');
         $phone = sanitize_input($_POST['contact'] ?? '');
         $location = sanitize_input($_POST['location'] ?? ($_POST['address'] ?? ''));
@@ -182,12 +183,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     exit;
                 }
 
-                $query = "INSERT INTO agents_details (name, company_name, email, phone, location, status, created_by) 
-                         VALUES (:name, :company_name, :email, :phone, :location, 'Active', :created_by)";
+                $query = "INSERT INTO agents_details (name, company_name, gst_number, email, phone, location, status, created_by)
+                         VALUES (:name, :company_name, :gst_number, :email, :phone, :location, 'Active', :created_by)";
                 $stmt = $conn->prepare($query);
                 $stmt->execute([
                     ':name' => $agent_name,
                     ':company_name' => $company_name,
+                    ':gst_number' => $gst_number !== '' ? $gst_number : null,
                     ':email' => $email,
                     ':phone' => $phone,
                     ':location' => $location,
@@ -399,7 +401,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
         
         try {
-            $stmt = $conn->prepare("SELECT id, name, company_name, email, phone, location, status, created_by, created_at FROM agents_details WHERE phone = :phone LIMIT 1");
+            $stmt = $conn->prepare("SELECT id, name, company_name, gst_number, email, phone, location, status, created_by, created_at FROM agents_details WHERE phone = :phone LIMIT 1");
             $stmt->execute([':phone' => $mobile]);
             $agent = $stmt->fetch(PDO::FETCH_ASSOC);
             
@@ -855,7 +857,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 echo json_encode(['success' => false, 'message' => 'Agent mobile number is required']);
                 exit;
             }
-            $agentStmt = $conn->prepare('SELECT id, name, phone, location, company_name, email FROM agents_details WHERE phone = :phone AND status = "Active" LIMIT 1');
+            $agentStmt = $conn->prepare('SELECT id, name, phone, location, company_name, gst_number, email FROM agents_details WHERE phone = :phone AND status = "Active" LIMIT 1');
             $agentStmt->execute([':phone' => $agentPhone]);
             $agent = $agentStmt->fetch(PDO::FETCH_ASSOC);
             if (!$agent) {
@@ -2492,6 +2494,10 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                                 placeholder="Enter company name" required>
                         </div>
                         <div class="mb-3">
+                            <label for="agentGstNumber" class="form-label text-muted fw-medium fs-7">GST Number</label>
+                            <input type="text" class="form-control py-2" id="agentGstNumber" placeholder="Enter GST number (optional)">
+                        </div>
+                        <div class="mb-3">
                             <label for="agentEmail" class="form-label text-muted fw-medium fs-7">Email Address</label>
                             <input type="email" class="form-control py-2" id="agentEmail" placeholder="Enter email"
                                 required>
@@ -2572,6 +2578,10 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                                     <small class="text-muted d-block fs-8 text-uppercase fw-semibold">Company
                                         Name</small>
                                     <strong class="text-dark fs-6" id="bookingAgentCompany">-</strong>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted d-block fs-8 text-uppercase fw-semibold">GST Number</small>
+                                    <strong class="text-dark fs-6" id="bookingAgentGstNumber">-</strong>
                                 </div>
                                 <div class="col-md-12">
                                     <small class="text-muted d-block fs-8 text-uppercase fw-semibold">Address /
@@ -2920,6 +2930,10 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                                             class="form-label text-muted fw-medium fs-7">Company Name</label>
                                         <input type="text" class="form-control py-2" id="regAgentCompany"
                                             placeholder="Enter company name" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="regAgentGstNumber" class="form-label text-muted fw-medium fs-7">GST Number</label>
+                                        <input type="text" class="form-control py-2" id="regAgentGstNumber" placeholder="Enter GST number (optional)">
                                     </div>
                                     <div class="mb-4">
                                         <label for="regAgentLocation"
@@ -4098,6 +4112,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                         };
                         setText('bookingAgentName', agent.name);
                         setText('bookingAgentCompany', agent.company_name || 'N/A');
+                        setText('bookingAgentGstNumber', agent.gst_number || 'N/A');
                         setText('bookingAgentLocation', agent.location || 'N/A');
                         setText('bookingAgentContact', agent.phone || mobile);
                         setText('bookingAgentEmail', agent.email || 'N/A');
@@ -4258,6 +4273,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         formData.append('action', 'create_agent');
         formData.append('agentName', document.getElementById('agentName').value);
         formData.append('companyName', document.getElementById('agentCompany').value);
+        formData.append('gstNumber', document.getElementById('agentGstNumber').value);
         formData.append('email', document.getElementById('agentEmail').value);
         formData.append('contact', document.getElementById('agentPhone').value);
         formData.append('location', document.getElementById('agentLocation').value);
@@ -4552,6 +4568,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         formData.append('action', 'create_agent');
         formData.append('agentName', document.getElementById('regAgentName').value);
         formData.append('companyName', document.getElementById('regAgentCompany').value);
+        formData.append('gstNumber', document.getElementById('regAgentGstNumber').value);
         formData.append('email', document.getElementById('regAgentEmail').value);
         formData.append('contact', document.getElementById('regAgentPhone').value);
         formData.append('location', document.getElementById('regAgentLocation').value);
@@ -4895,7 +4912,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                 }
                 bookingQueryAgent = data.agent;
                 if (form) form.disabled = false;
-                if (status) status.innerHTML = `<strong>${escapeQueryHistoryHtml(data.agent.name)}</strong> | ${escapeQueryHistoryHtml(data.agent.phone)} | ${escapeQueryHistoryHtml(data.agent.location || 'Location unavailable')} | ${escapeQueryHistoryHtml(data.agent.company_name || '')} | ${escapeQueryHistoryHtml(data.agent.email || '')}`;
+                                if (status) status.innerHTML = `<strong>${escapeQueryHistoryHtml(data.agent.name)}</strong> | ${escapeQueryHistoryHtml(data.agent.phone)} | GST: ${escapeQueryHistoryHtml(data.agent.gst_number || 'N/A')} | ${escapeQueryHistoryHtml(data.agent.location || 'Location unavailable')} | ${escapeQueryHistoryHtml(data.agent.company_name || '')} | ${escapeQueryHistoryHtml(data.agent.email || '')}`;
             })
             .catch(() => {
                 bookingQueryAgent = null;

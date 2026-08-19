@@ -218,6 +218,7 @@ function status_badge_class($status) {
 									<h6 class="fw-bold mb-1 text-center"><?php echo htmlspecialchars($agent['name'], ENT_QUOTES, 'UTF-8'); ?></h6>
 									<p class="text-muted small mb-1 text-center"><i class="bi bi-geo-alt me-1"></i><?php echo htmlspecialchars($agent['location'], ENT_QUOTES, 'UTF-8'); ?></p>
 									<p class="text-muted small mb-2 text-center"><i class="bi bi-telephone me-1"></i><?php echo htmlspecialchars($agent['phone'], ENT_QUOTES, 'UTF-8'); ?></p>
+									<p class="text-muted small mb-2 text-center"><i class="bi bi-receipt me-1"></i>GST: <?php echo htmlspecialchars($agent['gst_number'] ?? 'N/A', ENT_QUOTES, 'UTF-8'); ?></p>
 									<div class="mb-3 d-flex gap-2 justify-content-center flex-wrap">
 										<span class="badge <?php echo status_badge_class($agent['status']); ?>"><?php echo htmlspecialchars($agent['status'], ENT_QUOTES, 'UTF-8'); ?></span>
 										<span class="badge badge-created"><i class="bi bi-person-fill me-1"></i><?php echo htmlspecialchars($agent['created_by'], ENT_QUOTES, 'UTF-8'); ?></span>

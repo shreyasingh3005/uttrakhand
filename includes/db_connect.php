@@ -219,6 +219,23 @@ function ensure_agents_company_column(PDO $conn) {
 
 ensure_agents_company_column($conn);
 
+function ensure_agents_gst_column(PDO $conn) {
+    static $checked = false;
+    if ($checked) return;
+    $checked = true;
+
+    try {
+        $columns = $conn->query("SHOW COLUMNS FROM agents_details")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('gst_number', $columns, true)) {
+            $conn->exec("ALTER TABLE agents_details ADD COLUMN gst_number VARCHAR(30) DEFAULT NULL AFTER company_name");
+        }
+    } catch (PDOException $e) {
+        // Non-blocking for legacy installations.
+    }
+}
+
+ensure_agents_gst_column($conn);
+
 function ensure_registration_mobile_constraints(PDO $conn) {
     static $checked = false;
     if ($checked) return;

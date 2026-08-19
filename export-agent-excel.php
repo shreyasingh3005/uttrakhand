@@ -57,6 +57,7 @@ fputcsv($output, ['Agent Profile']);
 fputcsv($output, ['Name', (string) ($agent['name'] ?? '')]);
 fputcsv($output, ['Email', (string) ($agent['email'] ?? '')]);
 fputcsv($output, ['Phone', (string) ($agent['phone'] ?? '')]);
+fputcsv($output, ['GST Number', (string) ($agent['gst_number'] ?? '')]);
 fputcsv($output, ['Location', (string) ($agent['location'] ?? '')]);
 fputcsv($output, ['Status', (string) ($agent['status'] ?? '')]);
 fputcsv($output, ['Created By', (string) ($agent['created_by'] ?? '')]);

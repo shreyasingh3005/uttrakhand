@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
         
         try {
-            $agentStmt = $conn->prepare("SELECT id, name, email, phone, location FROM agents_details WHERE phone = :phone");
+            $agentStmt = $conn->prepare("SELECT id, name, email, phone, location, gst_number FROM agents_details WHERE phone = :phone");
             $agentStmt->execute([':phone' => $mobileNumber]);
             $agent = $agentStmt->fetch(PDO::FETCH_ASSOC);
             
@@ -235,6 +235,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'register_agent') {
         $name = sanitize_input($_POST['agent_name'] ?? '');
         $companyName = sanitize_input($_POST['agent_company'] ?? '');
+        $gstNumber = sanitize_input($_POST['agent_gst_number'] ?? '');
         $email = sanitize_input($_POST['agent_email'] ?? '');
         $phone = sanitize_input($_POST['agent_phone'] ?? '');
         $location = sanitize_input($_POST['agent_location'] ?? '');
@@ -249,12 +250,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 try {
                     $agentStmt = $conn->prepare(
-                        'INSERT INTO agents_details (name, company_name, email, phone, location, status, created_by)
-                         VALUES (:name, :company_name, :email, :phone, :location, "Active", :created_by)'
+                        'INSERT INTO agents_details (name, company_name, gst_number, email, phone, location, status, created_by)
+                         VALUES (:name, :company_name, :gst_number, :email, :phone, :location, "Active", :created_by)'
                     );
                     $agentStmt->execute([
                         ':name' => $name,
                         ':company_name' => $companyName,
+                        ':gst_number' => $gstNumber !== '' ? $gstNumber : null,
                         ':email' => $email,
                         ':phone' => $phone,
                         ':location' => $location,
@@ -1261,6 +1263,7 @@ if ($selectedEmployeeUsername !== '') {
                         <input type="hidden" name="selected_date" value="<?php echo htmlspecialchars($selectedDate, ENT_QUOTES, 'UTF-8'); ?>">
                         <div class="mb-2"><input class="form-control" type="text" name="agent_name" placeholder="Agent Name" required></div>
                         <div class="mb-2"><input class="form-control" type="text" name="agent_company" placeholder="Company Name" required></div>
+                        <div class="mb-2"><input class="form-control" type="text" name="agent_gst_number" placeholder="GST Number (optional)"></div>
                         <div class="mb-2"><input class="form-control" type="email" name="agent_email" placeholder="Agent Email" required></div>
                         <div class="mb-2"><input class="form-control" type="text" name="agent_phone" placeholder="Mobile Number" required></div>
                         <div class="mb-1 text-muted" style="font-size:.76rem;"></div>
@@ -1288,6 +1291,7 @@ if ($selectedEmployeeUsername !== '') {
                             <p><strong>Name:</strong> <?php echo htmlspecialchars($searchedAgent['name'], ENT_QUOTES, 'UTF-8'); ?></p>
                             <p><strong>Email:</strong> <?php echo htmlspecialchars($searchedAgent['email'], ENT_QUOTES, 'UTF-8'); ?></p>
                             <p><strong>Phone:</strong> <?php echo htmlspecialchars($searchedAgent['phone'], ENT_QUOTES, 'UTF-8'); ?></p>
+                            <p><strong>GST Number:</strong> <?php echo htmlspecialchars($searchedAgent['gst_number'] ?? 'N/A', ENT_QUOTES, 'UTF-8'); ?></p>
                             <p class="mb-0"><strong>Location:</strong> <?php echo htmlspecialchars($searchedAgent['location'], ENT_QUOTES, 'UTF-8'); ?></p>
                         </div>
                         <div class="table-responsive">

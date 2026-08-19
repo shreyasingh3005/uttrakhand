@@ -1402,8 +1402,9 @@ async function saveRates(hotelId) {
   });
   if (!rates.length) { showToast('No rates to save','err'); return; }
   try {
-    await api('save_room_price.php', { rates });
-    showToast('Rates saved ✓','ok');
+    const result = await api('save_room_price.php', { rates });
+    const skipped = Number(result.data?.skipped || 0);
+    showToast(skipped ? `Rates saved, ${skipped} invalid row(s) skipped` : 'Rates saved ✓','ok');
     loadRateCal(hotelId);
   } catch(e) { /* handled */ }
 }

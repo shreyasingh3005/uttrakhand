@@ -53,6 +53,7 @@ CREATE TABLE dashboard_details (
 CREATE TABLE agents_details (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(120) NOT NULL,
+    gst_number VARCHAR(30) DEFAULT NULL,
   email VARCHAR(150) NOT NULL,
     phone VARCHAR(20) NOT NULL,
     location VARCHAR(120) NOT NULL,
@@ -755,7 +756,3 @@ SELECT COUNT(*) AS total_users FROM `users`;
 SELECT COUNT(*) AS total_agents FROM `agents_details`;
 SELECT COUNT(*) AS total_employees FROM `employees_details`;
 SELECT COUNT(*) AS total_listings FROM `hotel_listings_details`;
-
--- ═══════════════════════════════════════════════════════════════════════════
--- END of all.sql
--- ═══════════════════════════════════════════════════════════════════════════
