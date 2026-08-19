@@ -775,6 +775,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $matchedHotels = json_decode($_POST['matched_hotels'] ?? '[]', true);
         $matchedHotels = is_array($matchedHotels) ? $matchedHotels : [];
 
+        if (empty($matchedHotels)) {
+            echo json_encode(['success' => false, 'message' => 'Select at least one matching hotel before sending quotes']);
+            exit;
+        }
+
         if ($hotelName === '' && !empty($matchedHotels)) {
             $hotelName = sanitize_input((string)($matchedHotels[0]['name'] ?? ''));
         }
@@ -4781,22 +4786,6 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                     })).join('')
                     : '<tr><td colspan="9" class="text-center text-muted py-4">No active hotels match this location/category/budget.</td></tr>';
 
-                const historyHotels = results.flatMap((hotel) => (hotel.rooms || []).map((room) => ({
-                    name: hotel.name,
-                    room_name: room.name,
-                    prices: room.prices || {},
-                    location: hotel.location || hotel.city || '',
-                    selected_price: Number(room.prices?.EP || hotel.est_budget || hotel.min_price || 0),
-                })));
-                fetch('employee-dashboard.php', {
-                    method: 'POST',
-                    body: new URLSearchParams({
-                        action: 'save_booking_query_history', location, category, check_in: checkIn,
-                        check_out: checkOut, nights: String(nights), adults: String(adults),
-                        children: String(children), rooms: String(rooms), budget: String(budget),
-                        matched_hotels: JSON.stringify(historyHotels)
-                    })
-                }).catch((saveError) => console.error('Query history save error:', saveError));
             })
             .catch((error) => {
                 console.error('Hotel filter error:', error);
@@ -4855,6 +4844,46 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         return lines.join('\n');
     }
 
+    function saveSelectedBookingQueryHistory(selectedIds) {
+        const location = document.getElementById('bookingQueryLocation')?.value.trim() || '';
+        const category = document.getElementById('bookingQueryHotelCategory')?.value || '';
+        const checkIn = document.getElementById('bookingQueryCheckIn')?.value || '';
+        const checkOut = document.getElementById('bookingQueryCheckOut')?.value || '';
+        const nights = Number(document.getElementById('bookingQueryNights')?.value || 0);
+        const adults = Number(document.getElementById('bookingQueryAdults')?.value || 1);
+        const children = Number(document.getElementById('bookingQueryChildren')?.value || 0);
+        const rooms = Number(document.getElementById('bookingQueryRooms')?.value || 1);
+        const budget = Number(document.getElementById('bookingQueryBudget')?.value || 0);
+        const selectedHotels = bookingQueryLastResults.filter((hotel) => selectedIds.includes(String(hotel.id)));
+        const matchedHotels = selectedHotels.flatMap((hotel) => (hotel.rooms || []).map((room) => ({
+            name: hotel.name,
+            hotel_code: hotel.hotel_code || '',
+            category: hotel.category || '',
+            room_name: room.name,
+            bed_type: room.bed_type || '',
+            room_size: room.room_size || '',
+            prices: room.prices || {},
+            location: hotel.location || hotel.city || '',
+            address: hotel.address || '',
+            phone: hotel.phone || '',
+            email: hotel.email || '',
+            available_rooms: Number(room.available_rooms || 0),
+            selected_price: Number(room.prices?.EP || hotel.est_budget || hotel.min_price || 0),
+        })));
+
+        return fetch('employee-dashboard.php', {
+            method: 'POST',
+            body: new URLSearchParams({
+                action: 'save_booking_query_history', location, category, check_in: checkIn,
+                check_out: checkOut, nights: String(nights), adults: String(adults),
+                children: String(children), rooms: String(rooms), budget: String(budget),
+                matched_hotels: JSON.stringify(matchedHotels)
+            })
+        }).then((response) => response.json()).then((data) => {
+            if (!data.success) throw new Error(data.message || 'Unable to save query history');
+        });
+    }
+
     function sendSelectedBookingQueryQuotes() {
         const selected = [...document.querySelectorAll('#bookingQueryResultsBody .hotel-checkbox:checked')].map((box) => box.value);
         if (!selected.length) {
@@ -4862,17 +4891,22 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             return;
         }
 
-        const message = buildBookingQueryShareText(selected);
-        const openWhatsapp = () => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
+        saveSelectedBookingQueryHistory(selected).then(() => {
+            const message = buildBookingQueryShareText(selected);
+            const openWhatsapp = () => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
 
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(message).then(() => {
-                alert(`${selected.length} hotel(s) copied to clipboard. Opening WhatsApp to send to the customer...`);
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(message).then(() => {
+                    alert(`${selected.length} hotel(s) copied to clipboard. Opening WhatsApp to send to the customer...`);
+                    openWhatsapp();
+                }).catch(openWhatsapp);
+            } else {
                 openWhatsapp();
-            }).catch(openWhatsapp);
-        } else {
-            openWhatsapp();
-        }
+            }
+        }).catch((error) => {
+            console.error('Query history save error:', error);
+            showErrorToast('Unable to save query history. Quotes were not sent.');
+        });
     }
 
     const bqCheckInEl = document.getElementById('bookingQueryCheckIn');
