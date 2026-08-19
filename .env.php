@@ -7,9 +7,9 @@
 return [
     // Database
     'DB_HOST'   => 'localhost',
-    'DB_NAME'   => 'employee_management',
-    'DB_USER'   => 'root',
-    'DB_PASS'   => '',
+    'DB_NAME'   => 'u424679052_hotel',
+    'DB_USER'   => 'u424679052_uttra',
+    'DB_PASS'   => '/9cHpZA|KZ',
     'DB_CHARSET'=> 'utf8mb4',
 
     // Rate Limiting (requests per window)
