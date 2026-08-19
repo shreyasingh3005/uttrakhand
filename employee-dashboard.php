@@ -3185,8 +3185,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                     <div class="mb-3">
                         <label class="form-label small fw-semibold text-secondary d-block">Query Type</label>
                         <div class="d-flex gap-4">
-                            <label class="form-check"><input class="form-check-input" type="radio" name="bookingQueryType" value="admin" checked onchange="setBookingQueryType(this.value)"> Admin</label>
-                            <label class="form-check"><input class="form-check-input" type="radio" name="bookingQueryType" value="agent" onchange="setBookingQueryType(this.value)"> Agent</label>
+                            <label class="form-check"><input class="form-check-input" type="radio" name="bookingQueryType" value="agent" checked onchange="setBookingQueryType(this.value)"> Agent</label>
                         </div>
                     </div>
                     <div id="bookingQueryAgentBox" class="border rounded p-3 mb-3" style="display:none;">
@@ -3198,7 +3197,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                         <div id="bookingQueryAgentStatus" class="small text-muted mt-2">Enter agent mobile number.</div>
                     </div>
 
-                    <fieldset id="bookingQueryDetailsFields" disabled>
+                    <fieldset id="bookingQueryDetailsFields">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label for="bookingQueryLocation" class="form-label small fw-semibold text-secondary">Location</label>
@@ -3261,6 +3260,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                 <div id="bookingQueryResultsWrap" class="card p-4 mt-4 shadow-sm border-0" style="border-radius: 8px; display: none;">
                     <div class="d-flex flex-wrap gap-2 mb-3 align-items-center justify-content-between">
                         <h5 class="mb-0 fw-bold text-dark">Generated Results</h5>
+                        <input type="search" class="form-control form-control-sm" id="bookingQueryHotelSearch" placeholder="Search hotel name..." oninput="filterBookingQueryResults()" style="max-width:240px;">
                         <div>
                             <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="selectBookingQueryRows(5)">Top 5</button>
                             <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="selectBookingQueryRows(10)">Top 10</button>
@@ -4874,19 +4874,14 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
     }
 
     let bookingQueryAgent = null;
-    let bookingQueryType = 'admin';
+    let bookingQueryType = 'agent';
 
     function setBookingQueryType(type) {
-        bookingQueryType = type === 'agent' ? 'agent' : 'admin';
+        bookingQueryType = 'agent';
         const agentBox = document.getElementById('bookingQueryAgentBox');
         const form = document.getElementById('bookingQueryDetailsFields');
-        if (agentBox) agentBox.style.display = bookingQueryType === 'agent' ? 'block' : 'none';
-        if (form) form.disabled = bookingQueryType === 'agent' && !bookingQueryAgent;
-        if (bookingQueryType === 'admin') {
-            bookingQueryAgent = null;
-            const status = document.getElementById('bookingQueryAgentStatus');
-            if (status) status.textContent = 'Select Agent type to search an agent.';
-        }
+        if (agentBox) agentBox.style.display = 'block';
+        if (form) form.disabled = false;
     }
 
     function lookupBookingQueryAgent() {
@@ -4894,10 +4889,10 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         const status = document.getElementById('bookingQueryAgentStatus');
         if (bookingQueryAgent && bookingQueryAgent.phone !== phone) bookingQueryAgent = null;
         const form = document.getElementById('bookingQueryDetailsFields');
-        if (!bookingQueryAgent && form) form.disabled = true;
+        if (form) form.disabled = false;
         if (!phone) {
             bookingQueryAgent = null;
-            if (status) status.textContent = 'Enter agent mobile number.';
+            if (status) status.textContent = 'Please enter the Agent Mobile Number before generating the query.';
             return;
         }
         if (status) status.textContent = 'Searching agent...';
@@ -4906,8 +4901,8 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             .then((data) => {
                 if (!data.success || !data.found) {
                     bookingQueryAgent = null;
-                    if (form) form.disabled = true;
-                    if (status) status.textContent = data.message || 'Agent mobile number is not registered.';
+                    if (form) form.disabled = false;
+                    if (status) status.textContent = 'Agent not found. Please enter a registered Agent Mobile Number.';
                     return;
                 }
                 bookingQueryAgent = data.agent;
@@ -4920,11 +4915,15 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             });
     }
 
-            setBookingQueryType('admin');
+            setBookingQueryType('agent');
 
     function generateBookingQueryResults() {
-        if (bookingQueryType === 'agent' && !bookingQueryAgent) {
-            showErrorToast('Please enter and verify a registered agent mobile number first');
+        if (!document.getElementById('bookingQueryAgentPhone')?.value.trim()) {
+            showErrorToast('Please enter the Agent Mobile Number before generating the query.');
+            return;
+        }
+        if (!bookingQueryAgent) {
+            showErrorToast('Agent not found. Please enter a registered Agent Mobile Number.');
             return;
         }
         const location = document.getElementById('bookingQueryLocation')?.value.trim() || '';
@@ -4975,10 +4974,12 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                     ? results.flatMap((hotel) => (hotel.rooms || []).map((room) => {
                         const mealPlans = formatBookingMealPlans(room.prices);
                         const nightlyPrice = Number(room.prices?.EP || hotel.est_budget || hotel.min_price || 0);
+                        const roomIndex = hotel.rooms.indexOf(room);
+                        const selectionKey = `${hotel.id}::${roomIndex}`;
                         return `
-                        <tr>
-                            <td><input class="form-check-input hotel-checkbox" type="checkbox" value="${hotel.id}" id="hotel_${hotel.id}"></td>
-                            <td><label for="hotel_${hotel.id}">${hotel.name}</label></td>
+                        <tr data-hotel-name="${String(hotel.name || '').toLowerCase()}">
+                            <td><input class="form-check-input hotel-checkbox" type="checkbox" value="${selectionKey}" id="hotel_${selectionKey}"></td>
+                            <td><label for="hotel_${selectionKey}">${hotel.name}</label></td>
                             <td>${room.name || 'N/A'}</td>
                             <td>${mealPlans}</td>
                             <td>${hotel.location || hotel.city || 'N/A'}</td>
@@ -5011,8 +5012,15 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             });
     }
 
+    function filterBookingQueryResults() {
+        const query = (document.getElementById('bookingQueryHotelSearch')?.value || '').trim().toLowerCase();
+        document.querySelectorAll('#bookingQueryResultsBody tr[data-hotel-name]').forEach((row) => {
+            row.style.display = !query || row.dataset.hotelName.includes(query) ? '' : 'none';
+        });
+    }
+
     function selectBookingQueryRows(limit) {
-        const boxes = document.querySelectorAll('#bookingQueryResultsBody .hotel-checkbox');
+        const boxes = [...document.querySelectorAll('#bookingQueryResultsBody .hotel-checkbox')].filter((box) => box.closest('tr')?.style.display !== 'none');
         boxes.forEach((box) => box.checked = false);
         if (limit === 'all') {
             boxes.forEach((box) => box.checked = true);
@@ -5036,19 +5044,20 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         const rooms = document.getElementById('bookingQueryRooms')?.value || '1';
         const budget = Number(document.getElementById('bookingQueryBudget')?.value || 0);
 
-        const selectedHotels = bookingQueryLastResults.filter((hotel) => selectedIds.includes(String(hotel.id)));
-
-        const firstHotel = selectedHotels[0] || {};
-        const firstRoom = firstHotel.rooms?.[0] || {};
-        return AirwaysQuotation.format({
+        const selectedRows = selectedIds.map((key) => {
+            const [hotelId, roomIndex] = String(key).split('::');
+            const hotel = bookingQueryLastResults.find((item) => String(item.id) === hotelId);
+            const room = hotel?.rooms?.[Number(roomIndex)];
+            return hotel && room ? { hotel, room } : null;
+        }).filter(Boolean);
+        return AirwaysQuotation.formatMany(selectedRows.map(({ hotel, room }) => ({
             id: window.employeeBookingQueryId,
-            hotelName: firstHotel.name, hotelLocation: firstHotel.location || firstHotel.city || location,
-            roomCategory: firstRoom.name || firstRoom.category,
-            mealPlan: firstRoom.meal_plan || firstRoom.mealPlan,
+            hotelName: hotel.name, hotelLocation: hotel.location || hotel.city || location,
+            roomCategory: room.name || room.category, mealPlan: room.meal_plan || room.mealPlan || Object.keys(room.prices || {})[0],
             checkIn, checkOut, adults, children, rooms,
-            roomPrice: firstRoom.prices?.EP || firstHotel.est_budget || firstHotel.min_price || budget,
-            matchedHotels: selectedHotels
-        });
+            roomPrice: room.prices?.EP || hotel.est_budget || hotel.min_price || budget,
+            matchedHotels: [{ ...hotel, rooms: [room] }]
+        })));
     }
 
     function saveSelectedBookingQueryHistory(selectedIds) {
@@ -5061,8 +5070,13 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         const children = Number(document.getElementById('bookingQueryChildren')?.value || 0);
         const rooms = Number(document.getElementById('bookingQueryRooms')?.value || 1);
         const budget = Number(document.getElementById('bookingQueryBudget')?.value || 0);
-        const selectedHotels = bookingQueryLastResults.filter((hotel) => selectedIds.includes(String(hotel.id)));
-        const matchedHotels = selectedHotels.flatMap((hotel) => (hotel.rooms || []).map((room) => ({
+        const selectedRows = selectedIds.map((key) => {
+            const [hotelId, roomIndex] = String(key).split('::');
+            const hotel = bookingQueryLastResults.find((item) => String(item.id) === hotelId);
+            const room = hotel?.rooms?.[Number(roomIndex)];
+            return hotel && room ? { hotel, room } : null;
+        }).filter(Boolean);
+        const matchedHotels = selectedRows.map(({ hotel, room }) => ({
             name: hotel.name,
             hotel_code: hotel.hotel_code || '',
             category: hotel.category || '',
@@ -5076,7 +5090,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             email: hotel.email || '',
             available_rooms: Number(room.available_rooms || 0),
             selected_price: Number(room.prices?.EP || hotel.est_budget || hotel.min_price || 0),
-        })));
+        }));
 
         return fetch('employee-dashboard.php', {
             method: 'POST',

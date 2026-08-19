@@ -101,5 +101,9 @@
         ].join('\n');
     }
 
-    window.AirwaysQuotation = { format, plainText: decodeHtml };
+    function formatMany(items) {
+        return (Array.isArray(items) ? items : []).map((item) => format(item)).join('\n\n');
+    }
+
+    window.AirwaysQuotation = { format, formatMany, plainText: decodeHtml };
 })(window);

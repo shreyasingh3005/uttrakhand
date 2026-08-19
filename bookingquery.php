@@ -336,6 +336,7 @@ try {
     <div id="adminQueryResultsWrap" class="panel mt-4" style="display: none;">
         <div class="d-flex flex-wrap gap-2 mb-3 align-items-center justify-content-between">
             <h5 class="mb-0 fw-bold">Generated Results</h5>
+            <input type="search" class="form-control form-control-sm" id="adminQueryHotelSearch" placeholder="Search hotel name..." oninput="filterAdminQueryResults()" style="max-width:240px;">
             <div>
                 <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="selectAdminQueryRows(5)">Top 5</button>
                 <button type="button" class="btn btn-sm btn-outline-secondary me-2" onclick="selectAdminQueryRows(10)">Top 10</button>
@@ -575,18 +576,19 @@ function generateBookingResultsFromInputs(locationId, categoryId, checkInId, che
             ? results.flatMap((hotel) => (hotel.rooms || []).map((room) => {
                 const mealPlans = formatAdminBookingMealPlans(room.prices);
                 const nightlyPrice = Number(room.prices?.EP || hotel.est_budget || hotel.min_price || 0);
+                const roomIndex = hotel.rooms.indexOf(room);
+                const selectionKey = `${hotel.id}::${roomIndex}`;
                 return `
-                <tr>
-                    <td><input class="form-check-input hotel-checkbox" type="checkbox" value="${hotel.id}" id="${resultBodyId}_${hotel.id}"></td>
-                    <td><label for="${resultBodyId}_${hotel.id}">${hotel.name}</label></td>
+                <tr data-hotel-name="${String(hotel.name || '').toLowerCase()}">
+                    <td><input class="form-check-input hotel-checkbox" type="checkbox" value="${selectionKey}" id="${resultBodyId}_${hotel.id}_${roomIndex}"></td>
+                    <td><label for="${resultBodyId}_${hotel.id}_${roomIndex}">${hotel.name}</label></td>
                     <td>${room.name || 'N/A'}</td>
                     <td>${mealPlans}</td>
                     <td>${hotel.location || hotel.city || 'N/A'}</td>
                     <td>₹${nightlyPrice.toLocaleString('en-IN')}</td>
                     <td>${checkIn || 'N/A'}</td>
                     <td>${checkOut || 'N/A'}</td>
-                </tr>
-            `;
+                </tr>`;
             })).join('')
             : '<tr><td colspan="9" class="text-center text-muted py-4">No active hotels match this location/category/budget.</td></tr>';
 
@@ -611,8 +613,15 @@ function generateBookingResultsFromInputs(locationId, categoryId, checkInId, che
     });
 }
 
+function filterAdminQueryResults() {
+    const query = (document.getElementById('adminQueryHotelSearch')?.value || '').trim().toLowerCase();
+    document.querySelectorAll('#adminQueryResultsBody tr[data-hotel-name]').forEach((row) => {
+        row.style.display = !query || row.dataset.hotelName.includes(query) ? '' : 'none';
+    });
+}
+
 function selectBookingQueryRows(limit) {
-    const boxes = document.querySelectorAll('.hotel-checkbox');
+    const boxes = [...document.querySelectorAll('.hotel-checkbox')].filter((box) => box.closest('tr')?.style.display !== 'none');
     boxes.forEach((box) => box.checked = false);
     if (limit === 'all') {
         boxes.forEach((box) => box.checked = true);
@@ -638,18 +647,21 @@ function buildHotelShareText(prefixIds, resultBodyId) {
 
     const selectedIds = [...document.querySelectorAll(`#${resultBodyId} .hotel-checkbox:checked`)].map((box) => box.value);
     const results = resultsDataStore[resultBodyId] || [];
-    const selectedHotels = results.filter((hotel) => selectedIds.includes(String(hotel.id)));
-
-    const firstHotel = selectedHotels[0] || {};
-    const firstRoom = firstHotel.rooms?.[0] || {};
+    const selectedRows = selectedIds.map((key) => {
+        const [hotelId, roomIndex] = String(key).split('::');
+        const hotel = results.find((item) => String(item.id) === hotelId);
+        const room = hotel?.rooms?.[Number(roomIndex)];
+        return hotel && room ? { hotel, room } : null;
+    }).filter(Boolean);
     return {
-        text: AirwaysQuotation.format({
-            hotelName: firstHotel.name, hotelLocation: firstHotel.location || firstHotel.city || location,
-            roomCategory: firstRoom.name || firstRoom.category, mealPlan: firstRoom.meal_plan || firstRoom.mealPlan,
+        text: AirwaysQuotation.formatMany(selectedRows.map(({ hotel, room }) => ({
+            id: window.adminBookingQueryId,
+            hotelName: hotel.name, hotelLocation: hotel.location || hotel.city || location,
+            roomCategory: room.name || room.category, mealPlan: room.meal_plan || room.mealPlan || Object.keys(room.prices || {})[0],
             checkIn, checkOut, adults, children, rooms,
-            roomPrice: firstRoom.prices?.EP || firstHotel.est_budget || firstHotel.min_price || budget,
-            matchedHotels: selectedHotels
-        }),
+            roomPrice: room.prices?.EP || hotel.est_budget || hotel.min_price || budget,
+            matchedHotels: [{ ...hotel, rooms: [room] }]
+        }))),
         count: selectedIds.length
     };
 }
@@ -685,7 +697,7 @@ function generateAdminBookingQueryResults() {
 }
 
 function selectAdminQueryRows(limit) {
-    const boxes = document.querySelectorAll('#adminQueryResultsBody .hotel-checkbox');
+    const boxes = [...document.querySelectorAll('#adminQueryResultsBody .hotel-checkbox')].filter((box) => box.closest('tr')?.style.display !== 'none');
     boxes.forEach((box) => box.checked = false);
     if (limit === 'all') {
         boxes.forEach((box) => box.checked = true);
@@ -712,8 +724,13 @@ function sendSelectedAdminQueryQuotes() {
         adults: 'adminQueryAdults', children: 'adminQueryChildren', rooms: 'adminQueryRooms', budget: 'adminQueryBudget'
     };
     const results = resultsDataStore[resultBodyId] || [];
-    const selectedHotels = results.filter((hotel) => selectedIds.includes(String(hotel.id)));
-    const matchedHotels = selectedHotels.flatMap((hotel) => (hotel.rooms || []).map((room) => ({
+    const selectedRows = selectedIds.map((key) => {
+        const [hotelId, roomIndex] = String(key).split('::');
+        const hotel = results.find((item) => String(item.id) === hotelId);
+        const room = hotel?.rooms?.[Number(roomIndex)];
+        return hotel && room ? { hotel, room } : null;
+    }).filter(Boolean);
+    const matchedHotels = selectedRows.map(({ hotel, room }) => ({
         name: hotel.name,
         hotel_code: hotel.hotel_code || '',
         category: hotel.category || '',
@@ -727,7 +744,7 @@ function sendSelectedAdminQueryQuotes() {
         email: hotel.email || '',
         available_rooms: Number(room.available_rooms || 0),
         selected_price: Number(room.prices?.EP || hotel.est_budget || hotel.min_price || 0),
-    })));
+    }));
     const params = new URLSearchParams({
         action: 'save_booking_query_history',
         location: document.getElementById(prefixIds.location)?.value.trim() || '',
