@@ -1206,7 +1206,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             http_response_code(200);
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['success' => true, 'message' => 'Agent locked and query saved successfully']);
+            echo json_encode(['success' => true, 'message' => 'Agent locked and query saved successfully', 'query_id' => $newQueryId]);
         } catch (PDOException $e) {
             http_response_code(200);
             header('Content-Type: application/json; charset=utf-8');
@@ -5021,27 +5021,17 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
 
         const selectedHotels = bookingQueryLastResults.filter((hotel) => selectedIds.includes(String(hotel.id)));
 
-        const lines = [
-            '*Hotel Options for Your Stay*',
-            `Location: ${location} | Category: ${category}`,
-            `Check-In: ${checkIn} | Check-Out: ${checkOut} | Nights: ${nights}`,
-            `Guests: ${adults} Adult(s), ${children} Child(ren) | Rooms: ${rooms}`,
-            budget > 0 ? `Budget: ₹${budget.toLocaleString('en-IN')}` : '',
-            ''
-        ].filter(Boolean);
-
-        selectedHotels.forEach((hotel, idx) => {
-            lines.push(`*${idx + 1}. ${hotel.name}*`);
-            lines.push(`Location: ${hotel.location || hotel.city || ''}`);
-            lines.push(`Category: ${hotel.category || 'N/A'}`);
-            lines.push(`Available Rooms: ${hotel.available_rooms || 0}`);
-            lines.push(`Price / Night: ₹${Number(hotel.min_price || 0).toLocaleString('en-IN')}`);
-            lines.push(`Estimated Total (${nights}N x ${rooms}R): ₹${Number(hotel.est_total || hotel.total_min || 0).toLocaleString('en-IN')}`);
-            lines.push('');
+        const firstHotel = selectedHotels[0] || {};
+        const firstRoom = firstHotel.rooms?.[0] || {};
+        return AirwaysQuotation.format({
+            id: window.employeeBookingQueryId,
+            hotelName: firstHotel.name, hotelLocation: firstHotel.location || firstHotel.city || location,
+            roomCategory: firstRoom.name || firstRoom.category,
+            mealPlan: firstRoom.meal_plan || firstRoom.mealPlan,
+            checkIn, checkOut, adults, children, rooms,
+            roomPrice: firstRoom.prices?.EP || firstHotel.est_budget || firstHotel.min_price || budget,
+            matchedHotels: selectedHotels
         });
-
-        lines.push('Please let us know which hotel you would like to book. 😊');
-        return lines.join('\n');
     }
 
     function saveSelectedBookingQueryHistory(selectedIds) {
@@ -5083,6 +5073,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             })
         }).then((response) => response.json()).then((data) => {
             if (!data.success) throw new Error(data.message || 'Unable to save query history');
+            return data;
         });
     }
 
@@ -5093,7 +5084,8 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             return;
         }
 
-        saveSelectedBookingQueryHistory(selected).then(() => {
+        saveSelectedBookingQueryHistory(selected).then((data) => {
+            window.employeeBookingQueryId = data.id;
             const message = buildBookingQueryShareText(selected);
             const openWhatsapp = () => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
 
@@ -5579,32 +5571,9 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             return;
         }
 
-        const queryText = `Booking Query for Agent: ${currentQueryAgent}\n\n` +
-            `Hotel: ${hotelName}\n` +
-            `Room Category: ${roomCategory}\n` +
-            `Meal Plan: ${mealPlan}\n\n` +
-            `Check-in: ${checkIn}\n` +
-            `Check-out: ${checkOut}\n` +
-            `Adults: ${adults}\n` +
-            `Children: ${children}\n` +
-            `Rooms: ${rooms}\n\n` +
-            `Total Amount: ₹${totalAmount}\n` +
-            `Client Name: ${clientName}\n` +
-            `Client Mobile: ${clientMobile}\n` +
-            (specialRequest ? `Special Request: ${specialRequest}\n` : '');
-
-        // Copy to clipboard
-        navigator.clipboard.writeText(queryText).then(() => {
-            showToastMsg('Query copied to clipboard');
-        }).catch(() => {
-            // Fallback for older browsers
-            const textArea = document.createElement('textarea');
-            textArea.value = queryText;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textArea);
-            showToastMsg('Query copied to clipboard');
+        let queryText = AirwaysQuotation.format({
+            hotelName, roomCategory, mealPlan, checkIn, checkOut, adults, children, rooms,
+            roomPrice: totalAmount, agentName: currentQueryAgent, agentPhone
         });
 
         // Lock agent and save query history
@@ -5634,6 +5603,11 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    queryText = AirwaysQuotation.format({
+                        hotelName, roomCategory, mealPlan, checkIn, checkOut, adults, children, rooms,
+                        roomPrice: totalAmount, agentName: currentQueryAgent, agentPhone, id: data.id
+                    });
+                    navigator.clipboard?.writeText(queryText).catch(() => {});
                     showToastMsg('Query generated and agent locked for 5 hours');
                     document.getElementById('generatedQueryText').value = queryText;
                     document.getElementById('generatedQueryDisplay').style.display = 'block';
@@ -5847,7 +5821,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                 <td>${hotelSummary}</td><td>${mealSummary}</td><td>${dates}</td>
                 <td>A:${item.adults || 1} C:${item.children || 0} R:${item.rooms || 1}</td>
                 <td>₹${Number(item.budget || 0).toLocaleString('en-IN')}/night</td><td>${generatedAt}</td>
-                <td><button class="btn btn-sm btn-outline-secondary" data-query-text="${escapeQueryHistoryHtml(text)}" onclick="copyQueryText(this.dataset.queryText)">Copy</button></td>
+                <td><button class="btn btn-sm btn-outline-secondary" data-query-text="${escapeQueryHistoryHtml(text)}" data-quotation="${escapeQueryHistoryHtml(JSON.stringify({ id: item.id, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, mealPlan: item.meal_plan, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: item.total_amount, agentName: item.agent_name, agentPhone: item.agent_phone }))}" onclick="copyQueryText(this.dataset.queryText, this)">Copy</button></td>
             </tr>`;
         });
         history.forEach(item => {
@@ -5919,40 +5893,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                 return showErrorToast(data.message || 'Unable to load query details');
             }
 
-            const lines = [];
-            lines.push('Agent Name: ' + (data.agent_name || 'N/A'));
-            lines.push('Agent Phone: ' + (data.agent_phone || 'N/A'));
-            lines.push('Hotel / Property: ' + (data.hotel_name || 'N/A'));
-            lines.push('Room Category: ' + (data.room_category || 'N/A'));
-            lines.push('Check-in: ' + (data.check_in || 'N/A'));
-            lines.push('Check-out: ' + (data.check_out || 'N/A'));
-            lines.push('Nights: ' + (data.nights !== '' ? data.nights : 'N/A'));
-            lines.push('Adults: ' + (data.adults || 1));
-            lines.push('Children: ' + (data.children || 0));
-            lines.push('Rooms: ' + (data.rooms || 1));
-            lines.push('Extra Bed: ' + (data.extra_bed || 'No'));
-            lines.push('Meal Plan: ' + (data.meal_plan || 'N/A'));
-            lines.push('Total Amount: ₹' + (data.total_amount || 0));
-            lines.push('Advance Paid: ₹' + (data.paid_amount || 0));
-            lines.push('Client Name: ' + (data.client_name || 'N/A'));
-            lines.push('Client Mobile: ' + (data.client_mobile || 'N/A'));
-            lines.push('Client Email: ' + (data.client_email || 'N/A'));
-            lines.push('Special Request: ' + (data.special_request || 'None'));
-
-            if (Array.isArray(data.hotels) && data.hotels.length > 0) {
-                lines.push('--- Matched Hotel Details ---');
-                data.hotels.forEach((hotel, index) => {
-                    lines.push('Hotel ' + (index + 1) + ': ' + (hotel.hotel_name || 'N/A'));
-                    lines.push('Location: ' + (hotel.location || 'N/A'));
-                    lines.push('Category: ' + (hotel.category || 'N/A'));
-                    lines.push('Room Type: ' + (hotel.room_type || 'N/A'));
-                    lines.push('Weekday Price: ₹' + (hotel.weekday_price || 0));
-                    lines.push('Weekend Price: ₹' + (hotel.weekend_price || 0));
-                    lines.push('GST: ' + (hotel.gst || 'N/A') + '%');
-                });
-            }
-
-            const text = lines.join('\n');
+            const text = AirwaysQuotation.format({ ...data, id: queryId, hotelName: data.hotel_name, roomCategory: data.room_category, matchedHotels: data.hotels });
             if (navigator.clipboard && window.isSecureContext) {
                 await navigator.clipboard.writeText(text);
             } else {
@@ -5970,7 +5911,9 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         }
     }
 
-    async function copyQueryText(text) {
+    async function copyQueryText(text, button) {
+        const row = button?.closest('.query-history-row');
+        if (row?.dataset.quotation) text = AirwaysQuotation.format(JSON.parse(row.dataset.quotation));
         if (!text) return showErrorToast('No query text available to copy');
         try {
             if (navigator.clipboard && window.isSecureContext) {
@@ -6089,6 +6032,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         }
     };
     </script>
+<script src="/assets/js/quotation-template.js"></script>
 <script src="/assets/js/ui-common.js"></script>
 </body>
 

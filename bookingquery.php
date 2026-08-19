@@ -370,6 +370,7 @@ try {
 </div><!-- /.main-wrapper -->
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/js/quotation-template.js"></script>
 <script src="/assets/js/ui-common.js"></script>
 <script>
 const listingPayload = <?php echo json_encode($listingDataForJs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
@@ -453,7 +454,7 @@ function loadAdminGeneratedQueryHistory() {
                     <td>${escapeAdminHistoryHtml(item.hotel_category || 'All Categories')}</td><td>${hotelNames}</td><td>${meals}</td>
                     <td>${escapeAdminHistoryHtml(item.check_in || 'N/A')} - ${escapeAdminHistoryHtml(item.check_out || 'N/A')}</td>
                     <td>₹${Number(item.budget || 0).toLocaleString('en-IN')}/night</td><td>${escapeAdminHistoryHtml(item.lock_until ? new Date(item.lock_until).toLocaleString() : 'N/A')}</td><td>${escapeAdminHistoryHtml(new Date(item.generated_at).toLocaleString())}</td>
-                    <td><button type="button" class="btn btn-sm btn-outline-secondary" data-query-text="${escapeAdminHistoryHtml(item.query_text)}" onclick="copyAdminGeneratedQuery(this)">Copy</button></td>
+                    <td><button type="button" class="btn btn-sm btn-outline-secondary" data-query-text="${escapeAdminHistoryHtml(item.query_text)}" data-quotation="${escapeAdminHistoryHtml(JSON.stringify({ id: item.id, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: null, agentName: item.agent_name, agentPhone: item.agent_phone, matchedHotels: hotels }))}" onclick="copyAdminHistoryQuotation(this)">Copy</button></td>
                 </tr>`;
             }).join('')}</tbody></table></div>` : '<div class="text-center py-3 text-muted">No generated Booking Query history found.</div>';
         applyAdminQueryHistoryFilter('all');
@@ -461,8 +462,9 @@ function loadAdminGeneratedQueryHistory() {
     .catch(() => {});
 }
 
-function copyAdminGeneratedQuery(button) {
-    copyQueryText(button?.dataset.queryText || '');
+function copyAdminHistoryQuotation(button) {
+    const quotation = button?.dataset.quotation ? JSON.parse(button.dataset.quotation) : null;
+    copyQueryText(quotation ? AirwaysQuotation.format(quotation) : button?.dataset.queryText || '');
 }
 
 function applyAdminQueryHistoryFilter(filter) {
@@ -638,27 +640,18 @@ function buildHotelShareText(prefixIds, resultBodyId) {
     const results = resultsDataStore[resultBodyId] || [];
     const selectedHotels = results.filter((hotel) => selectedIds.includes(String(hotel.id)));
 
-    const lines = [
-        '*Hotel Options for Your Stay*',
-        `Location: ${location} | Category: ${category}`,
-        `Check-In: ${checkIn} | Check-Out: ${checkOut} | Nights: ${nights}`,
-        `Guests: ${adults} Adult(s), ${children} Child(ren) | Rooms: ${rooms}`,
-        budget > 0 ? `Budget: ₹${budget.toLocaleString('en-IN')}` : '',
-        ''
-    ].filter(Boolean);
-
-    selectedHotels.forEach((hotel, idx) => {
-        lines.push(`*${idx + 1}. ${hotel.name}*`);
-        lines.push(`Location: ${hotel.location || hotel.city || ''}`);
-        lines.push(`Category: ${hotel.category || 'N/A'}`);
-        lines.push(`Available Rooms: ${hotel.available_rooms || 0}`);
-        lines.push(`Price / Night: ₹${Number(hotel.min_price || 0).toLocaleString('en-IN')}`);
-        lines.push(`Estimated Total (${nights}N x ${rooms}R): ₹${Number(hotel.est_total || hotel.total_min || 0).toLocaleString('en-IN')}`);
-        lines.push('');
-    });
-
-    lines.push('Please let us know which hotel you would like to book. \ud83d\ude0a');
-    return { text: lines.join('\n'), count: selectedIds.length };
+    const firstHotel = selectedHotels[0] || {};
+    const firstRoom = firstHotel.rooms?.[0] || {};
+    return {
+        text: AirwaysQuotation.format({
+            hotelName: firstHotel.name, hotelLocation: firstHotel.location || firstHotel.city || location,
+            roomCategory: firstRoom.name || firstRoom.category, mealPlan: firstRoom.meal_plan || firstRoom.mealPlan,
+            checkIn, checkOut, adults, children, rooms,
+            roomPrice: firstRoom.prices?.EP || firstHotel.est_budget || firstHotel.min_price || budget,
+            matchedHotels: selectedHotels
+        }),
+        count: selectedIds.length
+    };
 }
 
 function copyAndShareHotelQuotes(prefixIds, resultBodyId) {
@@ -754,6 +747,7 @@ function sendSelectedAdminQueryQuotes() {
         .then((response) => response.json())
         .then((data) => {
             if (!data.success) throw new Error(data.message || 'Unable to save query history');
+            window.adminBookingQueryId = data.id;
             copyAndShareHotelQuotes(prefixIds, resultBodyId);
         })
         .catch((error) => {
@@ -1017,7 +1011,13 @@ function generateAdminQueryFromForm() {
         specialRequest: document.getElementById('adminQuerySpecialRequest')?.value.trim(),
     };
 
-    const queryText = [
+    let queryText = AirwaysQuotation.format({
+        hotelName: values.hotelName, hotelLocation: values.location, roomCategory: values.roomCategory,
+        mealPlan: values.mealPlan, checkIn: values.checkIn, checkOut: values.checkOut,
+        adults: values.adults, children: values.children, rooms: values.rooms,
+        roomPrice: values.totalAmount, agentName: values.agentName, agentPhone: values.agentPhone
+    });
+/*
         `Booking Query:`,
         `Agent Name: ${values.agentName || 'N/A'}`,
         `Agent Phone: ${values.agentPhone}`,
@@ -1037,7 +1037,7 @@ function generateAdminQueryFromForm() {
         `Total Amount: ₹${values.totalAmount}`,
         `Extra Bed: ${values.extraBed}`,
         `Special Request: ${values.specialRequest || 'None'}`,
-    ].join('\n');
+    ].join('\n'); */
 
     document.getElementById('adminGeneratedQueryText').value = queryText;
     document.getElementById('adminGeneratedQueryWhatsappLink').href =
@@ -1068,6 +1068,17 @@ function generateAdminQueryFromForm() {
         })
     }).then(r => r.json()).then(data => {
         if (data.success) {
+            queryText = AirwaysQuotation.format({
+                hotelName: values.hotelName, hotelLocation: values.location, roomCategory: values.roomCategory,
+                mealPlan: values.mealPlan, checkIn: values.checkIn, checkOut: values.checkOut,
+                adults: values.adults, children: values.children, rooms: values.rooms,
+                roomPrice: values.totalAmount, agentName: values.agentName, agentPhone: values.agentPhone,
+                id: data.query_id
+            });
+            document.getElementById('adminGeneratedQueryText').value = queryText;
+            document.getElementById('adminGeneratedQueryWhatsappLink').href =
+                `https://wa.me/${agentPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(queryText)}`;
+            navigator.clipboard?.writeText(queryText).catch(() => {});
             setTimeout(() => { location.reload(); }, 600);
         } else {
             console.warn('Unable to save query:', data.message);

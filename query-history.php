@@ -165,7 +165,7 @@ try {
                 <thead class="table-light"><tr><th>Employee</th><th>Agent</th><th>Phone</th><th>Hotel</th><th>Room Category</th><th>Dates</th><th>Pax</th><th>Amount</th><th>Location</th><th>Generated At</th><th>Lock Until</th><th>Actions</th></tr></thead>
                 <tbody>
                     <?php foreach ($admin_history as $item): ?>
-                    <tr class="admin-history-row"
+                    <tr class="admin-history-row" data-query-id="<?php echo (int)($item['id'] ?? 0); ?>"
                         data-employee="<?php echo htmlspecialchars(strtolower((string)($item['created_by_username'] ?? $item['employee_name'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>"
                         data-hotel="<?php echo htmlspecialchars(strtolower((string)($item['hotel_name'] ?? ($item['hotel_category'] ?? ''))), ENT_QUOTES, 'UTF-8'); ?>"
                         data-location="<?php echo htmlspecialchars(strtolower((string)($item['location'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>"
@@ -215,6 +215,7 @@ try {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/js/quotation-template.js"></script>
 <script src="/assets/js/ui-common.js"></script>
 <script>
 function getAdminHistoryControls() {
@@ -301,6 +302,32 @@ function copyQueryText(queryText, buttonElement) {
         }
         return;
     }
+
+    let matchedHotels = [];
+    try { matchedHotels = JSON.parse(row.dataset.hotels || '[]'); } catch (e) { matchedHotels = []; }
+    const firstHotel = matchedHotels[0] || {};
+    const firstRoom = firstHotel.rooms?.[0] || firstHotel;
+    const quotationText = AirwaysQuotation.format({
+        id: row.dataset.queryId,
+        hotelName: firstHotel.name || row.dataset.hotel,
+        hotelLocation: firstHotel.location || firstHotel.city || row.dataset.location,
+        roomCategory: firstRoom.room_name || firstRoom.category || row.dataset.room,
+        mealPlan: firstRoom.prices ? Object.keys(firstRoom.prices)[0] : '',
+        checkIn: row.dataset.checkin, checkOut: row.dataset.checkout,
+        adults: row.dataset.adults, children: row.dataset.children, rooms: row.dataset.rooms,
+        roomPrice: firstRoom.selected_price || firstRoom.basePrice || row.dataset.budget,
+        matchedHotels
+    });
+    navigator.clipboard.writeText(quotationText).then(() => alert('Query copied to clipboard!')).catch(() => {
+        const textarea = document.createElement('textarea');
+        textarea.value = quotationText;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert('Query copied to clipboard!');
+    });
+    return;
     
     // Extract query details from data attributes
     const checkIn = row.dataset.checkin || '';
