@@ -9,7 +9,7 @@ return [
     'DB_HOST'   => 'localhost',
     'DB_NAME'   => 'u424679052_hotel',
     'DB_USER'   => 'u424679052_venture',
-    'DB_PASS'   => '1:g4:G/fus>G',
+    'DB_PASS'   => 'VTF?D;PsA!2d',
     'DB_CHARSET'=> 'utf8mb4',
 
     // Rate Limiting (requests per window)
