@@ -773,6 +773,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit;
     }
 
+    if ($_POST['action'] === 'acquire_booking_query_agent_lock') {
+        http_response_code(200);
+        header('Content-Type: application/json; charset=utf-8');
+        $agentPhone = sanitize_input($_POST['agent_phone'] ?? '');
+        if ($agentPhone === '') {
+            echo json_encode(['success' => false, 'message' => 'Agent mobile number is required']);
+            exit;
+        }
+        try {
+            $agentStmt = $conn->prepare('SELECT id, name, phone FROM agents_details WHERE phone = :phone AND status = "Active" LIMIT 1');
+            $agentStmt->execute([':phone' => $agentPhone]);
+            $agent = $agentStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$agent) {
+                echo json_encode(['success' => false, 'message' => 'Agent mobile number is not registered.']);
+                exit;
+            }
+
+            $conn->beginTransaction();
+            $lockStmt = $conn->prepare('SELECT id, employee_id, employee_username, lock_until FROM agent_query_locks WHERE agent_id = :agent_id AND lock_until > NOW() AND status = "Locked" ORDER BY lock_until DESC LIMIT 1 FOR UPDATE');
+            $lockStmt->execute([':agent_id' => (int)$agent['id']]);
+            $activeLock = $lockStmt->fetch(PDO::FETCH_ASSOC);
+            if ($activeLock && $user_role !== 'admin' && ((int)$activeLock['employee_id'] !== (int)$user_id) && $activeLock['employee_username'] !== $username) {
+                $conn->rollBack();
+                echo json_encode(['success' => false, 'message' => 'This agent is currently locked with another employee and cannot be booked by you until the lock expires.', 'lock_until' => $activeLock['lock_until']]);
+                exit;
+            }
+
+            if ($activeLock) {
+                $lockUntil = $activeLock['lock_until'];
+            } else {
+                $lockUntil = $user_role === 'admin' ? date('Y-m-d H:i:s') : date('Y-m-d H:i:s', strtotime('+6 hours'));
+                $newLockStmt = $conn->prepare('INSERT INTO agent_query_locks (agent_id, employee_id, employee_username, created_by_user_id, created_by_role, generated_at, locked_at, lock_until, query_text, status, booking_status, ip_address, user_agent) VALUES (:agent_id, :employee_id, :employee_username, :created_by_user_id, :created_by_role, NOW(), NOW(), :lock_until, :query_text, :status, "Unbooked", :ip_address, :user_agent)');
+                $newLockStmt->execute([
+                    ':agent_id' => (int)$agent['id'], ':employee_id' => $user_id, ':employee_username' => $username,
+                    ':created_by_user_id' => $user_id, ':created_by_role' => $user_role, ':lock_until' => $lockUntil,
+                    ':query_text' => 'Booking Query generated for agent ' . $agent['name'] . ' (' . $agent['phone'] . ')',
+                    ':status' => $user_role === 'admin' ? 'Open' : 'Locked',
+                    ':ip_address' => $_SERVER['REMOTE_ADDR'] ?? null, ':user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? null,
+                ]);
+            }
+            $conn->commit();
+            echo json_encode(['success' => true, 'agent' => $agent, 'lock_until' => $lockUntil]);
+        } catch (PDOException $e) {
+            if ($conn->inTransaction()) $conn->rollBack();
+            echo json_encode(['success' => false, 'message' => 'Unable to lock this agent. Please try again.']);
+        }
+        exit;
+    }
+
     if ($_POST['action'] === 'save_booking_query_history') {
         http_response_code(200);
         header('Content-Type: application/json; charset=utf-8');
@@ -786,6 +835,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $children = max(0, (int)($_POST['children'] ?? 0));
         $rooms = max(1, (int)($_POST['rooms'] ?? 1));
         $budget = max(0, (float)($_POST['budget'] ?? 0));
+        $queryType = strtolower(trim((string)($_POST['query_type'] ?? 'admin')));
+        $queryType = $queryType === 'agent' ? 'agent' : 'admin';
+        $agentPhone = sanitize_input($_POST['agent_phone'] ?? '');
         $hotelName = sanitize_input($_POST['hotel_name'] ?? '');
         $roomCategory = sanitize_input($_POST['room_category'] ?? '');
         $matchedHotels = json_decode($_POST['matched_hotels'] ?? '[]', true);
@@ -794,6 +846,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if (empty($matchedHotels)) {
             echo json_encode(['success' => false, 'message' => 'Select at least one matching hotel before sending quotes']);
             exit;
+        }
+
+        $agent = null;
+        $lockUntil = null;
+        if ($queryType === 'agent') {
+            if ($agentPhone === '') {
+                echo json_encode(['success' => false, 'message' => 'Agent mobile number is required']);
+                exit;
+            }
+            $agentStmt = $conn->prepare('SELECT id, name, phone, location, company_name, email FROM agents_details WHERE phone = :phone AND status = "Active" LIMIT 1');
+            $agentStmt->execute([':phone' => $agentPhone]);
+            $agent = $agentStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$agent) {
+                echo json_encode(['success' => false, 'message' => 'Agent mobile number is not registered.']);
+                exit;
+            }
         }
 
         if ($hotelName === '' && !empty($matchedHotels)) {
@@ -805,6 +873,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         $lines = [
             'Booking Query',
+                $queryType === 'agent' ? 'Agent: ' . (($agent['name'] ?? '') . ' (' . ($agent['phone'] ?? '') . ')') : '',
             'Location: ' . ($location ?: 'Any'),
             'Hotel Category: ' . ($category ?: 'All Categories'),
             'Check-In: ' . ($checkIn ?: 'N/A'),
@@ -826,12 +895,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
 
         try {
+            $conn->beginTransaction();
+            if ($agent) {
+                $lockStmt = $conn->prepare('SELECT id, employee_id, employee_username, lock_until FROM agent_query_locks WHERE agent_id = :agent_id AND lock_until > NOW() AND status = "Locked" ORDER BY lock_until DESC LIMIT 1 FOR UPDATE');
+                $lockStmt->execute([':agent_id' => (int)$agent['id']]);
+                $activeLock = $lockStmt->fetch(PDO::FETCH_ASSOC);
+                $ownsActiveLock = $activeLock && (((int)($activeLock['employee_id'] ?? 0) === (int)$user_id) || $activeLock['employee_username'] === $username);
+                if ($activeLock && $user_role !== 'admin' && !$ownsActiveLock) {
+                    $conn->rollBack();
+                    echo json_encode(['success' => false, 'message' => 'This agent is currently locked with another employee and cannot be booked by you until the lock expires.', 'lock_until' => $activeLock['lock_until']]);
+                    exit;
+                }
+                $lockUntil = $activeLock['lock_until'] ?? ($user_role === 'admin' ? date('Y-m-d H:i:s') : date('Y-m-d H:i:s', strtotime('+6 hours')));
+                if (!$activeLock || !$ownsActiveLock) {
+                    $newLockStmt = $conn->prepare('INSERT INTO agent_query_locks (agent_id, employee_id, employee_username, created_by_user_id, created_by_role, generated_at, locked_at, lock_until, query_text, hotel_name, room_category, check_in, check_out, adults, children, rooms, status, booking_status, ip_address, user_agent) VALUES (:agent_id, :employee_id, :employee_username, :created_by_user_id, :created_by_role, NOW(), NOW(), :lock_until, :query_text, :hotel_name, :room_category, :check_in, :check_out, :adults, :children, :rooms, :status, "Unbooked", :ip_address, :user_agent)');
+                    $newLockStmt->execute([
+                        ':agent_id' => (int)$agent['id'], ':employee_id' => $user_id, ':employee_username' => $username,
+                        ':created_by_user_id' => $user_id, ':created_by_role' => $user_role, ':lock_until' => $lockUntil,
+                        ':query_text' => implode("\n", $lines), ':hotel_name' => $hotelName ?: null, ':room_category' => $roomCategory ?: null,
+                        ':check_in' => $checkIn ?: null, ':check_out' => $checkOut ?: null, ':adults' => $adults, ':children' => $children,
+                        ':rooms' => $rooms, ':status' => $user_role === 'admin' ? 'Open' : 'Locked',
+                        ':ip_address' => $_SERVER['REMOTE_ADDR'] ?? null, ':user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? null,
+                    ]);
+                }
+            }
             $saveStmt = $conn->prepare('INSERT INTO booking_query_history (
-                created_by_user_id, created_by_username, created_by_role, employee_id, location, hotel_category,
+                created_by_user_id, created_by_username, created_by_role, query_type, agent_id, agent_name, agent_phone, lock_until, employee_id, location, hotel_category,
                 hotel_name, room_category, check_in, check_out, nights, adults, children, rooms, budget,
                 query_text, matched_hotels_json, query_date
             ) VALUES (
-                :user_id, :username, :role, :employee_id, :location, :category, :hotel_name, :room_category,
+                :user_id, :username, :role, :query_type, :agent_id, :agent_name, :agent_phone, :lock_until, :employee_id, :location, :category, :hotel_name, :room_category,
                 :check_in, :check_out, :nights, :adults, :children, :rooms, :budget,
                 :query_text, :matched_hotels_json, NOW()
             )');
@@ -839,6 +932,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 ':user_id' => $user_id,
                 ':username' => $username,
                 ':role' => $user_role === 'admin' ? 'admin' : 'employee',
+                ':query_type' => $queryType,
+                ':agent_id' => $agent['id'] ?? null,
+                ':agent_name' => $agent['name'] ?? null,
+                ':agent_phone' => $agent['phone'] ?? null,
+                ':lock_until' => $lockUntil,
                 ':employee_id' => $user_id,
                 ':location' => $location ?: null,
                 ':category' => $category ?: 'All Categories',
@@ -854,8 +952,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 ':query_text' => implode("\n", $lines),
                 ':matched_hotels_json' => json_encode($matchedHotels, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             ]);
+            $conn->commit();
             echo json_encode(['success' => true, 'id' => (int)$conn->lastInsertId()]);
         } catch (PDOException $e) {
+            if ($conn->inTransaction()) $conn->rollBack();
             echo json_encode(['success' => false, 'message' => 'Unable to save query history']);
         }
         exit;
@@ -925,7 +1025,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $locked_by = $lock['employee_username'];
                 $lock_until = $lock['lock_until'];
                 if ($user_role !== 'admin' && $locked_by !== $username) {
-                    echo json_encode(['success' => false, 'message' => "Agent is locked by $locked_by until $lock_until"]);
+                    echo json_encode(['success' => false, 'message' => 'This agent is currently locked with another employee and cannot be booked by you until the lock expires.', 'lock_until' => $lock_until]);
                     exit;
                 }
             }
@@ -946,8 +1046,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $query_text .= "GST: " . $hotel['gst'] . "%\n\n";
             }
 
-            // Save query and lock agent for 5 hours for non-admins; admin gets no active lock
-            $lock_until = ($user_role === 'admin') ? date('Y-m-d H:i:s') : date('Y-m-d H:i:s', strtotime('+5 hours'));
+            // Save query and lock agent for 6 hours for non-admins; admin gets no active lock
+            $lock_until = ($user_role === 'admin') ? date('Y-m-d H:i:s') : date('Y-m-d H:i:s', strtotime('+6 hours'));
             try {
                 $insertStmt = $conn->prepare("INSERT INTO agent_query_locks (
                                                agent_id, employee_id, employee_username, created_by_user_id, created_by_role,
@@ -1056,8 +1156,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
 
             $agent_id = $agent['id'];
-            // For admin, don't apply a 5-hour lock (set lock_until = now so it's not considered locked)
-            $lock_until = ($user_role === 'admin') ? date('Y-m-d H:i:s') : date('Y-m-d H:i:s', strtotime('+5 hours'));
+            // For admin, don't apply a 6-hour lock (set lock_until = now so it's not considered locked)
+            $lock_until = ($user_role === 'admin') ? date('Y-m-d H:i:s') : date('Y-m-d H:i:s', strtotime('+6 hours'));
 
             // Append a new query history row and lock record
             $lockStmt = $conn->prepare("INSERT INTO agent_query_locks (
@@ -3068,6 +3168,23 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                 <div class="card p-4 shadow-sm border-0" style="border-radius: 8px; background: #fff;">
                     <h4 class="mb-4 fw-bold text-dark">Booking Query Details</h4>
 
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary d-block">Query Type</label>
+                        <div class="d-flex gap-4">
+                            <label class="form-check"><input class="form-check-input" type="radio" name="bookingQueryType" value="admin" checked onchange="setBookingQueryType(this.value)"> Admin</label>
+                            <label class="form-check"><input class="form-check-input" type="radio" name="bookingQueryType" value="agent" onchange="setBookingQueryType(this.value)"> Agent</label>
+                        </div>
+                    </div>
+                    <div id="bookingQueryAgentBox" class="border rounded p-3 mb-3" style="display:none;">
+                        <label for="bookingQueryAgentPhone" class="form-label small fw-semibold text-secondary">Agent Mobile Number</label>
+                        <div class="input-group">
+                            <input type="tel" class="form-control" id="bookingQueryAgentPhone" maxlength="20" placeholder="Enter registered agent mobile number" oninput="lookupBookingQueryAgent()">
+                            <button type="button" class="btn btn-outline-primary" onclick="lookupBookingQueryAgent()">Fetch Agent</button>
+                        </div>
+                        <div id="bookingQueryAgentStatus" class="small text-muted mt-2">Enter agent mobile number.</div>
+                    </div>
+
+                    <fieldset id="bookingQueryDetailsFields" disabled>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label for="bookingQueryLocation" class="form-label small fw-semibold text-secondary">Location</label>
@@ -3124,6 +3241,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                             <i class="bi bi-magic me-2"></i>Generate Query
                         </button>
                     </div>
+                    </fieldset>
                 </div>
 
                 <div id="bookingQueryResultsWrap" class="card p-4 mt-4 shadow-sm border-0" style="border-radius: 8px; display: none;">
@@ -4738,7 +4856,60 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         nights.value = diffDays > 0 ? diffDays : 0;
     }
 
+    let bookingQueryAgent = null;
+    let bookingQueryType = 'admin';
+
+    function setBookingQueryType(type) {
+        bookingQueryType = type === 'agent' ? 'agent' : 'admin';
+        const agentBox = document.getElementById('bookingQueryAgentBox');
+        const form = document.getElementById('bookingQueryDetailsFields');
+        if (agentBox) agentBox.style.display = bookingQueryType === 'agent' ? 'block' : 'none';
+        if (form) form.disabled = bookingQueryType === 'agent' && !bookingQueryAgent;
+        if (bookingQueryType === 'admin') {
+            bookingQueryAgent = null;
+            const status = document.getElementById('bookingQueryAgentStatus');
+            if (status) status.textContent = 'Select Agent type to search an agent.';
+        }
+    }
+
+    function lookupBookingQueryAgent() {
+        const phone = document.getElementById('bookingQueryAgentPhone')?.value.trim() || '';
+        const status = document.getElementById('bookingQueryAgentStatus');
+        if (bookingQueryAgent && bookingQueryAgent.phone !== phone) bookingQueryAgent = null;
+        const form = document.getElementById('bookingQueryDetailsFields');
+        if (!bookingQueryAgent && form) form.disabled = true;
+        if (!phone) {
+            bookingQueryAgent = null;
+            if (status) status.textContent = 'Enter agent mobile number.';
+            return;
+        }
+        if (status) status.textContent = 'Searching agent...';
+        fetch('employee-dashboard.php', { method: 'POST', body: new URLSearchParams({ action: 'search_agent_by_mobile', mobileNumber: phone }) })
+            .then((response) => response.json())
+            .then((data) => {
+                if (!data.success || !data.found) {
+                    bookingQueryAgent = null;
+                    if (form) form.disabled = true;
+                    if (status) status.textContent = data.message || 'Agent mobile number is not registered.';
+                    return;
+                }
+                bookingQueryAgent = data.agent;
+                if (form) form.disabled = false;
+                if (status) status.innerHTML = `<strong>${escapeQueryHistoryHtml(data.agent.name)}</strong> | ${escapeQueryHistoryHtml(data.agent.phone)} | ${escapeQueryHistoryHtml(data.agent.location || 'Location unavailable')} | ${escapeQueryHistoryHtml(data.agent.company_name || '')} | ${escapeQueryHistoryHtml(data.agent.email || '')}`;
+            })
+            .catch(() => {
+                bookingQueryAgent = null;
+                if (status) status.textContent = 'Unable to fetch agent details.';
+            });
+    }
+
+            setBookingQueryType('admin');
+
     function generateBookingQueryResults() {
+        if (bookingQueryType === 'agent' && !bookingQueryAgent) {
+            showErrorToast('Please enter and verify a registered agent mobile number first');
+            return;
+        }
         const location = document.getElementById('bookingQueryLocation')?.value.trim() || '';
         const category = document.getElementById('bookingQueryHotelCategory')?.value || '';
         const checkIn = document.getElementById('bookingQueryCheckIn')?.value || '';
@@ -4801,6 +4972,19 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                     `;
                     })).join('')
                     : '<tr><td colspan="9" class="text-center text-muted py-4">No active hotels match this location/category/budget.</td></tr>';
+
+                if (bookingQueryType === 'agent' && results.length) {
+                    fetch('employee-dashboard.php', {
+                        method: 'POST',
+                        body: new URLSearchParams({ action: 'acquire_booking_query_agent_lock', agent_phone: bookingQueryAgent.phone })
+                    }).then((lockResponse) => lockResponse.json()).then((lockData) => {
+                        if (!lockData.success) {
+                            bookingQueryLastResults = [];
+                            resultBody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">${lockData.message || 'Agent is currently unavailable.'}</td></tr>`;
+                            showErrorToast(lockData.message || 'Agent is currently unavailable.');
+                        }
+                    }).catch(() => showErrorToast('Unable to verify the agent lock. Please try again.'));
+                }
 
             })
             .catch((error) => {
@@ -4893,6 +5077,8 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                 action: 'save_booking_query_history', location, category, check_in: checkIn,
                 check_out: checkOut, nights: String(nights), adults: String(adults),
                 children: String(children), rooms: String(rooms), budget: String(budget),
+                query_type: bookingQueryType,
+                agent_phone: bookingQueryAgent?.phone || '',
                 matched_hotels: JSON.stringify(matchedHotels)
             })
         }).then((response) => response.json()).then((data) => {

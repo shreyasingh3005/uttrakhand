@@ -8,8 +8,8 @@ return [
     // Database
     'DB_HOST'   => 'localhost',
     'DB_NAME'   => 'u424679052_hotel',
-    'DB_USER'   => 'u424679052_uttra',
-    'DB_PASS'   => '/9cHpZA|KZ',
+    'DB_USER'   => 'u424679052_venture',
+    'DB_PASS'   => '1:g4:G/fus>G',
     'DB_CHARSET'=> 'utf8mb4',
 
     // Rate Limiting (requests per window)

@@ -5,6 +5,7 @@ require_role('admin');
 
 try {
     $historyStmt = $conn->prepare("SELECT bqh.id, bqh.created_by_user_id, bqh.created_by_username, bqh.created_by_role, bqh.generated_at, bqh.query_text,
+                                          bqh.query_type, bqh.agent_id, bqh.agent_name, bqh.agent_phone, bqh.lock_until,
                                           bqh.location, bqh.hotel_category, bqh.check_in, bqh.check_out,
                                           bqh.nights, bqh.adults, bqh.children, bqh.rooms, bqh.budget, bqh.matched_hotels_json,
                                           COALESCE(NULLIF(bqh.created_by_username, ''), 'Unknown') AS employee_name,

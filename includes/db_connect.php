@@ -555,6 +555,7 @@ function ensure_agent_query_locks_table(PDO $conn) {
             assigned_employee_id INT DEFAULT NULL,
             assigned_employee_username VARCHAR(255) DEFAULT NULL,
             generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            locked_at DATETIME DEFAULT NULL,
             lock_until DATETIME NOT NULL,
             query_text TEXT,
             hotel_name VARCHAR(255) DEFAULT NULL,
@@ -580,6 +581,10 @@ function ensure_agent_query_locks_table(PDO $conn) {
             user_agent VARCHAR(255) DEFAULT NULL,
             FOREIGN KEY (agent_id) REFERENCES agents_details(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        $columns = $conn->query('SHOW COLUMNS FROM agent_query_locks')->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('locked_at', $columns, true)) {
+            $conn->exec('ALTER TABLE agent_query_locks ADD COLUMN locked_at DATETIME DEFAULT NULL AFTER generated_at');
+        }
     } catch (PDOException $e) { /* non-blocking */ }
 }
 
@@ -619,6 +624,11 @@ function ensure_booking_query_history_table(PDO $conn) {
             created_by_user_id INT DEFAULT NULL,
             created_by_username VARCHAR(255) NOT NULL,
             created_by_role ENUM('admin','employee') DEFAULT 'employee',
+            query_type ENUM('admin','agent') DEFAULT 'admin',
+            agent_id INT DEFAULT NULL,
+            agent_name VARCHAR(150) DEFAULT NULL,
+            agent_phone VARCHAR(30) DEFAULT NULL,
+            lock_until DATETIME DEFAULT NULL,
             location VARCHAR(255) DEFAULT NULL,
             hotel_category VARCHAR(120) DEFAULT NULL,
             check_in DATE DEFAULT NULL,
@@ -649,6 +659,11 @@ function ensure_booking_query_history_columns(PDO $conn) {
 
         $additions = [
             'employee_id' => 'ADD COLUMN employee_id INT DEFAULT NULL AFTER created_by_user_id',
+            'query_type' => "ADD COLUMN query_type ENUM('admin','agent') DEFAULT 'admin' AFTER created_by_role",
+            'agent_id' => 'ADD COLUMN agent_id INT DEFAULT NULL AFTER query_type',
+            'agent_name' => 'ADD COLUMN agent_name VARCHAR(150) DEFAULT NULL AFTER agent_id',
+            'agent_phone' => 'ADD COLUMN agent_phone VARCHAR(30) DEFAULT NULL AFTER agent_name',
+            'lock_until' => 'ADD COLUMN lock_until DATETIME DEFAULT NULL AFTER agent_phone',
             'hotel_name' => 'ADD COLUMN hotel_name VARCHAR(255) DEFAULT NULL AFTER budget',
             'room_category' => 'ADD COLUMN room_category VARCHAR(150) DEFAULT NULL AFTER hotel_name',
             'query_date' => 'ADD COLUMN query_date DATETIME DEFAULT NULL AFTER generated_at',

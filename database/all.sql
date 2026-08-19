@@ -1,29 +1,3 @@
--- ═══════════════════════════════════════════════════════════════════════════
--- all.sql — MERGED database: full employee_management schema + seed data
---
--- Consolidated, deduplicated version assembled intact from:
---   1. sql.sql                    -> CRM/listing tables + seed
---   2. hotel_manager_complete.sql -> Hotel room-manager tables, views + seed
---
--- hotel_manager.sql and hotel_listing_clean.sql are older variants of the same
--- hotel module, superseded by hotel_manager_complete.sql (which ships views so
--- their legacy naming still works). They are intentionally NOT merged here.
---
--- Import: Get-Content database\all.sql | C:\xampp\mysql\bin\mysql.exe -u root
--- ═══════════════════════════════════════════════════════════════════════════
-
-CREATE DATABASE IF NOT EXISTS `employee_management`
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-
-USE `employee_management`;
-
-SET NAMES utf8mb4;
-SET FOREIGN_KEY_CHECKS = 0;
-
--- ═══════════════════════════════════════════════════════════════════════════
--- CLEANUP OLD TABLES (views first, then tables — deduplicated union)
--- ═══════════════════════════════════════════════════════════════════════════
 
 DROP VIEW IF EXISTS `hotel_room_categories`;
 DROP VIEW IF EXISTS `hotel_bookings`;
@@ -173,6 +147,7 @@ CREATE TABLE IF NOT EXISTS agent_query_locks (
     assigned_employee_id INT DEFAULT NULL,
     assigned_employee_username VARCHAR(255) DEFAULT NULL,
     generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    locked_at DATETIME DEFAULT NULL,
     lock_until TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     query_text TEXT,
     hotel_name VARCHAR(255) DEFAULT NULL,

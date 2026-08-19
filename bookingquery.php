@@ -108,6 +108,7 @@ foreach ($listings as $listing) {
 // --- Admin Query History (show all employees + generated query records) ---
 try {
     $historyStmt = $conn->prepare("SELECT bqh.id, bqh.created_by_user_id, bqh.created_by_username, bqh.created_by_role, bqh.generated_at, bqh.query_text,
+                                          bqh.query_type, bqh.agent_id, bqh.agent_name, bqh.agent_phone, bqh.lock_until,
                                           bqh.location, bqh.hotel_category, bqh.check_in, bqh.check_out,
                                           bqh.nights, bqh.adults, bqh.children, bqh.rooms, bqh.budget, bqh.matched_hotels_json,
                                           COALESCE(NULLIF(bqh.created_by_username, ''), 'Unknown') AS employee_name,
@@ -256,6 +257,23 @@ try {
             <h4 class="fw-bold text-dark mb-1">Booking Query Details</h4>
         </div>
 
+        <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary d-block">Query Type</label>
+            <div class="d-flex gap-4">
+                <label class="form-check"><input class="form-check-input" type="radio" name="adminBookingQueryType" value="admin" checked onchange="setAdminBookingQueryType(this.value)"> Admin</label>
+                <label class="form-check"><input class="form-check-input" type="radio" name="adminBookingQueryType" value="agent" onchange="setAdminBookingQueryType(this.value)"> Agent</label>
+            </div>
+        </div>
+        <div id="adminBookingQueryAgentBox" class="border rounded p-3 mb-3" style="display:none;">
+            <label for="adminBookingQueryAgentPhone" class="form-label small fw-semibold text-secondary">Agent Mobile Number</label>
+            <div class="input-group">
+                <input type="tel" class="form-control" id="adminBookingQueryAgentPhone" maxlength="20" placeholder="Enter registered agent mobile number" oninput="lookupAdminBookingQueryAgent()">
+                <button type="button" class="btn btn-outline-primary" onclick="lookupAdminBookingQueryAgent()">Fetch Agent</button>
+            </div>
+            <div id="adminBookingQueryAgentStatus" class="small text-muted mt-2">Enter agent mobile number.</div>
+        </div>
+
+        <fieldset id="adminBookingQueryDetailsFields" disabled>
         <div class="row g-3">
             <div class="col-md-6">
                 <label for="adminQueryLocation" class="form-label small fw-semibold text-secondary">Location</label>
@@ -312,6 +330,7 @@ try {
                 <i class="bi bi-magic me-2"></i>Generate Query
             </button>
         </div>
+        </fieldset>
     </div>
 
     <div id="adminQueryResultsWrap" class="panel mt-4" style="display: none;">
@@ -355,6 +374,54 @@ try {
 <script>
 const listingPayload = <?php echo json_encode($listingDataForJs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 let listingSearchDebounceTimer = null;
+let adminBookingQueryType = 'admin';
+let adminBookingQueryAgent = null;
+
+function setAdminBookingQueryType(type) {
+    adminBookingQueryType = type === 'agent' ? 'agent' : 'admin';
+    const agentBox = document.getElementById('adminBookingQueryAgentBox');
+    const form = document.getElementById('adminBookingQueryDetailsFields');
+    if (agentBox) agentBox.style.display = adminBookingQueryType === 'agent' ? 'block' : 'none';
+    if (form) form.disabled = adminBookingQueryType === 'agent' && !adminBookingQueryAgent;
+    if (adminBookingQueryType === 'admin') {
+        adminBookingQueryAgent = null;
+        const status = document.getElementById('adminBookingQueryAgentStatus');
+        if (status) status.textContent = 'Select Agent type to search an agent.';
+    }
+}
+
+function lookupAdminBookingQueryAgent() {
+    const phone = document.getElementById('adminBookingQueryAgentPhone')?.value.trim() || '';
+    const status = document.getElementById('adminBookingQueryAgentStatus');
+    if (adminBookingQueryAgent && adminBookingQueryAgent.phone !== phone) adminBookingQueryAgent = null;
+    const form = document.getElementById('adminBookingQueryDetailsFields');
+    if (!adminBookingQueryAgent && form) form.disabled = true;
+    if (!phone) {
+        adminBookingQueryAgent = null;
+        if (status) status.textContent = 'Enter agent mobile number.';
+        return;
+    }
+    if (status) status.textContent = 'Searching agent...';
+    fetch('employee-dashboard.php', { method: 'POST', body: new URLSearchParams({ action: 'search_agent_by_mobile', mobileNumber: phone }) })
+        .then((response) => response.json())
+        .then((data) => {
+            if (!data.success || !data.found) {
+                adminBookingQueryAgent = null;
+                if (form) form.disabled = true;
+                if (status) status.textContent = data.message || 'Agent mobile number is not registered.';
+                return;
+            }
+            adminBookingQueryAgent = data.agent;
+            if (form) form.disabled = false;
+            if (status) status.textContent = `${data.agent.name} | ${data.agent.phone} | ${data.agent.location || 'Location unavailable'} | ${data.agent.company_name || ''} | ${data.agent.email || ''}`;
+        })
+        .catch(() => {
+            adminBookingQueryAgent = null;
+            if (status) status.textContent = 'Unable to fetch agent details.';
+        });
+}
+
+setAdminBookingQueryType('admin');
 
 function escapeAdminHistoryHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
@@ -376,16 +443,16 @@ function loadAdminGeneratedQueryHistory() {
         const container = document.getElementById('adminGeneratedQueryHistory');
         if (!container) return;
         container.innerHTML = records.length ? `<div class="table-responsive"><table class="table table-sm table-hover align-middle admin-generated-history-table">
-            <thead class="table-light"><tr><th>Created By</th><th>Location</th><th>Category</th><th>Hotel / Room</th><th>Meal</th><th>Dates</th><th>Budget</th><th>Generated At</th><th>Action</th></tr></thead><tbody>
+            <thead class="table-light"><tr><th>Created By</th><th>Agent</th><th>Agent Phone</th><th>Location</th><th>Category</th><th>Hotel / Room</th><th>Meal</th><th>Dates</th><th>Budget</th><th>Lock Until</th><th>Generated At</th><th>Action</th></tr></thead><tbody>
             ${records.map((item) => {
                 const hotels = Array.isArray(item.matched_hotels) ? item.matched_hotels : [];
                 const hotelNames = hotels.map((hotel) => `${escapeAdminHistoryHtml(hotel.name)} / ${escapeAdminHistoryHtml(hotel.room_name)}`).join('<br>') || 'No matches';
                 const meals = hotels.map((hotel) => formatAdminBookingMealPlans(hotel.prices)).join('<br>') || 'N/A';
                 return `<tr class="admin-history-row" data-history-date="${escapeAdminHistoryHtml(item.generated_at)}" data-history-text="${escapeAdminHistoryHtml((item.query_text || '').toLowerCase())}">
-                    <td>${escapeAdminHistoryHtml(item.created_by_username)}</td><td>${escapeAdminHistoryHtml(item.location || 'Any')}</td>
+                    <td>${escapeAdminHistoryHtml(item.created_by_username)}</td><td>${escapeAdminHistoryHtml(item.agent_name || 'Admin')}</td><td>${escapeAdminHistoryHtml(item.agent_phone || '')}</td><td>${escapeAdminHistoryHtml(item.location || 'Any')}</td>
                     <td>${escapeAdminHistoryHtml(item.hotel_category || 'All Categories')}</td><td>${hotelNames}</td><td>${meals}</td>
                     <td>${escapeAdminHistoryHtml(item.check_in || 'N/A')} - ${escapeAdminHistoryHtml(item.check_out || 'N/A')}</td>
-                    <td>₹${Number(item.budget || 0).toLocaleString('en-IN')}/night</td><td>${escapeAdminHistoryHtml(new Date(item.generated_at).toLocaleString())}</td>
+                    <td>₹${Number(item.budget || 0).toLocaleString('en-IN')}/night</td><td>${escapeAdminHistoryHtml(item.lock_until ? new Date(item.lock_until).toLocaleString() : 'N/A')}</td><td>${escapeAdminHistoryHtml(new Date(item.generated_at).toLocaleString())}</td>
                     <td><button type="button" class="btn btn-sm btn-outline-secondary" data-query-text="${escapeAdminHistoryHtml(item.query_text)}" onclick="copyAdminGeneratedQuery(this)">Copy</button></td>
                 </tr>`;
             }).join('')}</tbody></table></div>` : '<div class="text-center py-3 text-muted">No generated Booking Query history found.</div>';
@@ -455,6 +522,10 @@ function calculateBookingNights(checkInId, checkOutId, nightsId) {
 const resultsDataStore = {};
 
 function generateBookingResultsFromInputs(locationId, categoryId, checkInId, checkOutId, nightsId, adultsId, childrenId, roomsId, budgetId, resultWrapId, resultBodyId) {
+    if (resultBodyId === 'adminQueryResultsBody' && adminBookingQueryType === 'agent' && !adminBookingQueryAgent) {
+        alert('Please enter and verify a registered agent mobile number first');
+        return;
+    }
     const location = document.getElementById(locationId)?.value.trim() || '';
     const category = document.getElementById(categoryId)?.value || '';
     const checkIn = document.getElementById(checkInId)?.value || '';
@@ -516,6 +587,19 @@ function generateBookingResultsFromInputs(locationId, categoryId, checkInId, che
             `;
             })).join('')
             : '<tr><td colspan="9" class="text-center text-muted py-4">No active hotels match this location/category/budget.</td></tr>';
+
+        if (adminBookingQueryType === 'agent' && results.length) {
+            fetch('employee-dashboard.php', {
+                method: 'POST',
+                body: new URLSearchParams({ action: 'acquire_booking_query_agent_lock', agent_phone: adminBookingQueryAgent.phone })
+            }).then((lockResponse) => lockResponse.json()).then((lockData) => {
+                if (!lockData.success) {
+                    resultsDataStore[resultBodyId] = [];
+                    resultBody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">${lockData.message || 'Agent is currently unavailable.'}</td></tr>`;
+                    alert(lockData.message || 'Agent is currently unavailable.');
+                }
+            }).catch(() => alert('Unable to verify the agent lock. Please try again.'));
+        }
 
     })
     .catch((error) => {
@@ -662,6 +746,8 @@ function sendSelectedAdminQueryQuotes() {
         children: document.getElementById(prefixIds.children)?.value || '0',
         rooms: document.getElementById(prefixIds.rooms)?.value || '1',
         budget: document.getElementById(prefixIds.budget)?.value || '0',
+        query_type: adminBookingQueryType,
+        agent_phone: adminBookingQueryAgent?.phone || '',
         matched_hotels: JSON.stringify(matchedHotels)
     });
     fetch('employee-dashboard.php', { method: 'POST', body: params })
