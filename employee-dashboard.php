@@ -5914,6 +5914,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
     async function copyQueryText(text, button) {
         const row = button?.closest('.query-history-row');
         if (row?.dataset.quotation) text = AirwaysQuotation.format(JSON.parse(row.dataset.quotation));
+        else text = AirwaysQuotation.plainText(text || '');
         if (!text) return showErrorToast('No query text available to copy');
         try {
             if (navigator.clipboard && window.isSecureContext) {

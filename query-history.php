@@ -293,6 +293,7 @@ function copyQueryText(queryText, buttonElement) {
     
     if (!row) {
         // Fallback: just copy the query text if provided
+        queryText = AirwaysQuotation.plainText(queryText || '');
         if (queryText) {
             navigator.clipboard.writeText(queryText).then(() => {
                 alert('Query copied to clipboard!');
@@ -327,92 +328,6 @@ function copyQueryText(queryText, buttonElement) {
         document.body.removeChild(textarea);
         alert('Query copied to clipboard!');
     });
-    return;
-    
-    // Extract query details from data attributes
-    const checkIn = row.dataset.checkin || '';
-    const checkOut = row.dataset.checkout || '';
-    const location = row.dataset.location || '';
-    const category = row.dataset.category || '';
-    const nights = row.dataset.nights || '0';
-    const adults = row.dataset.adults || '1';
-    const children = row.dataset.children || '0';
-    const rooms = row.dataset.rooms || '1';
-    const budget = row.dataset.budget || '0';
-    const hotelJson = row.dataset.hotels || '[]';
-    
-    try {
-        let hotels = [];
-        try {
-            hotels = JSON.parse(hotelJson);
-        } catch (e) {
-            // JSON parsing failed, try to use as-is if it's already an array
-        }
-        
-        let formattedText = 'Booking Query\n';
-        formattedText += 'Location: ' + location + '\n';
-        formattedText += 'Hotel Category: ' + category + '\n';
-        formattedText += 'Check-In: ' + checkIn + '\n';
-        formattedText += 'Check-Out: ' + checkOut + '\n';
-        formattedText += 'Nights: ' + nights + '\n';
-        formattedText += 'Adults: ' + adults + '\n';
-        formattedText += 'Children: ' + children + '\n';
-        formattedText += 'Rooms: ' + rooms + '\n';
-        formattedText += 'Budget per Night: ₹' + number_format(budget) + '\n\n';
-        
-        // Add hotels and rooms
-        let hotelCounter = 1;
-        if (Array.isArray(hotels)) {
-            hotels.forEach((hotel) => {
-                if (hotel.rooms && hotel.rooms.length > 0) {
-                    hotel.rooms.forEach((room) => {
-                        formattedText += hotelCounter + '. ' + (hotel.name || 'N/A') + '\n';
-                        formattedText += 'Room Category: ' + (room.category || 'N/A') + '\n';
-                        const mealPlans = (room.mealPlans || []).join(', ') || 'N/A';
-                        formattedText += 'Meal Plans: ' + mealPlans + '\n';
-                        formattedText += 'Location: ' + (hotel.city || 'N/A') + ', ' + (hotel.state || 'N/A') + '\n';
-                        formattedText += 'Price per Night: ₹' + number_format(room.basePrice || 0) + '\n\n';
-                        hotelCounter++;
-                    });
-                }
-            });
-        }
-        
-        // Try to copy to clipboard
-        navigator.clipboard.writeText(formattedText).then(() => {
-            alert('✅ Complete query details copied to clipboard!');
-        }).catch(() => {
-            // Fallback: create hidden textarea and copy
-            const textarea = document.createElement('textarea');
-            textarea.value = formattedText;
-            textarea.style.position = 'fixed';
-            textarea.style.opacity = '0';
-            document.body.appendChild(textarea);
-            textarea.select();
-            try {
-                document.execCommand('copy');
-                alert('✅ Query details copied to clipboard!');
-            } catch (err) {
-                alert('✅ Query formatted (copy manually):\n\n' + formattedText.substring(0, 500));
-            }
-            document.body.removeChild(textarea);
-        });
-    } catch (e) {
-        // If anything fails, fall back to copying the query text
-        if (queryText) {
-            navigator.clipboard.writeText(queryText).then(() => {
-                alert('Query copied to clipboard!');
-            }).catch(() => {
-                alert('Error formatting query: ' + e.message);
-            });
-        } else {
-            alert('Error: ' + e.message);
-        }
-    }
-}
-
-function number_format(num) {
-    return new Intl.NumberFormat('en-IN').format(num);
 }
 
 function toggleSidebarMenu(open) {

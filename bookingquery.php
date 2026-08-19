@@ -464,7 +464,7 @@ function loadAdminGeneratedQueryHistory() {
 
 function copyAdminHistoryQuotation(button) {
     const quotation = button?.dataset.quotation ? JSON.parse(button.dataset.quotation) : null;
-    copyQueryText(quotation ? AirwaysQuotation.format(quotation) : button?.dataset.queryText || '');
+    copyQueryText(quotation ? AirwaysQuotation.format(quotation) : AirwaysQuotation.plainText(button?.dataset.queryText || ''));
 }
 
 function applyAdminQueryHistoryFilter(filter) {
@@ -1094,6 +1094,7 @@ function copyAdminGeneratedQuery() {
 }
 
 function copyQueryText(text) {
+    text = AirwaysQuotation.plainText(text || '');
     if (!text) return alert('No query text');
     try { navigator.clipboard.writeText(text); alert('Copied to clipboard'); }
     catch (e) { const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); alert('Copied to clipboard'); }
