@@ -956,8 +956,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             ]);
             $conn->commit();
             echo json_encode(['success' => true, 'id' => (int)$conn->lastInsertId()]);
-        } catch (PDOException $e) {
+        } catch (Throwable $e) {
             if ($conn->inTransaction()) $conn->rollBack();
+            error_log('save_booking_query_history failed: ' . $e->getMessage());
             echo json_encode(['success' => false, 'message' => 'Unable to save query history']);
         }
         exit;
