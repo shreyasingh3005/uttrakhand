@@ -24,7 +24,7 @@ return [
     'SESSION_REGENERATE_INTERVAL' => 300, // regenerate ID every 5 min
 
     // App
-    'APP_ENV'                  => 'development',  // development | production
-    'APP_DEBUG'                => true,
-    'APP_URL'                  => 'http://localhost/abhi',
+    'APP_ENV'                  => 'production',  // development | production
+    'APP_DEBUG'                => false,
+    'APP_URL'                  => 'http://paleturquoise-tarsier-877492.hostingersite.com',
 ];

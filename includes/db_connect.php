@@ -34,7 +34,7 @@ function ensure_core_tables(PDO $conn) {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 username VARCHAR(100) NOT NULL UNIQUE,
                 password VARCHAR(255) NOT NULL,
-                email VARCHAR(255) NOT NULL UNIQUE,
+                email VARCHAR(255) NOT NULL,
                 role ENUM('admin', 'employee') DEFAULT 'employee',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )"
@@ -218,6 +218,58 @@ function ensure_agents_company_column(PDO $conn) {
 }
 
 ensure_agents_company_column($conn);
+
+function ensure_registration_mobile_constraints(PDO $conn) {
+    static $checked = false;
+    if ($checked) return;
+    $checked = true;
+
+    try {
+        foreach (['agents_details', 'employees_details'] as $table) {
+            $indexes = $conn->query("SHOW INDEX FROM `{$table}`")->fetchAll(PDO::FETCH_ASSOC);
+            $indexColumns = [];
+            foreach ($indexes as $index) {
+                $indexColumns[$index['Key_name']]['unique'] = ((int)$index['Non_unique'] === 0);
+                $indexColumns[$index['Key_name']]['columns'][(int)$index['Seq_in_index']] = $index['Column_name'];
+            }
+
+            foreach ($indexColumns as $indexName => $indexData) {
+                ksort($indexData['columns']);
+                if ($indexName !== 'PRIMARY' && $indexData['unique'] && $indexData['columns'] === ['email']) {
+                    $conn->exec("ALTER TABLE `{$table}` DROP INDEX `{$indexName}`");
+                }
+            }
+
+            $phoneIndexExists = false;
+            foreach ($indexColumns as $indexName => $indexData) {
+                ksort($indexData['columns']);
+                if ($indexData['unique'] && $indexData['columns'] === ['phone']) {
+                    $phoneIndexExists = true;
+                    break;
+                }
+            }
+            if (!$phoneIndexExists) {
+                $conn->exec("ALTER TABLE `{$table}` ADD UNIQUE INDEX `uq_{$table}_phone` (`phone`)");
+            }
+        }
+
+        $userIndexes = $conn->query('SHOW INDEX FROM `users`')->fetchAll(PDO::FETCH_ASSOC);
+        $userEmailIndexes = [];
+        foreach ($userIndexes as $index) {
+            $indexName = $index['Key_name'];
+            if ($indexName !== 'PRIMARY' && (int)$index['Non_unique'] === 0 && $index['Column_name'] === 'email') {
+                $userEmailIndexes[$indexName] = true;
+            }
+        }
+        foreach (array_keys($userEmailIndexes) as $indexName) {
+            $conn->exec("ALTER TABLE `users` DROP INDEX `{$indexName}`");
+        }
+    } catch (PDOException $e) {
+        // Registration validation remains active if an existing schema needs manual cleanup.
+    }
+}
+
+ensure_registration_mobile_constraints($conn);
 
 function ensure_user_login_tracking_columns(PDO $conn) {
     static $checked = false;

@@ -245,12 +245,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $existingAgent = $existingAgentStmt->fetch();
 
             if ($existingAgent) {
-                $_SESSION['dashboard_error'] = sprintf(
-                    'Agent already exists with this mobile number: %s (%s). Email: %s',
-                    $existingAgent['name'],
-                    $existingAgent['company_name'],
-                    $existingAgent['email']
-                );
+                $_SESSION['dashboard_error'] = 'This mobile number is already registered. Please use a different mobile number.';
             } else {
                 try {
                     $agentStmt = $conn->prepare(
@@ -267,7 +262,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                     $_SESSION['dashboard_success'] = 'Agent registered successfully.';
                 } catch (PDOException $e) {
-                    $_SESSION['dashboard_error'] = 'Agent registration failed. Email already exists.';
+                    $duplicateMobileStmt = $conn->prepare('SELECT id FROM agents_details WHERE phone = :phone LIMIT 1');
+                    $duplicateMobileStmt->execute([':phone' => $phone]);
+                    $_SESSION['dashboard_error'] = $duplicateMobileStmt->fetch()
+                        ? 'This mobile number is already registered. Please use a different mobile number.'
+                        : 'Agent registration failed. Please verify the details and try again.';
                 }
             }
         } else {
@@ -289,6 +288,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($name !== '' && $email !== '' && $phone !== '' && $designation !== '' && $department !== '' && $username !== '' && $password !== '') {
             try {
+                $existingEmployeeStmt = $conn->prepare('SELECT id FROM employees_details WHERE phone = :phone LIMIT 1');
+                $existingEmployeeStmt->execute([':phone' => $phone]);
+                if ($existingEmployeeStmt->fetch()) {
+                    $_SESSION['dashboard_error'] = 'This mobile number is already registered. Please use a different mobile number.';
+                    redirect('/dashboard.php?date=' . urlencode($redirectDate));
+                }
+
                 $conn->beginTransaction();
 
                 $employeeStmt = $conn->prepare(
@@ -321,7 +327,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($conn->inTransaction()) {
                     $conn->rollBack();
                 }
-                $_SESSION['dashboard_error'] = 'Employee registration failed. Username/Email already exists.';
+                $duplicateMobileStmt = $conn->prepare('SELECT id FROM employees_details WHERE phone = :phone LIMIT 1');
+                $duplicateMobileStmt->execute([':phone' => $phone]);
+                $_SESSION['dashboard_error'] = $duplicateMobileStmt->fetch()
+                    ? 'This mobile number is already registered. Please use a different mobile number.'
+                    : 'Employee registration failed. Please verify the details and try again.';
             }
         } else {
             $_SESSION['dashboard_error'] = 'Please complete all required fields for employee registration.';

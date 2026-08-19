@@ -173,6 +173,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         if ($agent_name && $company_name && $email && $phone && $location) {
             try {
+                $existingAgentStmt = $conn->prepare('SELECT id FROM agents_details WHERE phone = :phone LIMIT 1');
+                $existingAgentStmt->execute([':phone' => $phone]);
+                if ($existingAgentStmt->fetch()) {
+                    http_response_code(200);
+                    header('Content-Type: application/json; charset=utf-8');
+                    echo json_encode(['success' => false, 'message' => 'This mobile number is already registered. Please use a different mobile number.']);
+                    exit;
+                }
+
                 $query = "INSERT INTO agents_details (name, company_name, email, phone, location, status, created_by) 
                          VALUES (:name, :company_name, :email, :phone, :location, 'Active', :created_by)";
                 $stmt = $conn->prepare($query);
@@ -191,7 +200,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             } catch (PDOException $e) {
                 http_response_code(200);
                 header('Content-Type: application/json; charset=utf-8');
-                echo json_encode(['success' => false, 'message' => "Agent email already exists or database error"]);
+                $duplicateMobileStmt = $conn->prepare('SELECT id FROM agents_details WHERE phone = :phone LIMIT 1');
+                $duplicateMobileStmt->execute([':phone' => $phone]);
+                echo json_encode([
+                    'success' => false,
+                    'message' => $duplicateMobileStmt->fetch()
+                        ? 'This mobile number is already registered. Please use a different mobile number.'
+                        : 'Agent registration failed. Please verify the details and try again.'
+                ]);
                 exit;
             }
         }

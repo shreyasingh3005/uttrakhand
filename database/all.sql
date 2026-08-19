@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(100) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE,
+  email VARCHAR(255) NOT NULL,
     role ENUM('admin', 'employee') DEFAULT 'employee',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -79,7 +79,7 @@ CREATE TABLE dashboard_details (
 CREATE TABLE agents_details (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(120) NOT NULL,
-    email VARCHAR(150) NOT NULL UNIQUE,
+  email VARCHAR(150) NOT NULL,
     phone VARCHAR(20) NOT NULL,
     location VARCHAR(120) NOT NULL,
     rating DECIMAL(2,1) DEFAULT 0.0,
@@ -87,20 +87,22 @@ CREATE TABLE agents_details (
     total_deals INT DEFAULT 0,
     total_revenue DECIMAL(12,2) DEFAULT 0,
     created_by VARCHAR(255) NOT NULL DEFAULT 'admin',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_agents_details_phone (phone)
 );
 
 -- 3) Employees Details
 CREATE TABLE employees_details (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(120) NOT NULL,
-    email VARCHAR(150) NOT NULL UNIQUE,
+  email VARCHAR(150) NOT NULL,
     phone VARCHAR(20) NOT NULL,
     designation VARCHAR(120) NOT NULL,
     department VARCHAR(80) NOT NULL,
     status ENUM('Active', 'On Leave', 'Inactive') DEFAULT 'Active',
     monthly_salary DECIMAL(12,2) DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_employees_details_phone (phone)
 );
 
 -- 4) Hotel Listings Details
