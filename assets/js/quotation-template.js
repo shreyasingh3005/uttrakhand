@@ -56,7 +56,33 @@
         const contactPhone = value(input, 'contactPhone', '919999831144');
         const contactEmail = value(input, 'contactEmail', 'manish@airwaystravels.com');
 
-        return `*Airways Travels | Quotation*Greetings from Airways Travels. Further with reference to query number *${queryNumber}*, find below the quotation as desired:*Hotel Name*: ${hotelName} ,, ${location}*Check-In*: ${formatDate(input.checkIn)}*Check-Out*: ${formatDate(input.checkOut)}*No. of Person*: ${adults + (children > 0 ? children : 0)}*No. of Rooms*: ${rooms} Room*Occupancy*: ${occupancy}*Room category*: ${roomCategory}*Meal plan*: ${mealPlan}*Room Price*: ${formatPrice(roomPrice)}/- per room per night*Above rates are inclusive of ${tax} taxes.**Cancellation policy*: ${cancellation}*Rooms and Rates are Subject to Availability, please confirm the same at the earliest to proceed with the booking.*Thank you for contacting Airways Travels.In case of any support please contact us:${contactPerson}☎️ Mobile : ${contactPhone}✉️ Email : ${contactEmail}_Powered by Airways Travels_`;
+        return `*Airways Travels | Quotation*
+
+    Greetings from Airways Travels. Further with reference to query number *${queryNumber}*, find below the quotation as desired:
+
+    *Hotel Name*: ${hotelName} ,, ${location}
+    *Check-In*: ${formatDate(input.checkIn)}
+    *Check-Out*: ${formatDate(input.checkOut)}
+    *No. of Person*: ${adults + (children > 0 ? children : 0)}
+    *No. of Rooms*: ${rooms} Room
+    *Occupancy*: ${occupancy}
+    *Room category*: ${roomCategory}
+    *Meal plan*: ${mealPlan}
+    *Room Price*: ${formatPrice(roomPrice)}/- per room per night
+
+    *Above rates are inclusive of ${tax} taxes.*
+
+    *Cancellation policy*: ${cancellation}
+
+    *Rooms and Rates are Subject to Availability, please confirm the same at the earliest to proceed with the booking.*
+
+    Thank you for contacting Airways Travels.
+    In case of any support please contact us:
+    ${contactPerson}
+    ☎️ Mobile : ${contactPhone}
+    ✉️ Email : ${contactEmail}
+
+    _Powered by Airways Travels_`;
     }
 
     window.AirwaysQuotation = { format };
