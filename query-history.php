@@ -5,7 +5,7 @@ require_role('admin');
 
 $unlockMessage = '';
 $unlockMessageType = 'success';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unlock_query') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array(($_POST['action'] ?? ''), ['unlock_query', 'lock_query'], true)) {
     $queryId = (int)($_POST['query_id'] ?? 0);
     if ($queryId <= 0) {
         $unlockMessage = 'Invalid query selected for unlock.';
@@ -16,7 +16,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unloc
             $historyStmt->execute([':id' => $queryId]);
             $agentId = (int)($historyStmt->fetchColumn() ?: 0);
 
-            if ($agentId > 0) {
+            if ($agentId > 0 && ($_POST['action'] ?? '') === 'lock_query') {
+                $lockUntil = date('Y-m-d H:i:s', strtotime('+6 hours'));
+                $lockStmt = $conn->prepare('UPDATE agent_query_locks SET lock_until = :lock_until, status = "Locked" WHERE agent_id = :agent_id ORDER BY id DESC LIMIT 1');
+                $lockStmt->execute([':agent_id' => $agentId, ':lock_until' => $lockUntil]);
+                $historyLockStmt = $conn->prepare('UPDATE booking_query_history SET lock_until = :lock_until WHERE id = :id');
+                $historyLockStmt->execute([':lock_until' => $lockUntil, ':id' => $queryId]);
+                $unlockMessage = 'Agent locked again for 6 hours.';
+            } elseif ($agentId > 0) {
                 $unlockStmt = $conn->prepare('UPDATE agent_query_locks SET lock_until = NOW(), status = "Open" WHERE agent_id = :agent_id AND status = "Locked"');
                 $unlockStmt->execute([':agent_id' => $agentId]);
                 $historyUnlockStmt = $conn->prepare('UPDATE booking_query_history SET lock_until = NOW() WHERE id = :id');
@@ -231,13 +238,13 @@ try {
                         <td><?php echo $isLocked ? date('d M Y, h:i A', strtotime($item['lock_until'])) : 'Unlocked'; ?></td>
                         <td>
                             <?php if (!empty($item['agent_phone'])): ?>
-                                <button class="btn btn-sm btn-outline-primary" onclick="viewAdminQuery(<?php echo (int)$item['id']; ?>)">View</button>
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewAdminQuery(this)">View</button>
                                 <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('', this)">Copy</button>
                                 <a class="btn btn-sm btn-success" target="_blank" href="https://wa.me/<?php echo preg_replace('/\D/','',($item['agent_phone'] ?? '')); ?>?text=<?php echo urlencode($item['query_text'] ?? ''); ?>">WA</a>
                                 <form method="post" style="display:inline-block; margin:0;">
-                                    <input type="hidden" name="action" value="unlock_query">
+                                    <input type="hidden" name="action" value="<?php echo $isLocked ? 'unlock_query' : 'lock_query'; ?>">
                                     <input type="hidden" name="query_id" value="<?php echo (int) $item['id']; ?>">
-                                    <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-unlock me-1"></i>Unlock Agent</button>
+                                    <button type="submit" class="btn btn-sm <?php echo $isLocked ? 'btn-success' : 'btn-warning'; ?>"><i class="bi bi-<?php echo $isLocked ? 'unlock' : 'lock'; ?> me-1"></i><?php echo $isLocked ? 'Unlock Agent' : 'Lock Agent'; ?></button>
                                 </form>
                             <?php else: ?>
                                 <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('', this)">Copy</button>
@@ -247,6 +254,23 @@ try {
                     <?php endforeach; ?>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="adminQueryHistoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="adminQueryHistoryModalTitle">Query Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <pre id="adminQueryHistoryModalBody" class="p-3" style="white-space:pre-wrap;background:#f8f9fa;border-radius:.75rem;min-height:220px;"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
         </div>
     </div>
 </div>
@@ -365,6 +389,35 @@ function copyQueryText(queryText, buttonElement) {
         document.body.removeChild(textarea);
         alert('Query copied to clipboard!');
     });
+}
+
+function viewAdminQuery(buttonElement) {
+    const row = buttonElement?.closest('.admin-history-row');
+    const modalElement = document.getElementById('adminQueryHistoryModal');
+    if (!row || !modalElement) return;
+    let matchedHotels = [];
+    try { matchedHotels = JSON.parse(row.dataset.hotels || '[]'); } catch (e) {}
+    const firstHotel = matchedHotels[0] || {};
+    const firstRoom = firstHotel.rooms?.[0] || firstHotel;
+    const details = AirwaysQuotation.format({
+        id: row.dataset.queryId,
+        hotelName: firstHotel.name || row.dataset.hotel,
+        hotelLocation: firstHotel.location || firstHotel.city || row.dataset.location,
+        roomCategory: firstRoom.room_name || firstRoom.category || row.dataset.room,
+        mealPlan: firstRoom.prices ? Object.keys(firstRoom.prices)[0] : '',
+        checkIn: row.dataset.checkin,
+        checkOut: row.dataset.checkout,
+        adults: row.dataset.adults,
+        children: row.dataset.children,
+        rooms: row.dataset.rooms,
+        roomPrice: firstRoom.selected_price || firstRoom.basePrice || row.dataset.budget,
+        agentName: row.cells[1]?.textContent.trim(),
+        agentPhone: row.cells[2]?.textContent.trim(),
+        matchedHotels
+    });
+    document.getElementById('adminQueryHistoryModalTitle').textContent = `Query for ${row.cells[1]?.textContent.trim() || 'Agent'}`;
+    document.getElementById('adminQueryHistoryModalBody').textContent = details;
+    bootstrap.Modal.getOrCreateInstance(modalElement).show();
 }
 
 function toggleSidebarMenu(open) {
