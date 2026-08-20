@@ -66,7 +66,7 @@ function f(mixed $v): float  { return max(0.0, (float)$v); }
 function i(mixed $v): int    { return (int)$v; }
 
 /* ── Constants ───────────────────────────────────────────────────────────── */
-const MEAL_CODES = ['EP','CP','MAP','AP','AI'];
+const MEAL_CODES = ['EP','CP','MAP','AP'];
 const VALID_PLANS = MEAL_CODES;
 const BED_TYPES  = ['Single','Double','Twin','King','Queen','Bunk'];
 const DOW        = ['Sun'=>0,'Mon'=>1,'Tue'=>2,'Wed'=>3,'Thu'=>4,'Fri'=>5,'Sat'=>6];

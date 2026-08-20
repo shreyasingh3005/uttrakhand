@@ -431,7 +431,7 @@ function escapeAdminHistoryHtml(value) {
 }
 
 function formatAdminBookingMealPlans(prices) {
-    const labels = { EP: 'EP - Room Only', CP: 'CP - Breakfast Included', MAP: 'MAP - Breakfast + Dinner', AP: 'AP - All Meals', AI: 'AI - All Inclusive' };
+    const labels = { EP: 'EP - Room Only', CP: 'CP - Breakfast Included', MAP: 'MAP - Breakfast + Dinner', AP: 'AP - All Meals' };
     return Object.entries(prices || {}).map(([code, price]) => `${labels[code] || code} (₹${Number(price || 0).toLocaleString('en-IN')}/night)`).join(', ') || 'EP - Room Only';
 }
 

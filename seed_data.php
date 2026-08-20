@@ -46,7 +46,7 @@ function pr(float $v): float { return round($v/50)*50; }
 
 /* ── Tier base EP prices & meal plan multipliers ────────────────────────── */
 $tierEP  = [1=>2000, 2=>4000, 3=>8000, 4=>15000, 5=>28000];
-$mpMul   = ['EP'=>1.00,'CP'=>1.30,'MAP'=>1.60,'AP'=>1.90,'AI'=>2.40];
+$mpMul   = ['EP'=>1.00,'CP'=>1.30,'MAP'=>1.60,'AP'=>1.90];
 $starMul = [3=>0.70, 4=>1.00, 5=>1.50];
 $dowMul  = [0=>1.15, 5=>1.25, 6=>1.35]; // Sun/Fri/Sat premium
 

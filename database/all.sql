@@ -373,8 +373,7 @@ INSERT INTO `meal_plans` (`code`,`name`,`label`,`description`,`sort_order`,`stat
 ('EP','EP - Room Only','EP - Room Only','Room only plan without meals',1,'active'),
 ('CP','CP - Breakfast Included','CP - Breakfast Included','Room with breakfast',2,'active'),
 ('MAP','MAP - Breakfast + Dinner','MAP - Breakfast + Dinner','Breakfast plus dinner',3,'active'),
-('AP','AP - All Meals','AP - All Meals','Breakfast, lunch and dinner',4,'active'),
-('AI','AI - All Inclusive','AI - All Inclusive','All inclusive plan',5,'active')
+('AP','AP - All Meals','AP - All Meals','Breakfast, lunch and dinner',4,'active')
 ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
 
 INSERT INTO `hotels` (`hotel_code`,`name`,`city`,`state`,`address`,`pin_code`,`phone`,`email`,`website`,`star_rating`,`description`,`status`) VALUES
@@ -398,7 +397,6 @@ SET @ep=(SELECT id FROM meal_plans WHERE code='EP');
 SET @cp=(SELECT id FROM meal_plans WHERE code='CP');
 SET @map=(SELECT id FROM meal_plans WHERE code='MAP');
 SET @ap=(SELECT id FROM meal_plans WHERE code='AP');
-SET @ai=(SELECT id FROM meal_plans WHERE code='AI');
 
 SET @r1=(SELECT id FROM hotel_room_categories WHERE hotel_id=@hgoa AND name='Deluxe Double Or Twin Room');
 SET @r2=(SELECT id FROM hotel_room_categories WHERE hotel_id=@hgoa AND name='Regency Suite');
@@ -407,11 +405,11 @@ SET @r4=(SELECT id FROM hotel_room_categories WHERE hotel_id=@hmum AND name='Sup
 SET @r5=(SELECT id FROM hotel_room_categories WHERE hotel_id=@hmum AND name='Deluxe Room');
 
 INSERT INTO `room_prices` (`hotel_id`,`room_category_id`,`meal_plan_id`,`base_price`,`rate_date`,`date_wise_price`) VALUES
-(@hgoa,@r1,@ep,5000,NULL,NULL),(@hgoa,@r1,@cp,5800,NULL,NULL),(@hgoa,@r1,@map,7200,NULL,NULL),(@hgoa,@r1,@ap,8500,NULL,NULL),(@hgoa,@r1,@ai,10000,NULL,NULL),
-(@hgoa,@r2,@ep,8000,NULL,NULL),(@hgoa,@r2,@cp,9000,NULL,NULL),(@hgoa,@r2,@map,10500,NULL,NULL),(@hgoa,@r2,@ap,12000,NULL,NULL),(@hgoa,@r2,@ai,14000,NULL,NULL),
-(@hgoa,@r3,@ep,12000,NULL,NULL),(@hgoa,@r3,@cp,13500,NULL,NULL),(@hgoa,@r3,@map,15000,NULL,NULL),(@hgoa,@r3,@ap,17000,NULL,NULL),(@hgoa,@r3,@ai,20000,NULL,NULL),
-(@hmum,@r4,@ep,4000,NULL,NULL),(@hmum,@r4,@cp,4700,NULL,NULL),(@hmum,@r4,@map,6000,NULL,NULL),(@hmum,@r4,@ap,7200,NULL,NULL),(@hmum,@r4,@ai,9000,NULL,NULL),
-(@hmum,@r5,@ep,6000,NULL,NULL),(@hmum,@r5,@cp,7000,NULL,NULL),(@hmum,@r5,@map,8500,NULL,NULL),(@hmum,@r5,@ap,10000,NULL,NULL),(@hmum,@r5,@ai,12000,NULL,NULL);
+(@hgoa,@r1,@ep,5000,NULL,NULL),(@hgoa,@r1,@cp,5800,NULL,NULL),(@hgoa,@r1,@map,7200,NULL,NULL),(@hgoa,@r1,@ap,8500,NULL,NULL),
+(@hgoa,@r2,@ep,8000,NULL,NULL),(@hgoa,@r2,@cp,9000,NULL,NULL),(@hgoa,@r2,@map,10500,NULL,NULL),(@hgoa,@r2,@ap,12000,NULL,NULL),
+(@hgoa,@r3,@ep,12000,NULL,NULL),(@hgoa,@r3,@cp,13500,NULL,NULL),(@hgoa,@r3,@map,15000,NULL,NULL),(@hgoa,@r3,@ap,17000,NULL,NULL),
+(@hmum,@r4,@ep,4000,NULL,NULL),(@hmum,@r4,@cp,4700,NULL,NULL),(@hmum,@r4,@map,6000,NULL,NULL),(@hmum,@r4,@ap,7200,NULL,NULL),
+(@hmum,@r5,@ep,6000,NULL,NULL),(@hmum,@r5,@cp,7000,NULL,NULL),(@hmum,@r5,@map,8500,NULL,NULL),(@hmum,@r5,@ap,10000,NULL,NULL);
 
 -- 14-day availability for each room (used by the Availability calendar)
 DROP PROCEDURE IF EXISTS `seed_mgr_availability`;

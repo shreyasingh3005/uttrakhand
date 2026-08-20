@@ -51,8 +51,8 @@ try {
 $mealPlans    = array_column($mpRows, 'label', 'code');
 $mealPlanIds  = array_column($mpRows, 'id', 'code');
 if (empty($mealPlans)) {
-    $mealPlans   = ['EP'=>'EP – Room Only','CP'=>'CP – Breakfast Included','MAP'=>'MAP – Breakfast + Dinner','AP'=>'AP – All Meals','AI'=>'AI – All Inclusive'];
-    $mealPlanIds = ['EP'=>1,'CP'=>2,'MAP'=>3,'AP'=>4,'AI'=>5];
+    $mealPlans   = ['EP'=>'EP – Room Only','CP'=>'CP – Breakfast Included','MAP'=>'MAP – Breakfast + Dinner','AP'=>'AP – All Meals'];
+    $mealPlanIds = ['EP'=>1,'CP'=>2,'MAP'=>3,'AP'=>4];
 }
 
 /* ── Fetch hotels with counts (filtered + paginated) ───────────────────── */

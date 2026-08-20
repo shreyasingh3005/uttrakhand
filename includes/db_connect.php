@@ -540,9 +540,10 @@ function ensure_hotel_manager_schema(PDO $conn) {
                 ('EP','EP - Room Only','EP - Room Only','Room only plan',1),
                 ('CP','CP - Breakfast Included','CP - Breakfast Included','Room with breakfast',2),
                 ('MAP','MAP - Breakfast + Dinner','MAP - Breakfast + Dinner','Rooms + dinner',3),
-                ('AP','AP - All Meals','AP - All Meals','All meals included',4),
-                ('AI','AI - All Inclusive','AI - All Inclusive','All inclusive plan',5)");
+                ('AP','AP - All Meals','AP - All Meals','All meals included',4)");
         }
+            // AI is retired. Keep historical references intact, but never expose it as an active plan.
+            $conn->exec("UPDATE meal_plans SET status='inactive' WHERE code='AI'");
 
         $ra = $cols_of('room_availability');
         if (isset($ra['date']) && !isset($ra['availability_date'])) {
