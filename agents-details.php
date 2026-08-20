@@ -215,7 +215,7 @@ function status_badge_class($status) {
 							<div class="col-xl-4 col-md-6">
 								<div class="agent-card p-4 h-100">
 									<div class="text-center mb-2">
-										<img src="https://ui-avatars.com/api/?name=<?php echo urlencode($agent['name']); ?>&background=e9ecef&color=333" class="rounded-circle" width="76" height="76" alt="avatar">
+										<img src="/assets/images/agent-avatar.svg" class="rounded-circle" width="76" height="76" alt="Agent avatar">
 									</div>
 									<h6 class="fw-bold mb-1 text-center"><?php echo htmlspecialchars($agent['name'], ENT_QUOTES, 'UTF-8'); ?></h6>
 									<p class="text-muted small mb-1 text-center"><i class="bi bi-geo-alt me-1"></i><?php echo htmlspecialchars($agent['location'], ENT_QUOTES, 'UTF-8'); ?></p>
