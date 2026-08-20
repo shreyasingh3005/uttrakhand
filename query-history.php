@@ -3,6 +3,37 @@ require_once __DIR__ . '/includes/auth_session.php';
 require_once __DIR__ . '/includes/db_connect.php';
 require_role('admin');
 
+$unlockMessage = '';
+$unlockMessageType = 'success';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unlock_query') {
+    $queryId = (int)($_POST['query_id'] ?? 0);
+    if ($queryId <= 0) {
+        $unlockMessage = 'Invalid query selected for unlock.';
+        $unlockMessageType = 'danger';
+    } else {
+        try {
+            $historyStmt = $conn->prepare('SELECT agent_id FROM booking_query_history WHERE id = :id LIMIT 1');
+            $historyStmt->execute([':id' => $queryId]);
+            $agentId = (int)($historyStmt->fetchColumn() ?: 0);
+
+            if ($agentId > 0) {
+                $unlockStmt = $conn->prepare('UPDATE agent_query_locks SET lock_until = NOW(), status = "Open" WHERE agent_id = :agent_id AND status = "Locked"');
+                $unlockStmt->execute([':agent_id' => $agentId]);
+                $historyUnlockStmt = $conn->prepare('UPDATE booking_query_history SET lock_until = NOW() WHERE id = :id');
+                $historyUnlockStmt->execute([':id' => $queryId]);
+                $unlockMessage = 'Agent unlocked successfully.';
+            } else {
+                $unlockStmt = $conn->prepare('UPDATE agent_query_locks SET lock_until = NOW(), status = "Open" WHERE id = :id');
+                $unlockStmt->execute([':id' => $queryId]);
+                $unlockMessage = $unlockStmt->rowCount() > 0 ? 'Agent unlocked successfully.' : 'Agent lock was already unlocked.';
+            }
+        } catch (PDOException $e) {
+            $unlockMessage = 'Unable to unlock the agent. Please try again.';
+            $unlockMessageType = 'danger';
+        }
+    }
+}
+
 try {
     $historyStmt = $conn->prepare("SELECT bqh.id, bqh.created_by_user_id, bqh.created_by_username, bqh.created_by_role, bqh.generated_at, bqh.query_text,
                                           bqh.query_type, bqh.agent_id, bqh.agent_name, bqh.agent_phone, bqh.lock_until,
@@ -96,6 +127,12 @@ try {
     </header>
 
     <div class="panel">
+        <?php if ($unlockMessage !== ''): ?>
+            <div class="alert alert-<?php echo htmlspecialchars($unlockMessageType, ENT_QUOTES, 'UTF-8'); ?> alert-dismissible fade show" role="alert">
+                <?php echo htmlspecialchars($unlockMessage, ENT_QUOTES, 'UTF-8'); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <?php endif; ?>
         <div class="d-flex flex-wrap gap-2 mb-3">
             <a href="/bookingquery.php" class="btn btn-outline-primary fw-semibold px-3 py-2">
                 <i class="bi bi-chat-dots me-2"></i>Booking Query
