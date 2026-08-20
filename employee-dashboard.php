@@ -5840,7 +5840,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             return;
         }
 
-        let html = '<div class="table-responsive"><table class="table table-custom table-hover align-middle"><thead class="bg-light"><tr><th>Type</th><th>Location</th><th>Category</th><th>Hotel / Room</th><th>Meal</th><th>Dates</th><th>Pax</th><th>Budget</th><th>Generated At</th><th>Actions</th></tr></thead><tbody>';
+        let html = '<div class="table-responsive"><table class="table table-custom table-hover align-middle"><thead class="bg-light"><tr><th>Type</th><th>Agent Name</th><th>Agent Number</th><th>Location</th><th>Category</th><th>Hotel / Room</th><th>Meal</th><th>Dates</th><th>Pax</th><th>Budget</th><th>Generated At</th><th>Actions</th></tr></thead><tbody>';
         generated.forEach(item => {
             const generatedAt = new Date(item.generated_at).toLocaleString();
             const dates = `${item.check_in || 'N/A'} - ${item.check_out || 'N/A'}`;
@@ -5849,7 +5849,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             const mealSummary = hotels.map(h => formatBookingMealPlans(h.prices)).join('<br>') || 'N/A';
             const text = item.query_text || '';
             html += `<tr class="query-history-row" data-history-date="${item.generated_at}" data-history-text="${(item.query_text || '').toLowerCase()}">
-                <td>Booking Query</td><td>${item.location || 'Any'}</td><td>${item.hotel_category || 'All Categories'}</td>
+                <td>Booking Query</td><td>${escapeQueryHistoryHtml(item.agent_name || 'N/A')}</td><td>${escapeQueryHistoryHtml(item.agent_phone || 'N/A')}</td><td>${escapeQueryHistoryHtml(item.location || 'Any')}</td><td>${escapeQueryHistoryHtml(item.hotel_category || 'All Categories')}</td>
                 <td>${hotelSummary}</td><td>${mealSummary}</td><td>${dates}</td>
                 <td>A:${item.adults || 1} C:${item.children || 0} R:${item.rooms || 1}</td>
                 <td>₹${Number(item.budget || 0).toLocaleString('en-IN')}/night</td><td>${generatedAt}</td>
@@ -5864,7 +5864,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             const dates = (item.check_in ? item.check_in : '') + (item.check_out ? (' - ' + item.check_out) : '');
             const pax = `A:${item.adults||1} C:${item.children||0} R:${item.rooms||1}`;
             html += `<tr class="query-history-row" data-history-date="${item.generated_at}" data-history-text="${(item.query_text || '').toLowerCase()}">
-                <td>Agent Query</td><td>${item.agent_phone || ''}</td><td>${item.hotel_name || ''}</td>
+                <td>Agent Query</td><td>${escapeQueryHistoryHtml(item.agent_name || 'N/A')}</td><td>${escapeQueryHistoryHtml(item.agent_phone || 'N/A')}</td><td>${escapeQueryHistoryHtml(item.location || 'Any')}</td><td>${escapeQueryHistoryHtml(item.hotel_name || '')}</td>
                 <td>${item.room_category || ''}</td><td>${item.meal_plan || ''}</td><td>${dates}</td><td>${pax}</td>
                 <td>₹${Number(item.total_amount||0).toLocaleString('en-IN')}</td><td>${generatedAt}</td>
                 <td>

@@ -8,8 +8,7 @@ try {
                                           bqh.query_type, bqh.agent_id, bqh.agent_name, bqh.agent_phone, bqh.lock_until,
                                           bqh.location, bqh.hotel_category, bqh.check_in, bqh.check_out,
                                           bqh.nights, bqh.adults, bqh.children, bqh.rooms, bqh.budget, bqh.matched_hotels_json,
-                                          COALESCE(NULLIF(bqh.created_by_username, ''), 'Unknown') AS employee_name,
-                                          '' AS agent_name, '' AS agent_phone
+                                          COALESCE(NULLIF(bqh.created_by_username, ''), 'Unknown') AS employee_name
                                           FROM booking_query_history bqh
                                           ORDER BY bqh.generated_at DESC LIMIT 200");
     $historyStmt->execute();
@@ -182,8 +181,8 @@ try {
                         data-history-date="<?php echo htmlspecialchars($item['generated_at'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
                         data-history-text="<?php echo htmlspecialchars(strtolower((string)($item['query_text'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>">>
                         <td><?php echo htmlspecialchars($item['created_by_username'] ?? $item['employee_name'] ?? ''); ?></td>
-                        <td><?php echo htmlspecialchars($item['agent_name'] ?? ($item['employee_name'] ?? '')); ?></td>
-                        <td><?php echo htmlspecialchars($item['agent_phone'] ?? ''); ?></td>
+                        <td><?php echo htmlspecialchars($item['agent_name'] ?? 'N/A'); ?></td>
+                        <td><?php echo htmlspecialchars($item['agent_phone'] ?? 'N/A'); ?></td>
                         <td><?php echo htmlspecialchars($item['hotel_name'] ?? ($item['hotel_category'] ?? '')); ?></td>
                         <td><?php echo htmlspecialchars($item['room_category'] ?? ($item['hotel_category'] ?? '')); ?></td>
                         <td><?php echo htmlspecialchars(($item['check_in'] ?? '') . (isset($item['check_out']) && $item['check_out'] ? ' - ' . $item['check_out'] : '')); ?></td>
