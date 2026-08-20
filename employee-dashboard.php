@@ -167,10 +167,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'create_agent') {
         $agent_name = sanitize_input($_POST['agentName'] ?? '');
         $company_name = sanitize_input($_POST['companyName'] ?? '');
-        $gst_number = sanitize_input($_POST['gstNumber'] ?? '');
+        $gst_number = strtoupper(sanitize_input($_POST['gstNumber'] ?? ''));
         $email = sanitize_input($_POST['email'] ?? '');
         $phone = sanitize_input($_POST['contact'] ?? '');
         $location = sanitize_input($_POST['location'] ?? ($_POST['address'] ?? ''));
+
+        if ($gst_number !== '' && !preg_match('/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/', $gst_number)) {
+            http_response_code(200);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => 'Invalid GSTIN. Please enter a valid 15-character GSTIN.']);
+            exit;
+        }
 
         if ($agent_name && $company_name && $email && $phone && $location) {
             try {
@@ -2827,6 +2834,10 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                                                 <span id="agentEmailDisplay" class="fw-medium"></span>
                                             </p>
                                             <p class="mb-2">
+                                                <i class="bi bi-receipt me-2 text-muted"></i>
+                                                <span id="agentGstDisplay" class="fw-medium"></span>
+                                            </p>
+                                            <p class="mb-2">
                                                 <i class="bi bi-building me-2 text-muted"></i>
                                                 <span id="agentCompanyDisplay" class="fw-medium"></span>
                                             </p>
@@ -4540,6 +4551,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         document.getElementById('agentNameDisplay').textContent = agent.name;
         document.getElementById('agentPhoneDisplay').textContent = agent.phone;
         document.getElementById('agentEmailDisplay').textContent = agent.email;
+        document.getElementById('agentGstDisplay').textContent = agent.gst_number || 'N/A';
         document.getElementById('agentCompanyDisplay').textContent = agent.company_name || 'N/A';
         document.getElementById('agentLocationDisplay').textContent = agent.location;
         document.getElementById('totalBookingsCount').textContent = bookingCount;

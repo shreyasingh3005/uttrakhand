@@ -416,7 +416,7 @@ function lookupAdminBookingQueryAgent() {
             adminBookingQueryAgent = data.agent;
             if (form) form.disabled = false;
             if (status) status.className = 'small text-success mt-2';
-            if (status) status.textContent = `${data.agent.name} | ${data.agent.phone} | ${data.agent.location || 'Location unavailable'} | ${data.agent.company_name || ''} | ${data.agent.email || ''}`;
+            if (status) status.textContent = `${data.agent.name} | ${data.agent.phone} | GSTIN: ${data.agent.gst_number || 'N/A'} | ${data.agent.location || 'Location unavailable'} | ${data.agent.company_name || ''} | ${data.agent.email || ''}`;
         })
         .catch(() => {
             adminBookingQueryAgent = null;
