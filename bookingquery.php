@@ -286,7 +286,7 @@ try {
         <div class="row g-3">
             <div class="col-md-6">
                 <label for="adminQueryLocation" class="form-label small fw-semibold text-secondary">Location</label>
-                <input type="text" class="form-control form-control-sm" id="adminQueryLocation" list="hotelCityList" placeholder="Type a city, e.g. gur..." autocomplete="off" required>
+                <input type="text" class="form-control form-control-sm query-required-field" id="adminQueryLocation" list="hotelCityList" placeholder="Type a city, e.g. gur..." autocomplete="off" required>
                 <datalist id="hotelCityList">
                     <?php foreach ($hotel_locations as $cityOption): ?>
                         <option value="<?php echo htmlspecialchars($cityOption, ENT_QUOTES, 'UTF-8'); ?>"></option>
@@ -295,7 +295,7 @@ try {
             </div>
             <div class="col-md-6">
                 <label for="adminQueryCategory" class="form-label small fw-semibold text-secondary">Hotel Category</label>
-                <select class="form-select form-select-sm" id="adminQueryCategory" required>
+                <select class="form-select form-select-sm query-required-field" id="adminQueryCategory" required>
                     <option value="all categories" selected>All Categories</option>
                     <?php foreach ($hotel_category_options as $cat): ?>
                         <option value="<?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?></option>
@@ -305,11 +305,11 @@ try {
 
             <div class="col-md-4">
                 <label for="adminQueryCheckIn" class="form-label small fw-semibold text-secondary">Check-In</label>
-                <input type="date" class="form-control form-control-sm" id="adminQueryCheckIn" required>
+                <input type="date" class="form-control form-control-sm query-required-field" id="adminQueryCheckIn" required>
             </div>
             <div class="col-md-4">
                 <label for="adminQueryCheckOut" class="form-label small fw-semibold text-secondary">Check-out</label>
-                <input type="date" class="form-control form-control-sm" id="adminQueryCheckOut" required>
+                <input type="date" class="form-control form-control-sm query-required-field" id="adminQueryCheckOut" required>
             </div>
             <div class="col-md-4">
                 <label for="adminQueryNights" class="form-label small fw-semibold text-secondary">Nights</label>
@@ -318,15 +318,15 @@ try {
 
             <div class="col-md-3">
                 <label for="adminQueryAdults" class="form-label small fw-semibold text-secondary">Adults</label>
-                <input type="number" class="form-control form-control-sm" id="adminQueryAdults" min="1" value="1" required>
+                <input type="number" class="form-control form-control-sm query-required-field" id="adminQueryAdults" min="1" value="1" required>
             </div>
             <div class="col-md-3">
                 <label for="adminQueryChildren" class="form-label small fw-semibold text-secondary">Children</label>
-                <input type="number" class="form-control form-control-sm" id="adminQueryChildren" min="0" value="0" required>
+                <input type="number" class="form-control form-control-sm query-required-field" id="adminQueryChildren" min="0" value="0" required>
             </div>
             <div class="col-md-3">
                 <label for="adminQueryRooms" class="form-label small fw-semibold text-secondary">Rooms</label>
-                <input type="number" class="form-control form-control-sm" id="adminQueryRooms" min="1" value="1" required>
+                <input type="number" class="form-control form-control-sm query-required-field" id="adminQueryRooms" min="1" value="1" required>
             </div>
             <div class="col-md-3">
                 <label for="adminQueryBudget" class="form-label small fw-semibold text-secondary">Budget</label>
@@ -541,6 +541,12 @@ function calculateBookingNights(checkInId, checkOutId, nightsId) {
 
 const resultsDataStore = {};
 
+document.querySelectorAll('.query-required-field').forEach((field) => {
+    const clearInvalid = () => field.classList.toggle('is-invalid', String(field.value).trim() === '');
+    field.addEventListener('input', clearInvalid);
+    field.addEventListener('change', clearInvalid);
+});
+
 function generateBookingResultsFromInputs(locationId, categoryId, checkInId, checkOutId, nightsId, adultsId, childrenId, roomsId, budgetId, resultWrapId, resultBodyId) {
     const requiredFields = [
         [locationId, 'Location'], [categoryId, 'Hotel Category'], [checkInId, 'Check-In'],
@@ -548,6 +554,7 @@ function generateBookingResultsFromInputs(locationId, categoryId, checkInId, che
     ];
     for (const [id, label] of requiredFields) {
         const field = document.getElementById(id);
+        field?.classList.toggle('is-invalid', !field || String(field.value).trim() === '');
         if (!field || String(field.value).trim() === '') {
             alert(`${label} is required.`);
             field?.focus();
