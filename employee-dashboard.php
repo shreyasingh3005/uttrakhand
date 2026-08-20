@@ -938,13 +938,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 }
             }
             $saveStmt = $conn->prepare('INSERT INTO booking_query_history (
-                created_by_user_id, created_by_username, created_by_role, query_type, agent_id, agent_name, agent_phone, lock_until, employee_id, location, hotel_category,
+                created_by_user_id, created_by_username, created_by_role, query_type, agent_id, agent_name, agent_phone, lock_until, location, hotel_category,
                 hotel_name, room_category, check_in, check_out, nights, adults, children, rooms, budget,
-                query_text, matched_hotels_json, query_date
+                query_text, matched_hotels_json
             ) VALUES (
-                :user_id, :username, :role, :query_type, :agent_id, :agent_name, :agent_phone, :lock_until, :employee_id, :location, :category, :hotel_name, :room_category,
+                :user_id, :username, :role, :query_type, :agent_id, :agent_name, :agent_phone, :lock_until, :location, :category, :hotel_name, :room_category,
                 :check_in, :check_out, :nights, :adults, :children, :rooms, :budget,
-                :query_text, :matched_hotels_json, NOW()
+                :query_text, :matched_hotels_json
             )');
             $saveStmt->execute([
                 ':user_id' => $user_id,
@@ -955,7 +955,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 ':agent_name' => $agent['name'] ?? null,
                 ':agent_phone' => $agent['phone'] ?? null,
                 ':lock_until' => $lockUntil,
-                ':employee_id' => $user_id,
                 ':location' => $location ?: null,
                 ':category' => $category ?: 'All Categories',
                 ':hotel_name' => $hotelName ?: null,
