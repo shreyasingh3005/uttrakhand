@@ -502,7 +502,7 @@ CSS;
     $hBl  = (int)$hotel['blocked_rooms'];
     $hOcc = $hTot > 0 ? round($hBk / $hTot * 100) : 0;
   ?>
-  <div class="hm-hcard" id="hcard-<?= $hotel['id'] ?>">
+  <div class="hm-hcard" id="hcard-<?= $hotel['id'] ?>" data-hotel="<?= htmlspecialchars(json_encode($hotel, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES, 'UTF-8') ?>">
 
     <!-- Card Header -->
     <div class="hm-hcard-hdr">
@@ -523,6 +523,9 @@ CSS;
       <div class="hm-hotel-actions">
         <button class="hm-btn hm-btn-white hm-btn-sm" onclick="openRoomModal(<?= $hotel['id'] ?>, null)">
           <i class="bi bi-plus-lg"></i> Add Room
+        </button>
+        <button class="hm-btn hm-btn-brand hm-btn-sm" onclick="openHotelModal(<?= $hotel['id'] ?>)">
+          <i class="bi bi-pencil-square"></i> Edit Hotel
         </button>
         <button class="hm-btn hm-btn-amber hm-btn-sm" onclick="openBulk(<?= $hotel['id'] ?>)">
           <i class="bi bi-arrow-up-circle"></i> Bulk Rates
@@ -789,10 +792,11 @@ CSS;
 <div class="hm-overlay" id="modal-hotel">
   <div class="hm-modal xl">
     <div class="hm-modal-hdr">
-      <h3><i class="bi bi-building-add"></i> Add New Hotel</h3>
-      <p>Hotel master details only. Rooms, rates, and availability are managed later.</p>
+      <h3 id="hotel-modal-title"><i class="bi bi-building-add"></i> Add New Hotel</h3>
+      <p id="hotel-modal-description">Hotel master details only. Rooms, rates, and availability are managed later.</p>
     </div>
     <div class="hm-modal-body">
+      <input type="hidden" id="hotel-edit-id" value="">
       <div class="hm-wizard-step active" id="wiz-s1">
         <div class="hm-fgrid2">
           <div class="hm-frow"><label>Hotel Name *</label><input type="text" id="wiz-name" placeholder="e.g. The Grand Palace"></div>
@@ -1063,7 +1067,42 @@ function esc(v) { const d=document.createElement('div'); d.textContent=v??''; re
 /* ══════════════════════════════════════════════════════════════════════════
    HOTEL WIZARD
    ════════════════════════════════════════════════════════════════════════ */
-function openHotelModal() {
+function openHotelModal(hotelId = null) {
+  const editId = document.getElementById('hotel-edit-id');
+  const title = document.getElementById('hotel-modal-title');
+  const description = document.getElementById('hotel-modal-description');
+  const save = document.getElementById('wiz-save');
+  editId.value = hotelId || '';
+  ['wiz-name','wiz-code','wiz-contact','wiz-city','wiz-state','wiz-address','wiz-pincode','wiz-phone','wiz-email','wiz-website','wiz-desc','wiz-image-urls'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('wiz-category').value = '3 Star';
+  if (hotelId) {
+    const card = document.getElementById('hcard-' + hotelId);
+    const hotel = card ? JSON.parse(card.dataset.hotel || '{}') : {};
+    document.getElementById('wiz-name').value = hotel.name || '';
+    document.getElementById('wiz-code').value = hotel.hotel_code || '';
+    document.getElementById('wiz-contact').value = hotel.contact_details || '';
+    document.getElementById('wiz-city').value = hotel.city || '';
+    document.getElementById('wiz-state').value = hotel.state || '';
+    document.getElementById('wiz-address').value = hotel.address || '';
+    document.getElementById('wiz-pincode').value = hotel.pin_code || '';
+    document.getElementById('wiz-phone').value = hotel.phone || '';
+    document.getElementById('wiz-email').value = hotel.email || '';
+    document.getElementById('wiz-website').value = hotel.website || '';
+    document.getElementById('wiz-category').value = hotel.property_category || '3 Star';
+    document.getElementById('wiz-desc').value = hotel.description || '';
+    const imageUrls = hotel.image_urls ? (Array.isArray(hotel.image_urls) ? hotel.image_urls : JSON.parse(hotel.image_urls || '[]')) : [];
+    document.getElementById('wiz-image-urls').value = imageUrls.join('\n');
+    title.innerHTML = '<i class="bi bi-pencil-square"></i> Edit Hotel';
+    description.textContent = 'Update hotel master details. Room categories, rates, and availability remain unchanged.';
+    save.innerHTML = '<i class="bi bi-floppy2"></i> Save Changes';
+  } else {
+    title.innerHTML = '<i class="bi bi-building-add"></i> Add New Hotel';
+    description.textContent = 'Hotel master details only. Rooms, rates, and availability are managed later.';
+    save.innerHTML = '<i class="bi bi-check2-circle"></i> Create Hotel';
+  }
   document.getElementById('modal-hotel').classList.add('open');
   goWizStep(1);
 }
@@ -1111,9 +1150,10 @@ async function submitHotelWizard() {
   };
 
   try {
-    const res = await api('save_hotel.php', payload);
+    const editId = parseInt(document.getElementById('hotel-edit-id').value || '0', 10);
+    const res = await api(editId ? 'update_hotel.php' : 'save_hotel.php', editId ? {...payload, hotel_id: editId} : payload);
     if (res.status === 'success' || res.success) {
-      localStorage.setItem('hm_toast_msg', `Hotel "${name}" created ✓`);
+      localStorage.setItem('hm_toast_msg', `Hotel "${name}" ${editId ? 'updated' : 'created'} ✓`);
       closeHotelModal();
       location.reload();
     }
