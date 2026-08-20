@@ -9,8 +9,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unloc
     $queryId = (int) ($_POST['query_id'] ?? 0);
     if ($queryId > 0) {
         try {
-            $unlockStmt = $conn->prepare('UPDATE agent_query_locks SET lock_until = NOW(), status = "Open" WHERE id = :id');
-            $unlockStmt->execute([':id' => $queryId]);
+            $historyStmt = $conn->prepare('SELECT agent_id FROM booking_query_history WHERE id = :id LIMIT 1');
+            $historyStmt->execute([':id' => $queryId]);
+            $historyAgentId = (int) ($historyStmt->fetchColumn() ?: 0);
+            if ($historyAgentId > 0) {
+                $unlockStmt = $conn->prepare('UPDATE agent_query_locks SET lock_until = NOW(), status = "Open" WHERE agent_id = :agent_id AND status = "Locked"');
+                $unlockStmt->execute([':agent_id' => $historyAgentId]);
+                $historyUnlockStmt = $conn->prepare('UPDATE booking_query_history SET lock_until = NOW() WHERE id = :id');
+                $historyUnlockStmt->execute([':id' => $queryId]);
+            } else {
+                $unlockStmt = $conn->prepare('UPDATE agent_query_locks SET lock_until = NOW(), status = "Open" WHERE id = :id');
+                $unlockStmt->execute([':id' => $queryId]);
+            }
             $flashMessage = 'Query lock unlocked successfully.';
             $flashType = 'success';
         } catch (PDOException $e) {
@@ -435,6 +445,12 @@ function formatAdminBookingMealPlans(prices) {
     return Object.entries(prices || {}).map(([code, price]) => `${labels[code] || code} (₹${Number(price || 0).toLocaleString('en-IN')}/night)`).join(', ') || 'EP - Room Only';
 }
 
+function formatAdminHistoryDate(value) {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? 'N/A' : date.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
 function loadAdminGeneratedQueryHistory() {
     fetch('employee-dashboard.php', {
         method: 'POST',
@@ -446,7 +462,7 @@ function loadAdminGeneratedQueryHistory() {
         const container = document.getElementById('adminGeneratedQueryHistory');
         if (!container) return;
         container.innerHTML = records.length ? `<div class="table-responsive"><table class="table table-sm table-hover align-middle admin-generated-history-table">
-            <thead class="table-light"><tr><th>Created By</th><th>Agent</th><th>Agent Phone</th><th>Location</th><th>Category</th><th>Hotel / Room</th><th>Meal</th><th>Dates</th><th>Budget</th><th>Lock Until</th><th>Generated At</th><th>Action</th></tr></thead><tbody>
+            <thead class="table-light"><tr><th>Created By</th><th>Agent</th><th>Agent Phone</th><th>Location</th><th>Category</th><th>Hotel / Room</th><th>Meal</th><th>Dates</th><th>Budget</th><th>Lock Status</th><th>Lock Until</th><th>Generated At</th><th>Action</th></tr></thead><tbody>
             ${records.map((item) => {
                 const hotels = Array.isArray(item.matched_hotels) ? item.matched_hotels : [];
                 const hotelNames = hotels.map((hotel) => `${escapeAdminHistoryHtml(hotel.name)} / ${escapeAdminHistoryHtml(hotel.room_name)}`).join('<br>') || 'No matches';
@@ -455,7 +471,7 @@ function loadAdminGeneratedQueryHistory() {
                     <td>${escapeAdminHistoryHtml(item.created_by_username)}</td><td>${escapeAdminHistoryHtml(item.agent_name || 'Admin')}</td><td>${escapeAdminHistoryHtml(item.agent_phone || '')}</td><td>${escapeAdminHistoryHtml(item.location || 'Any')}</td>
                     <td>${escapeAdminHistoryHtml(item.hotel_category || 'All Categories')}</td><td>${hotelNames}</td><td>${meals}</td>
                     <td>${escapeAdminHistoryHtml(item.check_in || 'N/A')} - ${escapeAdminHistoryHtml(item.check_out || 'N/A')}</td>
-                    <td>₹${Number(item.budget || 0).toLocaleString('en-IN')}/night</td><td>${escapeAdminHistoryHtml(item.lock_until ? new Date(item.lock_until).toLocaleString() : 'N/A')}</td><td>${escapeAdminHistoryHtml(new Date(item.generated_at).toLocaleString())}</td>
+                    <td>₹${Number(item.budget || 0).toLocaleString('en-IN')}/night</td><td>${item.lock_until && new Date(item.lock_until).getTime() > Date.now() ? '<span class="badge bg-danger">Agent Locked</span>' : '<span class="badge bg-success">Unlocked</span>'}</td><td>${escapeAdminHistoryHtml(item.lock_until && new Date(item.lock_until).getTime() > Date.now() ? formatAdminHistoryDate(item.lock_until) : 'Unlocked')}</td><td>${escapeAdminHistoryHtml(formatAdminHistoryDate(item.generated_at))}</td>
                     <td><button type="button" class="btn btn-sm btn-outline-secondary" data-query-text="${escapeAdminHistoryHtml(item.query_text)}" data-quotation="${escapeAdminHistoryHtml(JSON.stringify({ id: item.id, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: null, agentName: item.agent_name, agentPhone: item.agent_phone, matchedHotels: hotels }))}" onclick="copyAdminHistoryQuotation(this)">Copy</button></td>
                 </tr>`;
             }).join('')}</tbody></table></div>` : '<div class="text-center py-3 text-muted">No generated Booking Query history found.</div>';

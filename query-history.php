@@ -161,7 +161,7 @@ try {
 
         <div class="table-responsive">
             <table class="table table-sm table-hover">
-                <thead class="table-light"><tr><th>Employee</th><th>Agent</th><th>Phone</th><th>Hotel</th><th>Room Category</th><th>Dates</th><th>Pax</th><th>Amount</th><th>Location</th><th>Generated At</th><th>Lock Until</th><th>Actions</th></tr></thead>
+                <thead class="table-light"><tr><th>Employee</th><th>Agent</th><th>Phone</th><th>Hotel</th><th>Room Category</th><th>Dates</th><th>Pax</th><th>Amount</th><th>Location</th><th>Generated At</th><th>Lock Status</th><th>Lock Until</th><th>Actions</th></tr></thead>
                 <tbody>
                     <?php foreach ($admin_history as $item): ?>
                     <tr class="admin-history-row" data-query-id="<?php echo (int)($item['id'] ?? 0); ?>"
@@ -189,8 +189,9 @@ try {
                         <td><?php echo 'A:' . ((int)($item['adults'] ?? 1)) . ' C:' . ((int)($item['children'] ?? 0)) . ' R:' . ((int)($item['rooms'] ?? 1)); ?></td>
                         <td>₹<?php echo number_format((float)($item['total_amount'] ?? $item['budget'] ?? 0),0); ?></td>
                         <td><?php echo htmlspecialchars($item['location'] ?? ''); ?></td>
-                        <td><?php echo htmlspecialchars($item['generated_at']); ?></td>
-                        <td><?php echo htmlspecialchars($item['lock_until'] ?? ''); ?></td>
+                        <td><?php echo date('d M Y, h:i A', strtotime($item['generated_at'])); ?></td>
+                        <td><?php $isLocked = !empty($item['lock_until']) && strtotime($item['lock_until']) > time(); ?><span class="badge <?php echo $isLocked ? 'bg-danger' : 'bg-success'; ?>"><?php echo $isLocked ? 'Agent Locked' : 'Unlocked'; ?></span></td>
+                        <td><?php echo $isLocked ? date('d M Y, h:i A', strtotime($item['lock_until'])) : 'Unlocked'; ?></td>
                         <td>
                             <?php if (!empty($item['agent_phone'])): ?>
                                 <button class="btn btn-sm btn-outline-primary" onclick="viewAdminQuery(<?php echo (int)$item['id']; ?>)">View</button>
@@ -199,7 +200,7 @@ try {
                                 <form method="post" style="display:inline-block; margin:0;">
                                     <input type="hidden" name="action" value="unlock_query">
                                     <input type="hidden" name="query_id" value="<?php echo (int) $item['id']; ?>">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">Unlock</button>
+                                    <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-unlock me-1"></i>Unlock Agent</button>
                                 </form>
                             <?php else: ?>
                                 <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('', this)">Copy</button>

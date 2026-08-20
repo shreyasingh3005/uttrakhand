@@ -5861,6 +5861,12 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
     }
 
+    function formatQueryHistoryDate(value) {
+        if (!value) return 'N/A';
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? 'N/A' : date.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+
     function renderQueryHistory(history, generatedHistory = []) {
         queryHistoryData = Array.isArray(history) ? history : [];
         const generated = Array.isArray(generatedHistory) ? generatedHistory : [];
@@ -5870,9 +5876,12 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             return;
         }
 
-        let html = '<div class="table-responsive"><table class="table table-custom table-hover align-middle"><thead class="bg-light"><tr><th>Type</th><th>Agent Name</th><th>Agent Number</th><th>Location</th><th>Category</th><th>Hotel / Room</th><th>Meal</th><th>Dates</th><th>Pax</th><th>Budget</th><th>Generated At</th><th>Actions</th></tr></thead><tbody>';
+        let html = '<div class="table-responsive"><table class="table table-custom table-hover align-middle"><thead class="bg-light"><tr><th>Type</th><th>Agent Name</th><th>Agent Number</th><th>Location</th><th>Category</th><th>Hotel / Room</th><th>Meal</th><th>Dates</th><th>Pax</th><th>Budget</th><th>Lock Status</th><th>Lock Until</th><th>Generated At</th><th>Actions</th></tr></thead><tbody>';
         generated.forEach(item => {
-            const generatedAt = new Date(item.generated_at).toLocaleString();
+            const generatedAt = formatQueryHistoryDate(item.generated_at);
+            const isLocked = item.lock_until && new Date(item.lock_until).getTime() > Date.now();
+            const lockStatus = isLocked ? '<span class="badge bg-danger">Agent Locked</span>' : '<span class="badge bg-success">Unlocked</span>';
+            const lockUntil = isLocked ? formatQueryHistoryDate(item.lock_until) : 'Unlocked';
             const dates = `${item.check_in || 'N/A'} - ${item.check_out || 'N/A'}`;
             const hotels = Array.isArray(item.matched_hotels) ? item.matched_hotels : [];
             const hotelSummary = hotels.map(h => `${h.name || 'Hotel'} / ${h.room_name || 'Room'}`).join('<br>') || 'No matches';
@@ -5882,13 +5891,15 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                 <td>Booking Query</td><td>${escapeQueryHistoryHtml(item.agent_name || 'N/A')}</td><td>${escapeQueryHistoryHtml(item.agent_phone || 'N/A')}</td><td>${escapeQueryHistoryHtml(item.location || 'Any')}</td><td>${escapeQueryHistoryHtml(item.hotel_category || 'All Categories')}</td>
                 <td>${hotelSummary}</td><td>${mealSummary}</td><td>${dates}</td>
                 <td>A:${item.adults || 1} C:${item.children || 0} R:${item.rooms || 1}</td>
-                <td>₹${Number(item.budget || 0).toLocaleString('en-IN')}/night</td><td>${generatedAt}</td>
+                <td>₹${Number(item.budget || 0).toLocaleString('en-IN')}/night</td><td>${lockStatus}</td><td>${lockUntil}</td><td>${generatedAt}</td>
                 <td><button class="btn btn-sm btn-outline-secondary" data-query-text="${escapeQueryHistoryHtml(text)}" data-quotation="${escapeQueryHistoryHtml(JSON.stringify({ id: item.id, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, mealPlan: item.meal_plan, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: item.total_amount, agentName: item.agent_name, agentPhone: item.agent_phone }))}" onclick="copyQueryText(this.dataset.queryText, this)">Copy</button></td>
             </tr>`;
         });
         history.forEach(item => {
-            const generatedAt = new Date(item.generated_at).toLocaleString();
-            const lockUntil = new Date(item.lock_until).toLocaleString();
+            const generatedAt = formatQueryHistoryDate(item.generated_at);
+            const isLocked = item.lock_until && new Date(item.lock_until).getTime() > Date.now();
+            const lockStatus = isLocked ? '<span class="badge bg-danger">Agent Locked</span>' : '<span class="badge bg-success">Unlocked</span>';
+            const lockUntil = isLocked ? formatQueryHistoryDate(item.lock_until) : 'Unlocked';
             const escapedQuery = (item.query_text || '').replace(/'/g, "\\'");
             const whatsappUrl = `https://wa.me/${(item.agent_phone||'').replace(/\D/g,'')}?text=${encodeURIComponent(item.query_text||'')}`;
             const dates = (item.check_in ? item.check_in : '') + (item.check_out ? (' - ' + item.check_out) : '');
@@ -5896,7 +5907,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             html += `<tr class="query-history-row" data-history-date="${item.generated_at}" data-history-text="${(item.query_text || '').toLowerCase()}">
                 <td>Agent Query</td><td>${escapeQueryHistoryHtml(item.agent_name || 'N/A')}</td><td>${escapeQueryHistoryHtml(item.agent_phone || 'N/A')}</td><td>${escapeQueryHistoryHtml(item.location || 'Any')}</td><td>${escapeQueryHistoryHtml(item.hotel_name || '')}</td>
                 <td>${item.room_category || ''}</td><td>${item.meal_plan || ''}</td><td>${dates}</td><td>${pax}</td>
-                <td>₹${Number(item.total_amount||0).toLocaleString('en-IN')}</td><td>${generatedAt}</td>
+                <td>₹${Number(item.total_amount||0).toLocaleString('en-IN')}</td><td>${lockStatus}</td><td>${lockUntil}</td><td>${generatedAt}</td>
                 <td>
                     <button class="btn btn-sm btn-outline-primary me-1" onclick="viewQuery(${item.id})">View</button>
                     <button class="btn btn-sm btn-outline-secondary me-1" onclick="copyQueryDetails(${item.id})">Copy</button>
