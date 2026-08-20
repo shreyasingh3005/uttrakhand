@@ -1044,15 +1044,7 @@ if ($selectedEmployeeUsername !== '') {
         <span class="d-flex align-items-center gap-2"><i class="bi bi-buildings"></i> Uttarakhand Ventures</span>
         <button type="button" class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close menu"><i class="bi bi-x-lg"></i></button>
     </div>
-    <ul class="nav flex-column">
-        <li class="nav-item"><a class="nav-link active" href="/dashboard.php"><i class="bi bi-grid-1x2"></i> Dashboard</a></li>
-        <li class="nav-item"><a class="nav-link" href="/agents-details.php"><i class="bi bi-person-badge"></i> Agents</a></li>
-        <li class="nav-item"><a class="nav-link" href="/booking-details.php"><i class="bi bi-calendar-check"></i> Bookings</a></li>
-        <li class="nav-item"><a class="nav-link" href="/bookingquery.php"><i class="bi bi-chat-dots"></i> Booking Query</a></li>
-        <li class="nav-item"><a class="nav-link" href="/employees-detail.php"><i class="bi bi-person-vcard"></i> Employees</a></li>
-        <li class="nav-item"><a class="nav-link" href="/accounts-detail.php"><i class="bi bi-wallet2"></i> Accounts</a></li>
-        <li class="nav-item"><a class="nav-link" href="/listing.php"><i class="bi bi-building"></i> Hotel Listings</a></li>
-    </ul>
+    
 </div>
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 <div class="main-wrapper">

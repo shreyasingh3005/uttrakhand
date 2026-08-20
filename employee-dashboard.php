@@ -2268,7 +2268,6 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             <li class="nav-item"><a class="nav-link" data-target="my-bookings-view" href="#"
                     onclick="showSection('my-bookings-view'); return false;"><i class="bi bi-clock-history"></i> My
                     Bookings</a></li>
-            
         </ul>
     </div>
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
