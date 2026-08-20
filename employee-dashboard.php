@@ -2249,25 +2249,20 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             <li class="nav-item"><a class="nav-link active" data-target="dashboard-view" href="#"
                     onclick="showSection('dashboard-view'); return false;"><i class="bi bi-grid-1x2"></i> Dashboard</a>
             </li>
-            <li class="nav-item"><a class="nav-link" data-target="search-agent-view" href="#"
-                    onclick="showSection('search-agent-view'); return false;"><i class="bi bi-search"></i> Search
-                    Mobile</a></li>
+                <li class="nav-item"><a class="nav-link" data-target="search-agent-view" href="#"
+                    onclick="showSection('search-agent-view'); return false;"><i class="bi bi-person-badge"></i> Agents</a></li>
             <li class="nav-item"><a class="nav-link" data-target="add-agent-view" href="#"
                     onclick="showSection('add-agent-view'); return false;"><i class="bi bi-person-plus"></i> Add
                     Agent</a></li>
-            <li class="nav-item"><a class="nav-link" data-target="booking-query-view" href="#"
-                    onclick="showSection('booking-query-view'); return false;"><i class="bi bi-chat-quote"></i> Booking
-                    Query</a></li>
+                <li class="nav-item"><a class="nav-link" data-target="booking-query-view" href="#"
+                    onclick="showSection('booking-query-view'); return false;"><i class="bi bi-chat-dots"></i> Booking Query</a></li>
             <li class="nav-item"><a class="nav-link" data-target="query-history-view" href="#"
                     onclick="showSection('query-history-view'); return false;"><i class="bi bi-clock-history"></i> Query
                     History</a></li>
-            <li class="nav-item"><a class="nav-link" data-target="create-booking-view" href="#"
-                    onclick="showSection('create-booking-view'); return false;"><i class="bi bi-calendar-check"></i>
-                    Create Booking</a></li>
-            
             <li class="nav-item"><a class="nav-link" data-target="my-bookings-view" href="#"
-                    onclick="showSection('my-bookings-view'); return false;"><i class="bi bi-clock-history"></i> My
-                    Bookings</a></li>
+                    onclick="showSection('my-bookings-view'); return false;"><i class="bi bi-calendar-check"></i> Bookings</a></li>
+                <li class="nav-item"><a class="nav-link" data-target="create-booking-view" href="#"
+                    onclick="showSection('create-booking-view'); return false;"><i class="bi bi-calendar-plus"></i> Create Booking</a></li>
         </ul>
     </div>
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
