@@ -3228,7 +3228,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label for="bookingQueryLocation" class="form-label small fw-semibold text-secondary">Location</label>
-                            <input type="text" class="form-control" id="bookingQueryLocation" list="hotelCityList" placeholder="Type a city, e.g. gur..." value="" autocomplete="off">
+                            <input type="text" class="form-control" id="bookingQueryLocation" list="hotelCityList" placeholder="Type a city, e.g. gur..." value="" autocomplete="off" required>
                             <datalist id="hotelCityList">
                                 <?php foreach ($hotel_locations as $cityOption): ?>
                                     <option value="<?php echo htmlspecialchars($cityOption, ENT_QUOTES, 'UTF-8'); ?>"></option>
@@ -3237,7 +3237,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                         </div>
                         <div class="col-md-6">
                             <label for="bookingQueryHotelCategory" class="form-label small fw-semibold text-secondary">Hotel Category</label>
-                            <select class="form-select" id="bookingQueryHotelCategory">
+                            <select class="form-select" id="bookingQueryHotelCategory" required>
                                 <option value="all categories" selected>All Categories</option>
                                 <?php foreach ($hotel_category_options as $cat): ?>
                                     <option value="<?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?></option>
@@ -3247,11 +3247,11 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
 
                         <div class="col-md-4">
                             <label for="bookingQueryCheckIn" class="form-label small fw-semibold text-secondary">Check-In</label>
-                            <input type="date" class="form-control" id="bookingQueryCheckIn">
+                            <input type="date" class="form-control" id="bookingQueryCheckIn" required>
                         </div>
                         <div class="col-md-4">
                             <label for="bookingQueryCheckOut" class="form-label small fw-semibold text-secondary">Check-out</label>
-                            <input type="date" class="form-control" id="bookingQueryCheckOut">
+                            <input type="date" class="form-control" id="bookingQueryCheckOut" required>
                         </div>
                         <div class="col-md-4">
                             <label for="bookingQueryNights" class="form-label small fw-semibold text-secondary">Nights</label>
@@ -3260,15 +3260,15 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
 
                         <div class="col-md-3">
                             <label for="bookingQueryAdults" class="form-label small fw-semibold text-secondary">Adults</label>
-                            <input type="number" class="form-control" id="bookingQueryAdults" min="1" value="1">
+                            <input type="number" class="form-control" id="bookingQueryAdults" min="1" value="1" required>
                         </div>
                         <div class="col-md-3">
                             <label for="bookingQueryChildren" class="form-label small fw-semibold text-secondary">Children</label>
-                            <input type="number" class="form-control" id="bookingQueryChildren" min="0" value="0">
+                            <input type="number" class="form-control" id="bookingQueryChildren" min="0" value="0" required>
                         </div>
                         <div class="col-md-3">
                             <label for="bookingQueryRooms" class="form-label small fw-semibold text-secondary">Rooms</label>
-                            <input type="number" class="form-control" id="bookingQueryRooms" min="1" value="1">
+                            <input type="number" class="form-control" id="bookingQueryRooms" min="1" value="1" required>
                         </div>
                         <div class="col-md-3">
                             <label for="bookingQueryBudget" class="form-label small fw-semibold text-secondary">Budget</label>
@@ -4950,6 +4950,19 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             setBookingQueryType('agent');
 
     function generateBookingQueryResults() {
+        const requiredFields = [
+            ['bookingQueryLocation', 'Location'], ['bookingQueryHotelCategory', 'Hotel Category'],
+            ['bookingQueryCheckIn', 'Check-In'], ['bookingQueryCheckOut', 'Check-out'],
+            ['bookingQueryAdults', 'Adults'], ['bookingQueryChildren', 'Children'], ['bookingQueryRooms', 'Rooms']
+        ];
+        for (const [id, label] of requiredFields) {
+            const field = document.getElementById(id);
+            if (!field || String(field.value).trim() === '') {
+                showErrorToast(`${label} is required.`);
+                field?.focus();
+                return;
+            }
+        }
         if (!document.getElementById('bookingQueryAgentPhone')?.value.trim()) {
             showErrorToast('Please enter the Agent Mobile Number before generating the query.');
             return;

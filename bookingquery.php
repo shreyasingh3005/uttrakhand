@@ -286,7 +286,7 @@ try {
         <div class="row g-3">
             <div class="col-md-6">
                 <label for="adminQueryLocation" class="form-label small fw-semibold text-secondary">Location</label>
-                <input type="text" class="form-control form-control-sm" id="adminQueryLocation" list="hotelCityList" placeholder="Type a city, e.g. gur..." autocomplete="off">
+                <input type="text" class="form-control form-control-sm" id="adminQueryLocation" list="hotelCityList" placeholder="Type a city, e.g. gur..." autocomplete="off" required>
                 <datalist id="hotelCityList">
                     <?php foreach ($hotel_locations as $cityOption): ?>
                         <option value="<?php echo htmlspecialchars($cityOption, ENT_QUOTES, 'UTF-8'); ?>"></option>
@@ -295,7 +295,7 @@ try {
             </div>
             <div class="col-md-6">
                 <label for="adminQueryCategory" class="form-label small fw-semibold text-secondary">Hotel Category</label>
-                <select class="form-select form-select-sm" id="adminQueryCategory">
+                <select class="form-select form-select-sm" id="adminQueryCategory" required>
                     <option value="all categories" selected>All Categories</option>
                     <?php foreach ($hotel_category_options as $cat): ?>
                         <option value="<?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?></option>
@@ -305,11 +305,11 @@ try {
 
             <div class="col-md-4">
                 <label for="adminQueryCheckIn" class="form-label small fw-semibold text-secondary">Check-In</label>
-                <input type="date" class="form-control form-control-sm" id="adminQueryCheckIn">
+                <input type="date" class="form-control form-control-sm" id="adminQueryCheckIn" required>
             </div>
             <div class="col-md-4">
                 <label for="adminQueryCheckOut" class="form-label small fw-semibold text-secondary">Check-out</label>
-                <input type="date" class="form-control form-control-sm" id="adminQueryCheckOut">
+                <input type="date" class="form-control form-control-sm" id="adminQueryCheckOut" required>
             </div>
             <div class="col-md-4">
                 <label for="adminQueryNights" class="form-label small fw-semibold text-secondary">Nights</label>
@@ -318,15 +318,15 @@ try {
 
             <div class="col-md-3">
                 <label for="adminQueryAdults" class="form-label small fw-semibold text-secondary">Adults</label>
-                <input type="number" class="form-control form-control-sm" id="adminQueryAdults" min="1" value="1">
+                <input type="number" class="form-control form-control-sm" id="adminQueryAdults" min="1" value="1" required>
             </div>
             <div class="col-md-3">
                 <label for="adminQueryChildren" class="form-label small fw-semibold text-secondary">Children</label>
-                <input type="number" class="form-control form-control-sm" id="adminQueryChildren" min="0" value="0">
+                <input type="number" class="form-control form-control-sm" id="adminQueryChildren" min="0" value="0" required>
             </div>
             <div class="col-md-3">
                 <label for="adminQueryRooms" class="form-label small fw-semibold text-secondary">Rooms</label>
-                <input type="number" class="form-control form-control-sm" id="adminQueryRooms" min="1" value="1">
+                <input type="number" class="form-control form-control-sm" id="adminQueryRooms" min="1" value="1" required>
             </div>
             <div class="col-md-3">
                 <label for="adminQueryBudget" class="form-label small fw-semibold text-secondary">Budget</label>
@@ -542,6 +542,18 @@ function calculateBookingNights(checkInId, checkOutId, nightsId) {
 const resultsDataStore = {};
 
 function generateBookingResultsFromInputs(locationId, categoryId, checkInId, checkOutId, nightsId, adultsId, childrenId, roomsId, budgetId, resultWrapId, resultBodyId) {
+    const requiredFields = [
+        [locationId, 'Location'], [categoryId, 'Hotel Category'], [checkInId, 'Check-In'],
+        [checkOutId, 'Check-out'], [adultsId, 'Adults'], [childrenId, 'Children'], [roomsId, 'Rooms']
+    ];
+    for (const [id, label] of requiredFields) {
+        const field = document.getElementById(id);
+        if (!field || String(field.value).trim() === '') {
+            alert(`${label} is required.`);
+            field?.focus();
+            return;
+        }
+    }
     if (resultBodyId === 'adminQueryResultsBody' && adminBookingQueryType === 'agent' && !adminBookingQueryAgent) {
         alert('Please enter and verify a registered agent mobile number first');
         return;
