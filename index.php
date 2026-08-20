@@ -23,6 +23,7 @@ $error = $_GET['error'] ?? '';
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="<?php echo htmlspecialchars(site_url('assets/css/ui-modern.css'), ENT_QUOTES); ?>" rel="stylesheet">
     <style>
         :root {
             --primary: #4f46e5;

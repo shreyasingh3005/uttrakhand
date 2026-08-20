@@ -135,6 +135,7 @@ function time_ago_label($dateTime) {
 	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 	<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
 	<link rel="stylesheet" href="/assets/css/sidebar.css">
+	<link rel="stylesheet" href="/assets/css/ui-modern.css">
 	<style>
 		:root { --bg:#f8fafc; --panel:#fff; --nav-start:#0f172a; --nav-end:#1e293b; --sidebar-text:#94a3b8; --primary:#4f46e5; --primary-dark:#4338ca; --primary-50:#eef2ff; --primary-200:#c7d2fe; --accent:#06b6d4; --success:#10b981; --warning:#f59e0b; --danger:#ef4444; --text:#0f172a; --text-secondary:#475569; --text-muted:#94a3b8; --border:#e2e8f0; }
 		body { font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); font-size:14px; -webkit-font-smoothing:antialiased; }

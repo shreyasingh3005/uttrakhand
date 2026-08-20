@@ -117,6 +117,7 @@ $userInitial = strtoupper(substr($currentUser, 0, 1));
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 <link href="/assets/css/ui-consistency.css" rel="stylesheet">
+<link href="/assets/css/ui-modern.css" rel="stylesheet">
 <style>
 /* ── Reset & Tokens ─────────────────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
