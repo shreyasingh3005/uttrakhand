@@ -2809,6 +2809,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                                 <div class="card-body p-4">
                                     <div class="row">
                                         <div class="col-md-6 mb-3 mb-md-0">
+                                            <img src="https://ui-avatars.com/api/?name=Agent&background=dbeafe&color=1d4ed8&size=96" id="agentAvatarDisplay" class="rounded-circle mb-3" width="64" height="64" alt="Agent avatar">
                                             <h6 class="text-muted fw-bold small text-uppercase mb-2">Agent Information
                                             </h6>
                                             <h5 class="fw-bold mb-3" id="agentNameDisplay"></h5>
@@ -4536,6 +4537,10 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
 
         // Populate agent details
         document.getElementById('agentNameDisplay').textContent = agent.name;
+        const avatar = document.getElementById('agentAvatarDisplay');
+        if (avatar) {
+            avatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name || 'Agent')}&background=dbeafe&color=1d4ed8&size=96`;
+        }
         document.getElementById('agentPhoneDisplay').textContent = agent.phone;
         document.getElementById('agentEmailDisplay').textContent = agent.email;
         document.getElementById('agentGstDisplay').textContent = agent.gst_number || 'N/A';
