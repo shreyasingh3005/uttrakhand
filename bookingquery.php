@@ -410,10 +410,12 @@ function lookupAdminBookingQueryAgent() {
                 adminBookingQueryAgent = null;
                 if (form) form.disabled = true;
                 if (status) status.textContent = data.message || 'Agent mobile number is not registered.';
+                if (status) status.className = data.locked ? 'small text-danger mt-2' : 'small text-muted mt-2';
                 return;
             }
             adminBookingQueryAgent = data.agent;
             if (form) form.disabled = false;
+            if (status) status.className = 'small text-success mt-2';
             if (status) status.textContent = `${data.agent.name} | ${data.agent.phone} | ${data.agent.location || 'Location unavailable'} | ${data.agent.company_name || ''} | ${data.agent.email || ''}`;
         })
         .catch(() => {
