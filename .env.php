@@ -10,9 +10,9 @@
 return [
     // Database
     'DB_HOST'   => 'localhost',
-    'DB_NAME'   => 'u424679052_hotel',
-    'DB_USER'   => 'u424679052_venture',
-    'DB_PASS'   => 'VTF?D;PsA!2d',
+    'DB_NAME'   => 'employee_management',
+    'DB_USER'   => 'root',
+    'DB_PASS'   => '',
     'DB_CHARSET'=> 'utf8mb4',
 
     // Rate Limiting (requests per window)
@@ -27,7 +27,7 @@ return [
     'SESSION_REGENERATE_INTERVAL' => 300, // regenerate ID every 5 min
 
     // App
-    'APP_ENV'                  => 'production',  // development | production
-    'APP_DEBUG'                => false,
-    'APP_URL'                  => 'http://paleturquoise-tarsier-877492.hostingersite.com',
+    'APP_ENV'                  => 'development',  // development | production
+    'APP_DEBUG'                => true,
+    'APP_URL'                  => 'http://localhost/abhi',
 ];

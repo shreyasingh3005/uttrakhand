@@ -4896,6 +4896,11 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
     let bookingQueryAgent = null;
     let bookingQueryType = 'agent';
 
+    function setBookingQueryDetailsDisabled(disabled) {
+        const detailsFields = document.getElementById('bookingQueryDetailsFields');
+        if (detailsFields) detailsFields.disabled = disabled;
+    }
+
     document.querySelectorAll('.query-required-field').forEach((field) => {
         const clearInvalid = () => field.classList.toggle('is-invalid', String(field.value).trim() === '');
         field.addEventListener('input', clearInvalid);
@@ -4905,17 +4910,15 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
     function setBookingQueryType(type) {
         bookingQueryType = 'agent';
         const agentBox = document.getElementById('bookingQueryAgentBox');
-        const form = document.getElementById('bookingQueryDetailsFields');
         if (agentBox) agentBox.style.display = 'block';
-        if (form) form.disabled = false;
+        setBookingQueryDetailsDisabled(!bookingQueryAgent);
     }
 
     function lookupBookingQueryAgent() {
         const phone = document.getElementById('bookingQueryAgentPhone')?.value.trim() || '';
         const status = document.getElementById('bookingQueryAgentStatus');
         if (bookingQueryAgent && bookingQueryAgent.phone !== phone) bookingQueryAgent = null;
-        const form = document.getElementById('bookingQueryDetailsFields');
-        if (form) form.disabled = false;
+        setBookingQueryDetailsDisabled(true);
         if (!phone) {
             bookingQueryAgent = null;
             if (status) status.textContent = 'Please enter the Agent Mobile Number before generating the query.';
@@ -4927,20 +4930,21 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             .then((data) => {
                 if (!data.success || !data.found) {
                     bookingQueryAgent = null;
-                    if (form) form.disabled = Boolean(data.locked);
+                    setBookingQueryDetailsDisabled(true);
                     if (status) {
                         status.textContent = data.message || 'Agent not found. Please enter a registered Agent Mobile Number.';
-                        status.className = data.locked ? 'small text-danger mt-2' : 'small text-muted mt-2';
+                        status.className = 'small text-danger mt-2';
                     }
                     return;
                 }
                 bookingQueryAgent = data.agent;
-                if (form) form.disabled = false;
+                setBookingQueryDetailsDisabled(false);
                 if (status) status.className = 'small text-success mt-2';
                                 if (status) status.innerHTML = `<strong>${escapeQueryHistoryHtml(data.agent.name)}</strong> | ${escapeQueryHistoryHtml(data.agent.phone)} | GST: ${escapeQueryHistoryHtml(data.agent.gst_number || 'N/A')} | ${escapeQueryHistoryHtml(data.agent.location || 'Location unavailable')} | ${escapeQueryHistoryHtml(data.agent.company_name || '')} | ${escapeQueryHistoryHtml(data.agent.email || '')}`;
             })
             .catch(() => {
                 bookingQueryAgent = null;
+                setBookingQueryDetailsDisabled(true);
                 if (status) status.textContent = 'Unable to fetch agent details.';
             });
     }
