@@ -1,6 +1,18 @@
 (function (window) {
     'use strict';
 
+    const QUOTATION_HEADER = '*Airways Travels | Quotation*';
+    const QUOTATION_AVAILABILITY = '*Rooms and Rates are Subject to Availability, please confirm the same at the earliest to proceed with the booking.*';
+    const QUOTATION_FOOTER = [
+        'Thank you for contacting Airways Travels.',
+        'In case of any support please contact us:',
+        'Manish Bhatia',
+        '☎️ Mobile : 919999831144',
+        '✉️ Email : manish@airwaystravels.com',
+        '',
+        '_Powered by Airways Travels_'
+    ];
+
     function value(data, key, fallback) {
         const current = data && data[key];
         return current === undefined || current === null || current === '' ? fallback : current;
@@ -98,7 +110,7 @@
     function format(data) {
         const parts = quotationParts(data);
         return [
-            '*Airways Travels | Quotation*',
+            QUOTATION_HEADER,
             '',
             `Greetings from Airways Travels. Further with reference to query number *${decodeHtml(parts.queryNumber)}*, find below the quotation as desired:`,
             '',
@@ -114,15 +126,13 @@
             '',
             `*Cancellation policy*: ${parts.cancellation}`,
             '',
-            '*Rooms and Rates are Subject to Availability, please confirm the same at the earliest to proceed with the booking.*',
+            QUOTATION_AVAILABILITY,
             '',
-            'Thank you for contacting Airways Travels.',
-            'In case of any support please contact us:',
+            ...QUOTATION_FOOTER.slice(0, 2),
             parts.contactPerson,
             `☎️ Mobile : ${parts.contactPhone}`,
             `✉️ Email : ${parts.contactEmail}`,
-            '',
-            '_Powered by Airways Travels_'
+            ...QUOTATION_FOOTER.slice(5)
         ].join('\n');
     }
 
@@ -143,22 +153,20 @@
             ''
         ].join('\n')).join('\n');
         return [
-            '*Airways Travels | Quotation*',
+            QUOTATION_HEADER,
             '',
             `Greetings from Airways Travels. Further with reference to query number *${decodeHtml(first.queryNumber)}*, find below the quotation as desired:`,
             '',
             hotelBlocks,
             '*Cancellation policy*: ' + first.cancellation,
             '',
-            '*Rooms and Rates are Subject to Availability, please confirm the same at the earliest to proceed with the booking.*',
+            QUOTATION_AVAILABILITY,
             '',
-            'Thank you for contacting Airways Travels.',
-            'In case of any support please contact us:',
+            ...QUOTATION_FOOTER.slice(0, 2),
             first.contactPerson,
             `☎️ Mobile : ${first.contactPhone}`,
             `✉️ Email : ${first.contactEmail}`,
-            '',
-            '_Powered by Airways Travels_'
+            ...QUOTATION_FOOTER.slice(5)
         ].join('\n');
     }
 
