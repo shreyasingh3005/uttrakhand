@@ -97,6 +97,7 @@
             `*Meal plan*: ${mealPlan}`,
             `*Room Price*: ${formatPrice(roomPrice)}/- per room per night`,
             '',
+            'Above rates are inclusive of taxes.',
             `*Cancellation policy*: ${cancellation}`,
             '',
             '*Rooms and Rates are Subject to Availability, please confirm the same at the earliest to proceed with the booking.*',
