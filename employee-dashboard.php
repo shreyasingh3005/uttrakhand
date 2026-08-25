@@ -1011,6 +1011,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit;
     }
 
+    if ($_POST['action'] === 'update_query_text') {
+        http_response_code(200);
+        header('Content-Type: application/json; charset=utf-8');
+        $queryId = (int)($_POST['query_id'] ?? 0);
+        $queryText = trim((string)($_POST['query_text'] ?? ''));
+        $source = ($_POST['source'] ?? '') === 'legacy' ? 'legacy' : 'generated';
+        if ($queryId <= 0 || $queryText === '') {
+            echo json_encode(['success' => false, 'message' => 'Invalid query text update']);
+            exit;
+        }
+        try {
+            if ($source === 'legacy') {
+                $updateStmt = $conn->prepare('UPDATE agent_query_locks SET query_text = :query_text WHERE id = :id AND (created_by_user_id = :user_id OR employee_username = :username)');
+            } else {
+                $updateStmt = $conn->prepare('UPDATE booking_query_history SET query_text = :query_text WHERE id = :id AND (created_by_user_id = :user_id OR created_by_username = :username)');
+            }
+            $updateStmt->execute([
+                ':query_text' => $queryText,
+                ':id' => $queryId,
+                ':user_id' => $user_id,
+                ':username' => $username,
+            ]);
+            echo json_encode(['success' => $updateStmt->rowCount() > 0]);
+        } catch (PDOException $e) {
+            echo json_encode(['success' => false, 'message' => 'Unable to update query text']);
+        }
+        exit;
+    }
+
     if ($_POST['action'] === 'generate_query') {
         $agent_phone = sanitize_input($_POST['agentPhone'] ?? '');
         http_response_code(200);
@@ -5166,16 +5195,22 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         saveSelectedBookingQueryHistory(selected).then((data) => {
             window.employeeBookingQueryId = data.id;
             const message = buildBookingQueryShareText(selected);
+            const persist = fetch('employee-dashboard.php', {
+                method: 'POST',
+                body: new URLSearchParams({ action: 'update_query_text', source: 'generated', query_id: data.id, query_text: message })
+            });
             const openWhatsapp = () => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
 
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(message).then(() => {
-                    alert(`${selected.length} hotel(s) copied to clipboard. Opening WhatsApp to send to the customer...`);
+            persist.catch(() => {}).then(() => {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(message).then(() => {
+                        alert(`${selected.length} hotel(s) copied to clipboard. Opening WhatsApp to send to the customer...`);
+                        openWhatsapp();
+                    }).catch(openWhatsapp);
+                } else {
                     openWhatsapp();
-                }).catch(openWhatsapp);
-            } else {
-                openWhatsapp();
-            }
+                }
+            });
         }).catch((error) => {
             console.error('Query history save error:', error);
             showErrorToast('Unable to save query history. Quotes were not sent.');
@@ -5683,8 +5718,12 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                 if (data.success) {
                     queryText = AirwaysQuotation.format({
                         hotelName, roomCategory, mealPlan, checkIn, checkOut, adults, children, rooms,
-                        roomPrice: totalAmount, agentName: currentQueryAgent, agentPhone, id: data.id
+                        roomPrice: totalAmount, agentName: currentQueryAgent, agentPhone, id: data.query_id
                     });
+                    fetch('employee-dashboard.php', {
+                        method: 'POST',
+                        body: new URLSearchParams({ action: 'update_query_text', source: 'legacy', query_id: data.query_id, query_text: queryText })
+                    }).catch(error => console.error('Unable to persist formatted query:', error));
                     navigator.clipboard?.writeText(queryText).catch(() => {});
                     showToastMsg('Query generated and agent locked for 5 hours');
                     document.getElementById('generatedQueryText').value = queryText;
@@ -6002,7 +6041,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
 
     async function copyQueryText(text, button) {
         const row = button?.closest('.query-history-row');
-        if (row?.dataset.quotation) text = AirwaysQuotation.format(JSON.parse(row.dataset.quotation));
+        if (row?.dataset.quotation && !text) text = AirwaysQuotation.format(JSON.parse(row.dataset.quotation));
         else text = AirwaysQuotation.plainText(text || '');
         if (!text) return showErrorToast('No query text available to copy');
         try {

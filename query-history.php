@@ -240,7 +240,7 @@ try {
                         <td>
                             <?php if (!empty($item['agent_phone'])): ?>
                                 <button class="btn btn-sm btn-outline-primary" onclick="viewAdminQuery(this)">View</button>
-                                <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('', this)">Copy</button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick='copyQueryText(<?php echo json_encode($item['query_text'] ?? '', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>, this)'>Copy</button>
                                 <a class="btn btn-sm btn-success" target="_blank" href="https://wa.me/<?php echo preg_replace('/\D/','',($item['agent_phone'] ?? '')); ?>?text=<?php echo urlencode($item['query_text'] ?? ''); ?>">WA</a>
                                 <form method="post" style="display:inline-block; margin:0;">
                                     <input type="hidden" name="action" value="<?php echo $isLocked ? 'unlock_query' : 'lock_query'; ?>">
@@ -248,7 +248,7 @@ try {
                                     <button type="submit" class="btn btn-sm <?php echo $isLocked ? 'btn-success' : 'btn-warning'; ?>"><i class="bi bi-<?php echo $isLocked ? 'unlock' : 'lock'; ?> me-1"></i><?php echo $isLocked ? 'Unlock Agent' : 'Lock Agent'; ?></button>
                                 </form>
                             <?php else: ?>
-                                <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('', this)">Copy</button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick='copyQueryText(<?php echo json_encode($item['query_text'] ?? '', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>, this)'>Copy</button>
                             <?php endif; ?>
                         </td>
                     </tr>
@@ -363,6 +363,20 @@ function copyQueryText(queryText, buttonElement) {
                 alert('Failed to copy: ' + queryText.substring(0, 100));
             });
         }
+        return;
+    }
+
+    if (queryText) {
+        const storedText = AirwaysQuotation.plainText(queryText);
+        navigator.clipboard.writeText(storedText).then(() => alert('Query copied to clipboard!')).catch(() => {
+            const textarea = document.createElement('textarea');
+            textarea.value = storedText;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            alert('Query copied to clipboard!');
+        });
         return;
     }
 
