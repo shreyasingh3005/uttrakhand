@@ -224,7 +224,8 @@ try {
                         data-rooms="<?php echo htmlspecialchars((string)($item['rooms'] ?? 1), ENT_QUOTES, 'UTF-8'); ?>"
                         data-hotels="<?php echo htmlspecialchars($item['matched_hotels_json'] ?? '[]', ENT_QUOTES, 'UTF-8'); ?>"
                         data-history-date="<?php echo htmlspecialchars($item['generated_at'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
-                        data-history-text="<?php echo htmlspecialchars(strtolower((string)($item['query_text'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>">>
+                        data-history-text="<?php echo htmlspecialchars(strtolower((string)($item['query_text'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>"
+                        data-query-text="<?php echo htmlspecialchars((string)($item['query_text'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
                         <td><?php echo htmlspecialchars($item['created_by_username'] ?? $item['employee_name'] ?? ''); ?></td>
                         <td><?php echo htmlspecialchars($item['agent_name'] ?? 'N/A'); ?></td>
                         <td><?php echo htmlspecialchars($item['agent_phone'] ?? 'N/A'); ?></td>
@@ -410,6 +411,13 @@ function viewAdminQuery(buttonElement) {
     const row = buttonElement?.closest('.admin-history-row');
     const modalElement = document.getElementById('adminQueryHistoryModal');
     if (!row || !modalElement) return;
+    const storedText = row.dataset.queryText || '';
+    if (storedText && storedText.includes('*Airways Travels | Quotation*') && /\*UV-\d{4}\*/.test(storedText)) {
+        document.getElementById('adminQueryHistoryModalTitle').textContent = `Query for ${row.cells[1]?.textContent.trim() || 'Agent'}`;
+        document.getElementById('adminQueryHistoryModalBody').textContent = AirwaysQuotation.plainText(storedText);
+        bootstrap.Modal.getOrCreateInstance(modalElement).show();
+        return;
+    }
     let matchedHotels = [];
     try { matchedHotels = JSON.parse(row.dataset.hotels || '[]'); } catch (e) {}
     const firstHotel = matchedHotels[0] || {};

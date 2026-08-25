@@ -5947,7 +5947,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                 <td>${hotelSummary}</td><td>${mealSummary}</td><td>${dates}</td>
                 <td>A:${item.adults || 1} C:${item.children || 0} R:${item.rooms || 1}</td>
                 <td>₹${Number(item.budget || 0).toLocaleString('en-IN')}/night</td><td>${lockStatus}</td><td>${lockUntil}</td><td>${generatedAt}</td>
-                <td><button class="btn btn-sm btn-outline-primary me-1" data-query-text="${escapeQueryHistoryHtml(text)}" onclick="viewGeneratedQuery(this)">View</button><button class="btn btn-sm btn-outline-secondary" data-query-text="${escapeQueryHistoryHtml(text)}" data-quotation="${escapeQueryHistoryHtml(JSON.stringify({ id: item.id, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, mealPlan: item.meal_plan, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: item.total_amount, agentName: item.agent_name, agentPhone: item.agent_phone }))}" onclick="copyQueryText(this.dataset.queryText, this)">Copy</button></td>
+                <td><button class="btn btn-sm btn-outline-primary me-1" data-query-text="${escapeQueryHistoryHtml(text)}" data-quotation="${escapeQueryHistoryHtml(JSON.stringify({ id: item.id, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, mealPlan: item.meal_plan, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: item.total_amount, agentName: item.agent_name, agentPhone: item.agent_phone, matchedHotels: hotels }))}" onclick="viewGeneratedQuery(this)">View</button><button class="btn btn-sm btn-outline-secondary" data-query-text="${escapeQueryHistoryHtml(text)}" data-quotation="${escapeQueryHistoryHtml(JSON.stringify({ id: item.id, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, mealPlan: item.meal_plan, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: item.total_amount, agentName: item.agent_name, agentPhone: item.agent_phone, matchedHotels: hotels }))}" onclick="copyQueryText(this.dataset.queryText, this)">Copy</button></td>
             </tr>`;
         });
         history.forEach(item => {
@@ -6041,7 +6041,8 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
 
     async function copyQueryText(text, button) {
         const row = button?.closest('.query-history-row');
-        if (row?.dataset.quotation && !text) text = AirwaysQuotation.format(JSON.parse(row.dataset.quotation));
+        const isFormatted = text && text.includes('*Airways Travels | Quotation*') && /\*UV-\d{4}\*/.test(text);
+        if (!isFormatted && row?.dataset.quotation) text = AirwaysQuotation.format(JSON.parse(row.dataset.quotation));
         else text = AirwaysQuotation.plainText(text || '');
         if (!text) return showErrorToast('No query text available to copy');
         try {
@@ -6150,7 +6151,10 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
 
     function viewGeneratedQuery(button) {
         const modal = document.getElementById('queryHistoryModal');
-        const text = button?.dataset.queryText || '';
+        let text = button?.dataset.queryText || '';
+        if ((!text.includes('*Airways Travels | Quotation*') || !/\*UV-\d{4}\*/.test(text)) && button?.dataset.quotation) {
+            text = AirwaysQuotation.format(JSON.parse(button.dataset.quotation));
+        }
         if (!modal) return showErrorToast('Query modal not available');
         document.getElementById('queryHistoryModalTitle').textContent = 'Query Details';
         document.getElementById('queryHistoryModalBody').textContent = AirwaysQuotation.plainText(text);

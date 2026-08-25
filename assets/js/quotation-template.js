@@ -26,6 +26,10 @@
         return Number.isFinite(number) ? String(Math.round(number)) : '0';
     }
 
+    function randomQueryNumber() {
+        return `UV-${String(Math.floor(1000 + Math.random() * 9000))}`;
+    }
+
     function decodeHtml(value) {
         const text = String(value ?? '')
             .replace(/<br\s*\/?>/gi, '\n')
@@ -54,12 +58,6 @@
         return decodeHtml(value(data, 'mealPlan', value(room, 'meal_plan', 'N/A')));
     }
 
-    function generateQueryNumber(input) {
-        const supplied = String(input?.queryNumber || '').trim();
-        if (/^UV-\d{4,}$/i.test(supplied)) return supplied.toUpperCase();
-        return `UV-${Math.floor(1000 + Math.random() * 9000)}`;
-    }
-
     function quotationParts(data) {
         const input = data || {};
         const selected = firstRoom(input);
@@ -69,12 +67,14 @@
         const hotelName = decodeHtml(value(input, 'hotelName', value(hotel, 'name', 'N/A')));
         const location = decodeHtml(value(input, 'hotelLocation', value(hotel, 'location', value(hotel, 'city', 'N/A'))));
         const roomCategory = decodeHtml(value(input, 'roomCategory', value(room, 'room_name', value(room, 'name', 'N/A'))));
+        const mealPlan = decodeHtml(value(input, 'mealPlan', value(room, 'meal_plan', Object.keys(prices)[0] || 'MAPAI')));
         const adults = Number(value(input, 'adults', 1));
         const children = Number(value(input, 'children', 0));
         const rooms = Number(value(input, 'rooms', 1));
         const occupancy = value(input, 'occupancy', adults === 2 ? 'Double' : adults === 1 ? 'Single' : `${adults} Persons`);
         const roomPrice = value(input, 'roomPrice', value(room, 'selected_price', prices.EP || prices.MAP || prices.MAPAI || input.budget || 0));
-        const queryNumber = generateQueryNumber(input);
+        const queryId = Number(input.id || 0);
+        const queryNumber = value(input, 'queryNumber', queryId > 0 ? `UV-${String(queryId).padStart(4, '0')}` : randomQueryNumber());
         const cancellation = decodeHtml(value(input, 'cancellationPolicy', 'Free cancellation 1 day prior to arrival hotel local time (12:00 Hours), Thereafter any cancellation/no show leads to 100% retention charges.'));
         const contactPerson = decodeHtml(value(input, 'contactPerson', 'Manish Bhatia'));
         const contactPhone = decodeHtml(value(input, 'contactPhone', '919999831144'));
@@ -116,7 +116,7 @@
             `*Meal plan*: ${parts.mealPlan}`,
             `*Room Price*: ${parts.roomPrice}/- per room per night`,
             '',
-            'Above rates are inclusive of taxes.',
+            '*Above rates are inclusive of taxes.*',
             '',
             `*Cancellation policy*: ${parts.cancellation}`,
             '',
@@ -154,7 +154,7 @@
             `Greetings from Airways Travels. Further with reference to query number *${decodeHtml(first.queryNumber)}*, find below the quotation as desired:`,
             '',
             hotelBlocks,
-            'Above rates are inclusive of taxes.',
+            '*Above rates are inclusive of taxes.*',
             '',
             '*Cancellation policy*: ' + first.cancellation,
             '',
