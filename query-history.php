@@ -210,7 +210,6 @@ try {
                 <tbody>
                     <?php foreach ($admin_history as $item): ?>
                     <tr class="admin-history-row" data-query-id="<?php echo (int)($item['id'] ?? 0); ?>"
-                        data-query-text="<?php echo htmlspecialchars((string)($item['query_text'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
                         data-employee="<?php echo htmlspecialchars(strtolower((string)($item['created_by_username'] ?? $item['employee_name'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>"
                         data-hotel="<?php echo htmlspecialchars(strtolower((string)($item['hotel_name'] ?? ($item['hotel_category'] ?? ''))), ENT_QUOTES, 'UTF-8'); ?>"
                         data-location="<?php echo htmlspecialchars(strtolower((string)($item['location'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>"
@@ -411,13 +410,6 @@ function viewAdminQuery(buttonElement) {
     const row = buttonElement?.closest('.admin-history-row');
     const modalElement = document.getElementById('adminQueryHistoryModal');
     if (!row || !modalElement) return;
-    const storedText = AirwaysQuotation.plainText(row.dataset.queryText || '');
-    if (storedText) {
-        document.getElementById('adminQueryHistoryModalTitle').textContent = 'Query Details';
-        document.getElementById('adminQueryHistoryModalBody').textContent = storedText;
-        bootstrap.Modal.getOrCreateInstance(modalElement).show();
-        return;
-    }
     let matchedHotels = [];
     try { matchedHotels = JSON.parse(row.dataset.hotels || '[]'); } catch (e) {}
     const firstHotel = matchedHotels[0] || {};

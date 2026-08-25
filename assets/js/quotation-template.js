@@ -1,18 +1,6 @@
 (function (window) {
     'use strict';
 
-    const QUOTATION_HEADER = '*Airways Travels | Quotation*';
-    const QUOTATION_AVAILABILITY = '*Rooms and Rates are Subject to Availability, please confirm the same at the earliest to proceed with the booking.*';
-    const QUOTATION_FOOTER = [
-        'Thank you for contacting Airways Travels.',
-        'In case of any support please contact us:',
-        'Manish Bhatia',
-        '☎️ Mobile : 919999831144',
-        '✉️ Email : manish@airwaystravels.com',
-        '',
-        '_Powered by Airways Travels_'
-    ];
-
     function value(data, key, fallback) {
         const current = data && data[key];
         return current === undefined || current === null || current === '' ? fallback : current;
@@ -36,6 +24,15 @@
     function formatPrice(input) {
         const number = Number(input || 0);
         return Number.isFinite(number) ? String(Math.round(number)) : '0';
+    }
+
+    function queryNumber(data) {
+        const input = data || {};
+        const explicit = String(input.queryNumber || '').trim();
+        if (explicit) return explicit;
+        const id = Number(input.id || 0);
+        if (id > 0) return `UV-${String(id).padStart(4, '0')}`;
+        return `UV-${String(Math.floor(1000 + Math.random() * 9000))}`;
     }
 
     function decodeHtml(value) {
@@ -81,15 +78,14 @@
         const rooms = Number(value(input, 'rooms', 1));
         const occupancy = value(input, 'occupancy', adults === 2 ? 'Double' : adults === 1 ? 'Single' : `${adults} Persons`);
         const roomPrice = value(input, 'roomPrice', value(room, 'selected_price', prices.EP || prices.MAP || prices.MAPAI || input.budget || 0));
-        const queryId = Number(input.id || 0);
-        const queryNumber = value(input, 'queryNumber', queryId > 0 ? `UV-${String(queryId).padStart(4, '0')}` : 'N/A');
+        const quotationNumber = queryNumber(input);
         const cancellation = decodeHtml(value(input, 'cancellationPolicy', 'Free cancellation 1 day prior to arrival hotel local time (12:00 Hours), Thereafter any cancellation/no show leads to 100% retention charges.'));
         const contactPerson = decodeHtml(value(input, 'contactPerson', 'Manish Bhatia'));
         const contactPhone = decodeHtml(value(input, 'contactPhone', '919999831144'));
         const contactEmail = decodeHtml(value(input, 'contactEmail', 'manish@airwaystravels.com'));
 
         return {
-            queryNumber,
+            queryNumber: quotationNumber,
             hotelName,
             location,
             checkIn: formatDate(input.checkIn),
@@ -110,7 +106,7 @@
     function format(data) {
         const parts = quotationParts(data);
         return [
-            QUOTATION_HEADER,
+            '*Airways Travels | Quotation*',
             '',
             `Greetings from Airways Travels. Further with reference to query number *${decodeHtml(parts.queryNumber)}*, find below the quotation as desired:`,
             '',
@@ -124,15 +120,19 @@
             `*Meal plan*: ${parts.mealPlan}`,
             `*Room Price*: ${parts.roomPrice}/- per room per night`,
             '',
+            'Above rates are inclusive of taxes.',
+            '',
             `*Cancellation policy*: ${parts.cancellation}`,
             '',
-            QUOTATION_AVAILABILITY,
+            '*Rooms and Rates are Subject to Availability, please confirm the same at the earliest to proceed with the booking.*',
             '',
-            ...QUOTATION_FOOTER.slice(0, 2),
+            'Thank you for contacting Airways Travels.',
+            'In case of any support please contact us:',
             parts.contactPerson,
             `☎️ Mobile : ${parts.contactPhone}`,
             `✉️ Email : ${parts.contactEmail}`,
-            ...QUOTATION_FOOTER.slice(5)
+            '',
+            '_Powered by Airways Travels_'
         ].join('\n');
     }
 
@@ -153,20 +153,24 @@
             ''
         ].join('\n')).join('\n');
         return [
-            QUOTATION_HEADER,
+            '*Airways Travels | Quotation*',
             '',
             `Greetings from Airways Travels. Further with reference to query number *${decodeHtml(first.queryNumber)}*, find below the quotation as desired:`,
             '',
             hotelBlocks,
+            'Above rates are inclusive of taxes.',
+            '',
             '*Cancellation policy*: ' + first.cancellation,
             '',
-            QUOTATION_AVAILABILITY,
+            '*Rooms and Rates are Subject to Availability, please confirm the same at the earliest to proceed with the booking.*',
             '',
-            ...QUOTATION_FOOTER.slice(0, 2),
+            'Thank you for contacting Airways Travels.',
+            'In case of any support please contact us:',
             first.contactPerson,
             `☎️ Mobile : ${first.contactPhone}`,
             `✉️ Email : ${first.contactEmail}`,
-            ...QUOTATION_FOOTER.slice(5)
+            '',
+            '_Powered by Airways Travels_'
         ].join('\n');
     }
 
