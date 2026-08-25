@@ -1616,6 +1616,7 @@ if ($selectedEmployeeUsername !== '') {
         </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/assets/js/quotation-template.js?v=20260825-1"></script>
 <script>
 (() => {
     const sidebar = document.getElementById('adminSidebar');
@@ -1868,19 +1869,19 @@ function adminGenerateQueryFromForm() {
         return;
     }
 
-    const queryText = `Booking Query for Agent: ${currentAdminQueryAgent}\n\n` +
-        `Hotel: ${hotelName}\n` +
-        `Room Category: ${roomCategory}\n` +
-        `Meal Plan: ${mealPlan}\n\n` +
-        `Check-in: ${checkIn}\n` +
-        `Check-out: ${checkOut}\n` +
-        `Adults: ${adults}\n` +
-        `Children: ${children}\n` +
-        `Rooms: ${rooms}\n\n` +
-        `Total Amount: ₹${totalAmount}\n` +
-        `Client Name: ${clientName}\n` +
-        `Client Mobile: ${clientMobile}\n` +
-        (specialRequest ? `Special Request: ${specialRequest}\n` : '');
+    const queryText = AirwaysQuotation.format({
+        hotelName,
+        roomCategory,
+        mealPlan,
+        checkIn,
+        checkOut,
+        adults,
+        children,
+        rooms,
+        roomPrice: totalAmount,
+        agentName: currentAdminQueryAgent,
+        agentPhone
+    });
 
     // Copy to clipboard
     navigator.clipboard.writeText(queryText).then(() => {

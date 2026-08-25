@@ -74,7 +74,10 @@
         const occupancy = value(input, 'occupancy', adults === 2 ? 'Double' : adults === 1 ? 'Single' : `${adults} Persons`);
         const roomPrice = value(input, 'roomPrice', value(room, 'selected_price', prices.EP || prices.MAP || prices.MAPAI || input.budget || 0));
         const queryId = Number(input.id || 0);
-        const queryNumber = value(input, 'queryNumber', queryId > 0 ? `UV-${String(queryId).padStart(4, '0')}` : randomQueryNumber());
+        const suppliedQueryNumber = String(input.queryNumber || '').trim();
+        const queryNumber = suppliedQueryNumber && suppliedQueryNumber.toUpperCase() !== 'N/A'
+            ? suppliedQueryNumber
+            : queryId > 0 ? `UV-${String(queryId).padStart(4, '0')}` : randomQueryNumber();
         const cancellation = decodeHtml(value(input, 'cancellationPolicy', 'Free cancellation 1 day prior to arrival hotel local time (12:00 Hours), Thereafter any cancellation/no show leads to 100% retention charges.'));
         const contactPerson = decodeHtml(value(input, 'contactPerson', 'Manish Bhatia'));
         const contactPhone = decodeHtml(value(input, 'contactPhone', '919999831144'));
