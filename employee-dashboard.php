@@ -3304,7 +3304,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
 
                     <div class="mt-3">
                         <button class="btn btn-success" type="button" onclick="sendSelectedBookingQueryQuotes()">
-                            Send Selected Quotes
+                            Copy
                         </button>
                     </div>
                 </div>

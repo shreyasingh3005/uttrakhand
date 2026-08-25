@@ -374,7 +374,7 @@ try {
         </div>
 
         <div class="mt-3">
-            <button type="button" class="btn btn-success" onclick="sendSelectedAdminQueryQuotes()">Send Selected Quotes</button>
+            <button type="button" class="btn btn-success" onclick="sendSelectedAdminQueryQuotes()">Copy</button>
         </div>
     </div>
 
