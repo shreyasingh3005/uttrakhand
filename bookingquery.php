@@ -1,3 +1,5 @@
+                                          bqh.nights, bqh.adults, bqh.children, bqh.rooms, bqh.budget, bqh.matched_hotels_json, bqh.query_number,
+            queryNumber: window.adminBookingQueryNumber,
 <?php
 require_once __DIR__ . '/includes/auth_session.php';
 require_once __DIR__ . '/includes/db_connect.php';
@@ -473,7 +475,7 @@ function loadAdminGeneratedQueryHistory() {
                     <td>${escapeAdminHistoryHtml(item.hotel_category || 'All Categories')}</td><td>${hotelNames}</td><td>${meals}</td>
                     <td>${escapeAdminHistoryHtml(item.check_in || 'N/A')} - ${escapeAdminHistoryHtml(item.check_out || 'N/A')}</td>
                     <td>₹${Number(item.budget || 0).toLocaleString('en-IN')}/night</td><td>${item.lock_until && new Date(item.lock_until).getTime() > Date.now() ? '<span class="badge bg-danger">Agent Locked</span>' : '<span class="badge bg-success">Unlocked</span>'}</td><td>${escapeAdminHistoryHtml(item.lock_until && new Date(item.lock_until).getTime() > Date.now() ? formatAdminHistoryDate(item.lock_until) : 'Unlocked')}</td><td>${escapeAdminHistoryHtml(formatAdminHistoryDate(item.generated_at))}</td>
-                    <td><button type="button" class="btn btn-sm btn-outline-secondary" data-query-text="${escapeAdminHistoryHtml(item.query_text)}" data-quotation="${escapeAdminHistoryHtml(JSON.stringify({ id: item.id, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: null, agentName: item.agent_name, agentPhone: item.agent_phone, matchedHotels: hotels }))}" onclick="copyAdminHistoryQuotation(this)">Copy</button></td>
+                    <td><button type="button" class="btn btn-sm btn-outline-secondary" data-query-text="${escapeAdminHistoryHtml(item.query_text)}" data-quotation="${escapeAdminHistoryHtml(JSON.stringify({ queryNumber: item.query_number, queryText: item.query_text, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: null, agentName: item.agent_name, agentPhone: item.agent_phone, matchedHotels: hotels }))}" onclick="copyAdminHistoryQuotation(this)">Copy</button></td>
                 </tr>`;
             }).join('')}</tbody></table></div>` : '<div class="text-center py-3 text-muted">No generated Booking Query history found.</div>';
         applyAdminQueryHistoryFilter('all');
@@ -692,7 +694,7 @@ function buildHotelShareText(prefixIds, resultBodyId) {
     }).filter(Boolean);
     return {
         text: AirwaysQuotation.formatMany(selectedRows.map(({ hotel, room }) => ({
-            id: window.adminBookingQueryId,
+            queryNumber: window.adminBookingQueryNumber,
             hotelName: hotel.name, hotelLocation: hotel.location || hotel.city || location,
             roomCategory: room.name || room.category, mealPlan: room.meal_plan || room.mealPlan || Object.keys(room.prices || {})[0],
             checkIn, checkOut, adults, children, rooms,
@@ -793,6 +795,7 @@ function sendSelectedAdminQueryQuotes() {
         children: document.getElementById(prefixIds.children)?.value || '0',
         rooms: document.getElementById(prefixIds.rooms)?.value || '1',
         budget: document.getElementById(prefixIds.budget)?.value || '0',
+        query_number: window.adminBookingQueryNumber || AirwaysQuotation.generateQueryNumber(),
         query_type: adminBookingQueryType,
         agent_phone: adminBookingQueryAgent?.phone || '',
         matched_hotels: JSON.stringify(matchedHotels)
@@ -802,6 +805,7 @@ function sendSelectedAdminQueryQuotes() {
         .then((data) => {
             if (!data.success) throw new Error(data.message || 'Unable to save query history');
             window.adminBookingQueryId = data.id;
+            window.adminBookingQueryNumber = data.query_number || window.adminBookingQueryNumber;
             copyAndShareHotelQuotes(prefixIds, resultBodyId);
         })
         .catch((error) => {
@@ -1065,11 +1069,12 @@ function generateAdminQueryFromForm() {
         specialRequest: document.getElementById('adminQuerySpecialRequest')?.value.trim(),
     };
 
+    const queryNumber = AirwaysQuotation.generateQueryNumber();
     let queryText = AirwaysQuotation.format({
         hotelName: values.hotelName, hotelLocation: values.location, roomCategory: values.roomCategory,
         mealPlan: values.mealPlan, checkIn: values.checkIn, checkOut: values.checkOut,
         adults: values.adults, children: values.children, rooms: values.rooms,
-        roomPrice: values.totalAmount, agentName: values.agentName, agentPhone: values.agentPhone
+        roomPrice: values.totalAmount, agentName: values.agentName, agentPhone: values.agentPhone, queryNumber
     });
 /*
         `Booking Query:`,
@@ -1126,8 +1131,7 @@ function generateAdminQueryFromForm() {
                 hotelName: values.hotelName, hotelLocation: values.location, roomCategory: values.roomCategory,
                 mealPlan: values.mealPlan, checkIn: values.checkIn, checkOut: values.checkOut,
                 adults: values.adults, children: values.children, rooms: values.rooms,
-                roomPrice: values.totalAmount, agentName: values.agentName, agentPhone: values.agentPhone,
-                id: data.query_id
+                roomPrice: values.totalAmount, agentName: values.agentName, agentPhone: values.agentPhone, queryNumber
             });
             document.getElementById('adminGeneratedQueryText').value = queryText;
             document.getElementById('adminGeneratedQueryWhatsappLink').href =

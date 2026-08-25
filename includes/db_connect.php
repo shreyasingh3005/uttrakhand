@@ -686,6 +686,7 @@ function ensure_booking_query_history_columns(PDO $conn) {
             'room_category' => 'ADD COLUMN room_category VARCHAR(150) DEFAULT NULL AFTER hotel_name',
             'query_text' => 'ADD COLUMN query_text TEXT NOT NULL AFTER room_category',
             'matched_hotels_json' => 'ADD COLUMN matched_hotels_json LONGTEXT DEFAULT NULL AFTER query_text',
+            'query_number' => 'ADD COLUMN query_number VARCHAR(8) DEFAULT NULL AFTER matched_hotels_json',
             'query_date' => 'ADD COLUMN query_date DATETIME DEFAULT NULL AFTER generated_at',
         ];
 

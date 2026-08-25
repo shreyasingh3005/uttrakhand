@@ -867,6 +867,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $roomCategory = sanitize_input($_POST['room_category'] ?? '');
         $matchedHotels = json_decode($_POST['matched_hotels'] ?? '[]', true);
         $matchedHotels = is_array($matchedHotels) ? $matchedHotels : [];
+        $queryNumber = strtoupper(trim((string)($_POST['query_number'] ?? '')));
+        if (!preg_match('/^UV-\d{3,5}$/', $queryNumber)) {
+            $queryNumber = 'UV-' . random_int(100, 99999);
+        }
 
         if (empty($matchedHotels)) {
             echo json_encode(['success' => false, 'message' => 'Select at least one matching hotel before sending quotes']);
@@ -947,11 +951,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $saveStmt = $conn->prepare('INSERT INTO booking_query_history (
                 created_by_user_id, created_by_username, created_by_role, query_type, agent_id, agent_name, agent_phone, lock_until, location, hotel_category,
                 hotel_name, room_category, check_in, check_out, nights, adults, children, rooms, budget,
-                query_text, matched_hotels_json
+                query_text, matched_hotels_json, query_number
             ) VALUES (
                 :user_id, :username, :role, :query_type, :agent_id, :agent_name, :agent_phone, :lock_until, :location, :category, :hotel_name, :room_category,
                 :check_in, :check_out, :nights, :adults, :children, :rooms, :budget,
-                :query_text, :matched_hotels_json
+                :query_text, :matched_hotels_json, :query_number
             )');
             $saveStmt->execute([
                 ':user_id' => $user_id,
@@ -975,9 +979,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 ':budget' => $budget,
                 ':query_text' => implode("\n", $lines),
                 ':matched_hotels_json' => json_encode($matchedHotels, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                ':query_number' => $queryNumber,
             ]);
             $conn->commit();
-            echo json_encode(['success' => true, 'id' => (int)$conn->lastInsertId()]);
+            echo json_encode(['success' => true, 'id' => (int)$conn->lastInsertId(), 'query_number' => $queryNumber]);
         } catch (Throwable $e) {
             if ($conn->inTransaction()) $conn->rollBack();
             error_log('save_booking_query_history failed: ' . $e->getMessage());
@@ -5099,7 +5104,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             return hotel && room ? { hotel, room } : null;
         }).filter(Boolean);
         return AirwaysQuotation.formatMany(selectedRows.map(({ hotel, room }) => ({
-            id: window.employeeBookingQueryId,
+            queryNumber: window.employeeBookingQueryNumber,
             hotelName: hotel.name, hotelLocation: hotel.location || hotel.city || location,
             roomCategory: room.name || room.category, mealPlan: room.meal_plan || room.mealPlan || Object.keys(room.prices || {})[0],
             checkIn, checkOut, adults, children, rooms,
@@ -5146,6 +5151,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                 action: 'save_booking_query_history', location, category, check_in: checkIn,
                 check_out: checkOut, nights: String(nights), adults: String(adults),
                 children: String(children), rooms: String(rooms), budget: String(budget),
+                query_number: window.employeeBookingQueryNumber || AirwaysQuotation.generateQueryNumber(),
                 query_type: bookingQueryType,
                 agent_phone: bookingQueryAgent?.phone || '',
                 matched_hotels: JSON.stringify(matchedHotels)
@@ -5165,6 +5171,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
 
         saveSelectedBookingQueryHistory(selected).then((data) => {
             window.employeeBookingQueryId = data.id;
+            window.employeeBookingQueryNumber = data.query_number || window.employeeBookingQueryNumber;
             const message = buildBookingQueryShareText(selected);
             const openWhatsapp = () => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
 
@@ -5649,9 +5656,10 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             return;
         }
 
+        const queryNumber = AirwaysQuotation.generateQueryNumber();
         let queryText = AirwaysQuotation.format({
             hotelName, roomCategory, mealPlan, checkIn, checkOut, adults, children, rooms,
-            roomPrice: totalAmount, agentName: currentQueryAgent, agentPhone
+            roomPrice: totalAmount, agentName: currentQueryAgent, agentPhone, queryNumber
         });
 
         // Lock agent and save query history
@@ -5683,7 +5691,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                 if (data.success) {
                     queryText = AirwaysQuotation.format({
                         hotelName, roomCategory, mealPlan, checkIn, checkOut, adults, children, rooms,
-                        roomPrice: totalAmount, agentName: currentQueryAgent, agentPhone, id: data.id
+                        roomPrice: totalAmount, agentName: currentQueryAgent, agentPhone, queryNumber
                     });
                     navigator.clipboard?.writeText(queryText).catch(() => {});
                     showToastMsg('Query generated and agent locked for 5 hours');
@@ -5908,7 +5916,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                 <td>${hotelSummary}</td><td>${mealSummary}</td><td>${dates}</td>
                 <td>A:${item.adults || 1} C:${item.children || 0} R:${item.rooms || 1}</td>
                 <td>₹${Number(item.budget || 0).toLocaleString('en-IN')}/night</td><td>${lockStatus}</td><td>${lockUntil}</td><td>${generatedAt}</td>
-                <td><button class="btn btn-sm btn-outline-primary me-1" data-query-text="${escapeQueryHistoryHtml(text)}" data-quotation="${escapeQueryHistoryHtml(JSON.stringify({ id: item.id, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, mealPlan: item.meal_plan, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: item.total_amount, agentName: item.agent_name, agentPhone: item.agent_phone, matchedHotels: hotels }))}" onclick="viewGeneratedQuery(this)">View</button><button class="btn btn-sm btn-outline-secondary" data-query-text="${escapeQueryHistoryHtml(text)}" data-quotation="${escapeQueryHistoryHtml(JSON.stringify({ id: item.id, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, mealPlan: item.meal_plan, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: item.total_amount, agentName: item.agent_name, agentPhone: item.agent_phone, matchedHotels: hotels }))}" onclick="copyQueryText(this.dataset.queryText, this)">Copy</button></td>
+                <td><button class="btn btn-sm btn-outline-primary me-1" data-query-text="${escapeQueryHistoryHtml(text)}" data-quotation="${escapeQueryHistoryHtml(JSON.stringify({ queryNumber: item.query_number, queryText: text, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, mealPlan: item.meal_plan, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: item.total_amount, agentName: item.agent_name, agentPhone: item.agent_phone, matchedHotels: hotels }))}" onclick="viewGeneratedQuery(this)">View</button><button class="btn btn-sm btn-outline-secondary" data-query-text="${escapeQueryHistoryHtml(text)}" data-quotation="${escapeQueryHistoryHtml(JSON.stringify({ queryNumber: item.query_number, queryText: text, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, mealPlan: item.meal_plan, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: item.total_amount, agentName: item.agent_name, agentPhone: item.agent_phone, matchedHotels: hotels }))}" onclick="copyQueryText(this.dataset.queryText, this)">Copy</button></td>
             </tr>`;
         });
         history.forEach(item => {

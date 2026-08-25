@@ -371,7 +371,7 @@ function copyQueryText(queryText, buttonElement) {
     const firstHotel = matchedHotels[0] || {};
     const firstRoom = firstHotel.rooms?.[0] || firstHotel;
     const quotationText = AirwaysQuotation.format({
-        id: row.dataset.queryId,
+        id: row.dataset.queryId, queryText: row.dataset.historyText,
         hotelName: firstHotel.name || row.dataset.hotel,
         hotelLocation: firstHotel.location || firstHotel.city || row.dataset.location,
         roomCategory: firstRoom.room_name || firstRoom.category || row.dataset.room,
@@ -400,7 +400,7 @@ function openAdminHistoryWhatsApp(buttonElement) {
     const firstHotel = matchedHotels[0] || {};
     const firstRoom = firstHotel.rooms?.[0] || firstHotel;
     const text = AirwaysQuotation.format({
-        id: row.dataset.queryId,
+        id: row.dataset.queryId, queryText: row.dataset.historyText,
         hotelName: firstHotel.name || row.dataset.hotel,
         hotelLocation: firstHotel.location || firstHotel.city || row.dataset.location,
         roomCategory: firstRoom.room_name || firstRoom.category || row.dataset.room,
@@ -424,7 +424,7 @@ function viewAdminQuery(buttonElement) {
     const firstHotel = matchedHotels[0] || {};
     const firstRoom = firstHotel.rooms?.[0] || firstHotel;
     const details = AirwaysQuotation.format({
-        id: row.dataset.queryId,
+        id: row.dataset.queryId, queryText: row.dataset.historyText,
         hotelName: firstHotel.name || row.dataset.hotel,
         hotelLocation: firstHotel.location || firstHotel.city || row.dataset.location,
         roomCategory: firstRoom.room_name || firstRoom.category || row.dataset.room,
