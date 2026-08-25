@@ -1011,35 +1011,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit;
     }
 
-    if ($_POST['action'] === 'update_query_text') {
-        http_response_code(200);
-        header('Content-Type: application/json; charset=utf-8');
-        $queryId = (int)($_POST['query_id'] ?? 0);
-        $queryText = trim((string)($_POST['query_text'] ?? ''));
-        $source = ($_POST['source'] ?? '') === 'legacy' ? 'legacy' : 'generated';
-        if ($queryId <= 0 || $queryText === '') {
-            echo json_encode(['success' => false, 'message' => 'Invalid query text update']);
-            exit;
-        }
-        try {
-            if ($source === 'legacy') {
-                $updateStmt = $conn->prepare('UPDATE agent_query_locks SET query_text = :query_text WHERE id = :id AND (created_by_user_id = :user_id OR employee_username = :username)');
-            } else {
-                $updateStmt = $conn->prepare('UPDATE booking_query_history SET query_text = :query_text WHERE id = :id AND (created_by_user_id = :user_id OR created_by_username = :username)');
-            }
-            $updateStmt->execute([
-                ':query_text' => $queryText,
-                ':id' => $queryId,
-                ':user_id' => $user_id,
-                ':username' => $username,
-            ]);
-            echo json_encode(['success' => $updateStmt->rowCount() > 0]);
-        } catch (PDOException $e) {
-            echo json_encode(['success' => false, 'message' => 'Unable to update query text']);
-        }
-        exit;
-    }
-
     if ($_POST['action'] === 'generate_query') {
         $agent_phone = sanitize_input($_POST['agentPhone'] ?? '');
         http_response_code(200);
@@ -5195,22 +5166,16 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         saveSelectedBookingQueryHistory(selected).then((data) => {
             window.employeeBookingQueryId = data.id;
             const message = buildBookingQueryShareText(selected);
-            const persist = fetch('employee-dashboard.php', {
-                method: 'POST',
-                body: new URLSearchParams({ action: 'update_query_text', source: 'generated', query_id: data.id, query_text: message })
-            });
             const openWhatsapp = () => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
 
-            persist.catch(() => {}).then(() => {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(message).then(() => {
-                        alert(`${selected.length} hotel(s) copied to clipboard. Opening WhatsApp to send to the customer...`);
-                        openWhatsapp();
-                    }).catch(openWhatsapp);
-                } else {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(message).then(() => {
+                    alert(`${selected.length} hotel(s) copied to clipboard. Opening WhatsApp to send to the customer...`);
                     openWhatsapp();
-                }
-            });
+                }).catch(openWhatsapp);
+            } else {
+                openWhatsapp();
+            }
         }).catch((error) => {
             console.error('Query history save error:', error);
             showErrorToast('Unable to save query history. Quotes were not sent.');
@@ -5718,12 +5683,8 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                 if (data.success) {
                     queryText = AirwaysQuotation.format({
                         hotelName, roomCategory, mealPlan, checkIn, checkOut, adults, children, rooms,
-                        roomPrice: totalAmount, agentName: currentQueryAgent, agentPhone, id: data.query_id
+                        roomPrice: totalAmount, agentName: currentQueryAgent, agentPhone, id: data.id
                     });
-                    fetch('employee-dashboard.php', {
-                        method: 'POST',
-                        body: new URLSearchParams({ action: 'update_query_text', source: 'legacy', query_id: data.query_id, query_text: queryText })
-                    }).catch(error => console.error('Unable to persist formatted query:', error));
                     navigator.clipboard?.writeText(queryText).catch(() => {});
                     showToastMsg('Query generated and agent locked for 5 hours');
                     document.getElementById('generatedQueryText').value = queryText;
@@ -5956,7 +5917,6 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             const lockStatus = isLocked ? '<span class="badge bg-danger">Agent Locked</span>' : '<span class="badge bg-success">Unlocked</span>';
             const lockUntil = isLocked ? formatQueryHistoryDate(item.lock_until) : 'Unlocked';
             const escapedQuery = (item.query_text || '').replace(/'/g, "\\'");
-            const whatsappUrl = `https://wa.me/${(item.agent_phone||'').replace(/\D/g,'')}?text=${encodeURIComponent(item.query_text||'')}`;
             const dates = (item.check_in ? item.check_in : '') + (item.check_out ? (' - ' + item.check_out) : '');
             const pax = `A:${item.adults||1} C:${item.children||0} R:${item.rooms||1}`;
             html += `<tr class="query-history-row" data-history-date="${item.generated_at}" data-history-text="${(item.query_text || '').toLowerCase()}">
@@ -5966,7 +5926,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                 <td>
                     <button class="btn btn-sm btn-outline-primary me-1" onclick="viewQuery(${item.id})">View</button>
                     <button class="btn btn-sm btn-outline-secondary me-1" onclick="copyQueryDetails(${item.id})">Copy</button>
-                    <a class="btn btn-sm btn-success" target="_blank" href="${whatsappUrl}"><i class="bi bi-whatsapp"></i></a>
+                    <button class="btn btn-sm btn-success" type="button" onclick="openEmployeeHistoryWhatsApp(${item.id})"><i class="bi bi-whatsapp"></i></button>
                 </td>
             </tr>`;
         });
@@ -6039,10 +5999,26 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         }
     }
 
+    async function openEmployeeHistoryWhatsApp(queryId) {
+        try {
+            const response = await fetch('employee-dashboard.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ action: 'get_query_by_id', queryId })
+            });
+            const data = await response.json();
+            if (!data.success) return showErrorToast(data.message || 'Unable to load query details');
+            const text = AirwaysQuotation.format({ ...data, id: queryId, hotelName: data.hotel_name, roomCategory: data.room_category, matchedHotels: data.hotels });
+            window.open(`https://wa.me/${(data.agent_phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(text)}`, '_blank');
+        } catch (error) {
+            console.error('Open WhatsApp failed:', error);
+            showErrorToast('Unable to prepare WhatsApp message');
+        }
+    }
+
     async function copyQueryText(text, button) {
         const row = button?.closest('.query-history-row');
-        const isFormatted = text && text.includes('*Airways Travels | Quotation*') && /\*UV-\d{4}\*/.test(text);
-        if (!isFormatted && row?.dataset.quotation) text = AirwaysQuotation.format(JSON.parse(row.dataset.quotation));
+        if (row?.dataset.quotation) text = AirwaysQuotation.format(JSON.parse(row.dataset.quotation));
         else text = AirwaysQuotation.plainText(text || '');
         if (!text) return showErrorToast('No query text available to copy');
         try {
@@ -6151,13 +6127,13 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
 
     function viewGeneratedQuery(button) {
         const modal = document.getElementById('queryHistoryModal');
-        let text = button?.dataset.queryText || '';
-        if ((!text.includes('*Airways Travels | Quotation*') || !/\*UV-\d{4}\*/.test(text)) && button?.dataset.quotation) {
-            text = AirwaysQuotation.format(JSON.parse(button.dataset.quotation));
-        }
+        const text = button?.dataset.queryText || '';
         if (!modal) return showErrorToast('Query modal not available');
         document.getElementById('queryHistoryModalTitle').textContent = 'Query Details';
-        document.getElementById('queryHistoryModalBody').textContent = AirwaysQuotation.plainText(text);
+        const quotation = button?.dataset.quotation ? JSON.parse(button.dataset.quotation) : null;
+        document.getElementById('queryHistoryModalBody').textContent = quotation
+            ? AirwaysQuotation.format(quotation)
+            : AirwaysQuotation.plainText(text);
         bootstrap.Modal.getOrCreateInstance(modal).show();
     }
 

@@ -374,7 +374,7 @@ try {
         </div>
 
         <div class="mt-3">
-            <button type="button" class="btn btn-success" onclick="sendSelectedAdminQueryQuotes()">Copy query</button>
+            <button type="button" class="btn btn-success" onclick="sendSelectedAdminQueryQuotes()">Send Selected Quotes</button>
         </div>
     </div>
 
@@ -482,7 +482,8 @@ function loadAdminGeneratedQueryHistory() {
 }
 
 function copyAdminHistoryQuotation(button) {
-    copyQueryText(button?.dataset.queryText || '');
+    const quotation = button?.dataset.quotation ? JSON.parse(button.dataset.quotation) : null;
+    copyQueryText(quotation ? AirwaysQuotation.format(quotation) : AirwaysQuotation.plainText(button?.dataset.queryText || ''));
 }
 
 function applyAdminQueryHistoryFilter(filter) {
@@ -801,11 +802,7 @@ function sendSelectedAdminQueryQuotes() {
         .then((data) => {
             if (!data.success) throw new Error(data.message || 'Unable to save query history');
             window.adminBookingQueryId = data.id;
-            const message = buildHotelShareText(prefixIds, resultBodyId).text;
-            return fetch('employee-dashboard.php', {
-                method: 'POST',
-                body: new URLSearchParams({ action: 'update_query_text', source: 'generated', query_id: data.id, query_text: message })
-            }).then(() => copyAndShareHotelQuotes(prefixIds, resultBodyId));
+            copyAndShareHotelQuotes(prefixIds, resultBodyId);
         })
         .catch((error) => {
             console.error('Query history save error:', error);
@@ -1132,10 +1129,6 @@ function generateAdminQueryFromForm() {
                 roomPrice: values.totalAmount, agentName: values.agentName, agentPhone: values.agentPhone,
                 id: data.query_id
             });
-            fetch('employee-dashboard.php', {
-                method: 'POST',
-                body: new URLSearchParams({ action: 'update_query_text', source: 'legacy', query_id: data.query_id, query_text: queryText })
-            }).catch(err => console.error('Unable to persist formatted query:', err));
             document.getElementById('adminGeneratedQueryText').value = queryText;
             document.getElementById('adminGeneratedQueryWhatsappLink').href =
                 `https://wa.me/${agentPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(queryText)}`;

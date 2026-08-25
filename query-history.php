@@ -224,8 +224,7 @@ try {
                         data-rooms="<?php echo htmlspecialchars((string)($item['rooms'] ?? 1), ENT_QUOTES, 'UTF-8'); ?>"
                         data-hotels="<?php echo htmlspecialchars($item['matched_hotels_json'] ?? '[]', ENT_QUOTES, 'UTF-8'); ?>"
                         data-history-date="<?php echo htmlspecialchars($item['generated_at'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
-                        data-history-text="<?php echo htmlspecialchars(strtolower((string)($item['query_text'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>"
-                        data-query-text="<?php echo htmlspecialchars((string)($item['query_text'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
+                        data-history-text="<?php echo htmlspecialchars(strtolower((string)($item['query_text'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>">>
                         <td><?php echo htmlspecialchars($item['created_by_username'] ?? $item['employee_name'] ?? ''); ?></td>
                         <td><?php echo htmlspecialchars($item['agent_name'] ?? 'N/A'); ?></td>
                         <td><?php echo htmlspecialchars($item['agent_phone'] ?? 'N/A'); ?></td>
@@ -241,15 +240,15 @@ try {
                         <td>
                             <?php if (!empty($item['agent_phone'])): ?>
                                 <button class="btn btn-sm btn-outline-primary" onclick="viewAdminQuery(this)">View</button>
-                                <button class="btn btn-sm btn-outline-secondary" onclick='copyQueryText(<?php echo json_encode($item['query_text'] ?? '', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>, this)'>Copy</button>
-                                <a class="btn btn-sm btn-success" target="_blank" href="https://wa.me/<?php echo preg_replace('/\D/','',($item['agent_phone'] ?? '')); ?>?text=<?php echo urlencode($item['query_text'] ?? ''); ?>">WA</a>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('', this)">Copy</button>
+                                <button type="button" class="btn btn-sm btn-success" onclick="openAdminHistoryWhatsApp(this)">WA</button>
                                 <form method="post" style="display:inline-block; margin:0;">
                                     <input type="hidden" name="action" value="<?php echo $isLocked ? 'unlock_query' : 'lock_query'; ?>">
                                     <input type="hidden" name="query_id" value="<?php echo (int) $item['id']; ?>">
                                     <button type="submit" class="btn btn-sm <?php echo $isLocked ? 'btn-success' : 'btn-warning'; ?>"><i class="bi bi-<?php echo $isLocked ? 'unlock' : 'lock'; ?> me-1"></i><?php echo $isLocked ? 'Unlock Agent' : 'Lock Agent'; ?></button>
                                 </form>
                             <?php else: ?>
-                                <button class="btn btn-sm btn-outline-secondary" onclick='copyQueryText(<?php echo json_encode($item['query_text'] ?? '', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>, this)'>Copy</button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('', this)">Copy</button>
                             <?php endif; ?>
                         </td>
                     </tr>
@@ -367,20 +366,6 @@ function copyQueryText(queryText, buttonElement) {
         return;
     }
 
-    if (queryText) {
-        const storedText = AirwaysQuotation.plainText(queryText);
-        navigator.clipboard.writeText(storedText).then(() => alert('Query copied to clipboard!')).catch(() => {
-            const textarea = document.createElement('textarea');
-            textarea.value = storedText;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            alert('Query copied to clipboard!');
-        });
-        return;
-    }
-
     let matchedHotels = [];
     try { matchedHotels = JSON.parse(row.dataset.hotels || '[]'); } catch (e) { matchedHotels = []; }
     const firstHotel = matchedHotels[0] || {};
@@ -407,17 +392,33 @@ function copyQueryText(queryText, buttonElement) {
     });
 }
 
+function openAdminHistoryWhatsApp(buttonElement) {
+    const row = buttonElement?.closest('.admin-history-row');
+    if (!row) return;
+    let matchedHotels = [];
+    try { matchedHotels = JSON.parse(row.dataset.hotels || '[]'); } catch (e) {}
+    const firstHotel = matchedHotels[0] || {};
+    const firstRoom = firstHotel.rooms?.[0] || firstHotel;
+    const text = AirwaysQuotation.format({
+        id: row.dataset.queryId,
+        hotelName: firstHotel.name || row.dataset.hotel,
+        hotelLocation: firstHotel.location || firstHotel.city || row.dataset.location,
+        roomCategory: firstRoom.room_name || firstRoom.category || row.dataset.room,
+        checkIn: row.dataset.checkin,
+        checkOut: row.dataset.checkout,
+        adults: row.dataset.adults,
+        children: row.dataset.children,
+        rooms: row.dataset.rooms,
+        roomPrice: firstRoom.selected_price || firstRoom.basePrice || row.dataset.budget,
+        matchedHotels
+    });
+    window.open(`https://wa.me/${(row.cells[2]?.textContent || '').replace(/\D/g, '')}?text=${encodeURIComponent(text)}`, '_blank');
+}
+
 function viewAdminQuery(buttonElement) {
     const row = buttonElement?.closest('.admin-history-row');
     const modalElement = document.getElementById('adminQueryHistoryModal');
     if (!row || !modalElement) return;
-    const storedText = row.dataset.queryText || '';
-    if (storedText && storedText.includes('*Airways Travels | Quotation*') && /\*UV-\d{4}\*/.test(storedText)) {
-        document.getElementById('adminQueryHistoryModalTitle').textContent = `Query for ${row.cells[1]?.textContent.trim() || 'Agent'}`;
-        document.getElementById('adminQueryHistoryModalBody').textContent = AirwaysQuotation.plainText(storedText);
-        bootstrap.Modal.getOrCreateInstance(modalElement).show();
-        return;
-    }
     let matchedHotels = [];
     try { matchedHotels = JSON.parse(row.dataset.hotels || '[]'); } catch (e) {}
     const firstHotel = matchedHotels[0] || {};
