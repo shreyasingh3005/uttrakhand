@@ -33,7 +33,10 @@
             .filter(([, price]) => Number(price) > 0)
             .map(([code, price]) => `${labels[code] || code} - ${formatPrice(price)}/- per room per night`);
         if (plans.length) return plans.join(', ');
-        return decodeHtml(value(input, 'mealPlan', 'EP'));
+        const selectedPlan = decodeHtml(value(input, 'mealPlan', ''));
+        const fallbackPlanCodes = ['EP', 'CP', 'MAP', 'AP', 'AI'];
+        const selectedCode = selectedPlan.split(/\s|\(/, 1)[0].toUpperCase();
+        return fallbackPlanCodes.map((plan) => plan === selectedCode && selectedPlan ? selectedPlan : plan).join(', ');
     }
 
     function decodeHtml(value) {
@@ -109,8 +112,43 @@
     }
 
     function formatMany(items) {
-        const quotations = (Array.isArray(items) ? items : []).map((item) => format(item).trim());
-        return [...new Set(quotations)].join('\n\n');
+        const quotations = Array.isArray(items) ? items : [];
+        if (quotations.length <= 1) return quotations.length ? format(quotations[0]).trim() : '';
+
+        const firstQuotation = format(quotations[0]).trim();
+        const lines = firstQuotation.split('\n');
+        const roomCategoryIndex = lines.findIndex((line) => line.startsWith('*Room category*:'));
+        const mealPlanIndex = lines.findIndex((line) => line.startsWith('*Meal plan*:'));
+        const roomPriceIndex = lines.findIndex((line) => line.startsWith('*Room Price*:'));
+        if (roomCategoryIndex < 0 || mealPlanIndex < 0 || roomPriceIndex < 0) return firstQuotation;
+
+        const seen = new Set();
+        const roomOptions = [];
+        quotations.forEach((item) => {
+            const selected = firstRoom(item);
+            const room = selected.room;
+            const roomName = decodeHtml(value(item, 'roomCategory', value(room, 'room_name', value(room, 'name', 'N/A'))));
+            const mealPlan = formatMealPlans(item, selected.prices);
+            const roomPrice = formatPrice(value(item, 'roomPrice', value(room, 'selected_price', selected.prices.EP || selected.prices.MAP || item.budget || 0)));
+            const hotelName = decodeHtml(value(item, 'hotelName', value(selected.hotel, 'name', 'N/A')));
+            const optionKey = `${hotelName}|${roomName}|${mealPlan}|${roomPrice}`;
+            if (seen.has(optionKey)) return;
+            seen.add(optionKey);
+            roomOptions.push({ hotelName, roomName, mealPlan, roomPrice });
+        });
+
+        const firstHotelName = roomOptions[0]?.hotelName || '';
+        const optionLines = [];
+        roomOptions.forEach((option, index) => {
+            if (option.hotelName !== firstHotelName) optionLines.push(`*Hotel Name*: ${option.hotelName}`);
+            optionLines.push(`*Room category*: ${option.roomName}`);
+            optionLines.push(`*Meal plan*: ${option.mealPlan}`);
+            optionLines.push(`*Room Price*: ${option.roomPrice}/- per room per night`);
+            if (index < roomOptions.length - 1) optionLines.push('');
+        });
+
+        lines.splice(roomCategoryIndex, roomPriceIndex - roomCategoryIndex + 1, ...optionLines);
+        return lines.join('\n');
     }
 
     window.AirwaysQuotation = { format, formatMany, plainText: decodeHtml };
