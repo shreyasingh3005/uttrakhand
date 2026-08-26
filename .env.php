@@ -30,4 +30,13 @@ return [
     'APP_ENV'                  => 'production',  // development | production
     'APP_DEBUG'                => false,
     'APP_URL'                  => 'http://paleturquoise-tarsier-877492.hostingersite.com',
+
+    // SMTP (set these for admin password reset emails)
+    'MAIL_HOST'                => '',
+    'MAIL_PORT'                => 587,
+    'MAIL_USERNAME'            => '',
+    'MAIL_PASSWORD'            => '',
+    'MAIL_ENCRYPTION'          => 'tls', // tls | ssl | none
+    'MAIL_FROM_ADDRESS'        => '',
+    'MAIL_FROM_NAME'           => 'Uttarakhand Ventures CRM',
 ];

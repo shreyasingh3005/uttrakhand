@@ -285,6 +285,7 @@ $error = $_GET['error'] ?? '';
                         Sign In
                     </button>
                 </form>
+                <p style="margin-top:18px;text-align:center;font-size:.86rem;"><a href="<?php echo htmlspecialchars(site_url('forgot-password.php'), ENT_QUOTES); ?>" style="color:var(--primary);font-weight:600;text-decoration:none;">Forgot admin password?</a></p>
             </div>
         </section>
     </div>

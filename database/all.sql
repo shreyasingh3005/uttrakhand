@@ -38,6 +38,10 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255) NOT NULL,
   email VARCHAR(255) NOT NULL,
     role ENUM('admin', 'employee') DEFAULT 'employee',
+  reset_otp VARCHAR(255) DEFAULT NULL,
+  otp_expires_at DATETIME DEFAULT NULL,
+  otp_attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  otp_requested_at DATETIME DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

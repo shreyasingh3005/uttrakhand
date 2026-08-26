@@ -44,6 +44,8 @@ Next work should prioritize:
 
 The local dashboard was verified after repair with an authenticated admin smoke test and returned HTTP 200 with rendered dashboard HTML.
 
+Admin password recovery is implemented in `forgot-password.php`: it finds only `users.role = 'admin'`, sends a six-digit hashed OTP through the configured SMTP transport, expires codes after 10 minutes, limits verification attempts, and clears the code after a successful password update. `includes/db_connect.php` applies the reset-column migration for existing installations.
+
 ## 4. Updates
 
 When changing the project, update this file when any of the following changes:

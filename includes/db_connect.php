@@ -312,6 +312,29 @@ function ensure_user_login_tracking_columns(PDO $conn) {
 
 ensure_user_login_tracking_columns($conn);
 
+function ensure_password_reset_columns(PDO $conn) {
+    static $checked = false;
+    if ($checked) return;
+    $checked = true;
+    try {
+        $columns = [];
+        $colStmt = $conn->query("SHOW COLUMNS FROM users");
+        foreach ($colStmt->fetchAll(PDO::FETCH_ASSOC) as $col) {
+            $columns[$col['Field']] = true;
+        }
+        $alterParts = [];
+        if (!isset($columns['reset_otp'])) $alterParts[] = "ADD COLUMN reset_otp VARCHAR(255) DEFAULT NULL";
+        if (!isset($columns['otp_expires_at'])) $alterParts[] = "ADD COLUMN otp_expires_at DATETIME DEFAULT NULL";
+        if (!isset($columns['otp_attempts'])) $alterParts[] = "ADD COLUMN otp_attempts TINYINT UNSIGNED NOT NULL DEFAULT 0";
+        if (!isset($columns['otp_requested_at'])) $alterParts[] = "ADD COLUMN otp_requested_at DATETIME DEFAULT NULL";
+        if (!empty($alterParts)) $conn->exec("ALTER TABLE users " . implode(', ', $alterParts));
+    } catch (PDOException $e) {
+        error_log('Password reset schema check failed: ' . $e->getMessage());
+    }
+}
+
+ensure_password_reset_columns($conn);
+
 function ensure_hotels_master_columns_indexes(PDO $conn) {
     static $checked = false;
     if ($checked) return;
