@@ -148,6 +148,11 @@ function status_badge_class($status) {
 		.summary-value { font-size:1rem; font-weight:700; }
 		.agent-card { border:1px solid var(--border); border-radius:16px; background:#fff; transition:.2s ease; font-size:.92rem; }
 		.agent-card:hover { transform:translateY(-4px); box-shadow:0 10px 26px rgba(20,30,70,.08); border-color:var(--primary-200); }
+		.agent-actions { margin-top:1rem; display:flex; flex-direction:column; align-items:center; gap:.6rem; }
+		.agent-actions .btn,
+		.agent-actions form { width:100%; max-width:222px; }
+		.agent-actions form { margin:0; }
+		.agent-actions .btn { min-height:40px; }
 		.badge-created { background:var(--primary-50); color:var(--brand); font-weight:600; }
 		.filter-grid .form-control,.filter-grid .form-select { border-radius:12px; border-color:var(--border); }
 		.filter-grid .form-control:focus,.filter-grid .form-select:focus { border-color:var(--brand); box-shadow:0 0 0 3px var(--primary-50); }
@@ -269,7 +274,7 @@ function status_badge_class($status) {
 										<div class="col-6"><div class="text-muted">Revenue</div><strong>₹<?php echo number_format((float) $agent['total_revenue'], 0); ?></strong></div>
 									</div>
 									<p class="mb-0 text-muted small text-center"><?php echo htmlspecialchars($agent['email'], ENT_QUOTES, 'UTF-8'); ?></p>
-									<div class="mt-3 d-flex justify-content-center align-items-center gap-2 flex-wrap">
+									<div class="agent-actions">
 										<a class="btn btn-sm btn-outline-success rounded-pill px-3" href="/export-agent-excel.php?agent_id=<?php echo (int) $agent['id']; ?>">
 											<i class="bi bi-file-earmark-spreadsheet me-1"></i> Download Full Data
 										</a>
@@ -280,12 +285,12 @@ function status_badge_class($status) {
 										], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES, 'UTF-8'); ?>" onclick="openAgentEdit(this)">
 											<i class="bi bi-pencil-square me-1"></i> Update Details
 										</button>
-									</div>
-									<form method="post" class="m-0" onsubmit="return confirmDeleteAgent('<?php echo htmlspecialchars(addslashes($agent['name']), ENT_QUOTES, 'UTF-8'); ?>');">
+									<form method="post" onsubmit="return confirmDeleteAgent('<?php echo htmlspecialchars(addslashes($agent['name']), ENT_QUOTES, 'UTF-8'); ?>');">
 										<input type="hidden" name="action" value="delete_agent">
 										<input type="hidden" name="agent_id" value="<?php echo (int) $agent['id']; ?>">
 										<button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3"><i class="bi bi-trash me-1"></i> Delete</button>
 									</form>
+								</div>
 								</div>
 							</div>
 						<?php endforeach; ?>
