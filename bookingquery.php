@@ -710,14 +710,26 @@ function copyAndShareHotelQuotes(prefixIds, resultBodyId) {
         alert('Please select at least one hotel.');
         return;
     }
-    const openWhatsapp = () => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(() => {
-            alert(`${count} hotel(s) copied to clipboard. Opening WhatsApp to send to the customer...`);
-            openWhatsapp();
-        }).catch(openWhatsapp);
+            alert(`${count} hotel(s) quotation copied successfully. WhatsApp will not open automatically.`);
+        }).catch(() => {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            alert(`${count} hotel(s) quotation copied successfully. WhatsApp will not open automatically.`);
+        });
     } else {
-        openWhatsapp();
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert(`${count} hotel(s) quotation copied successfully. WhatsApp will not open automatically.`);
     }
 }
 

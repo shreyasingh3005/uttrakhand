@@ -5174,15 +5174,27 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             window.employeeBookingQueryId = data.id;
             window.employeeBookingQueryNumber = data.query_number || window.employeeBookingQueryNumber;
             const message = buildBookingQueryShareText(selected);
-            const openWhatsapp = () => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
 
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(message).then(() => {
-                    alert(`${selected.length} hotel(s) copied to clipboard. Opening WhatsApp to send to the customer...`);
-                    openWhatsapp();
-                }).catch(openWhatsapp);
+                    alert(`${selected.length} hotel(s) quotation copied successfully. WhatsApp will not open automatically.`);
+                }).catch(() => {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = message;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    alert(`${selected.length} hotel(s) quotation copied successfully. WhatsApp will not open automatically.`);
+                });
             } else {
-                openWhatsapp();
+                const textarea = document.createElement('textarea');
+                textarea.value = message;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                alert(`${selected.length} hotel(s) quotation copied successfully. WhatsApp will not open automatically.`);
             }
         }).catch((error) => {
             console.error('Query history save error:', error);
