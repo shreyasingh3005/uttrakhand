@@ -155,6 +155,17 @@ function status_badge_class($status) {
 		.mobile-menu-btn { display:none; }
 		.btn-brand { background:var(--brand); border-color:var(--brand); color:#fff; box-shadow:0 1px 3px rgba(79,70,229,.3); }
 		.btn-brand:hover { background:var(--primary-dark,#4338ca); border-color:var(--primary-dark,#4338ca); color:#fff; box-shadow:0 4px 12px rgba(79,70,229,.35); }
+		.action-buttons { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:10px; margin-top:12px; }
+		.action-buttons .btn { display:inline-flex; align-items:center; justify-content:center; min-width:154px; padding:.5rem .9rem; border-radius:10px; font-size:.85rem; font-weight:600; border:1px solid transparent; text-decoration:none; transition:background-color .2s ease, border-color .2s ease, transform .2s ease, box-shadow .2s ease; }
+		.action-buttons .btn:hover { transform:translateY(-1px); box-shadow:0 6px 14px rgba(15,23,42,.12); text-decoration:none; }
+		.action-buttons .btn:active { transform:translateY(0); box-shadow:none; }
+		.action-buttons .btn-download { background:#0ea5e9; border-color:#0ea5e9; color:#fff; }
+		.action-buttons .btn-download:hover { background:#0284c7; border-color:#0284c7; color:#fff; }
+		.action-buttons .btn-update { background:#16a34a; border-color:#16a34a; color:#fff; }
+		.action-buttons .btn-update:hover { background:#15803d; border-color:#15803d; color:#fff; }
+		.action-buttons .btn-delete { background:#dc2626; border-color:#dc2626; color:#fff; }
+		.action-buttons .btn-delete:hover { background:#b91c1c; border-color:#b91c1c; color:#fff; }
+		.action-buttons form { margin:0; }
 		@media (max-width:992px){
 			.mobile-menu-btn { display:inline-flex; align-items:center; justify-content:center; }
 			.main-wrapper { margin-left:0; }
@@ -269,23 +280,23 @@ function status_badge_class($status) {
 										<div class="col-6"><div class="text-muted">Revenue</div><strong>₹<?php echo number_format((float) $agent['total_revenue'], 0); ?></strong></div>
 									</div>
 									<p class="mb-0 text-muted small text-center"><?php echo htmlspecialchars($agent['email'], ENT_QUOTES, 'UTF-8'); ?></p>
-									<div class="mt-3 d-flex justify-content-center align-items-center gap-2 flex-wrap">
-										<a class="btn btn-sm btn-outline-success rounded-pill px-3" href="/export-agent-excel.php?agent_id=<?php echo (int) $agent['id']; ?>">
+									<div class="action-buttons">
+										<a class="btn btn-download" href="/export-agent-excel.php?agent_id=<?php echo (int) $agent['id']; ?>">
 											<i class="bi bi-file-earmark-spreadsheet me-1"></i> Download Full Data
 										</a>
-										<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" data-agent="<?php echo htmlspecialchars(json_encode([
+										<button type="button" class="btn btn-update" data-agent="<?php echo htmlspecialchars(json_encode([
 											'id' => $agent['id'], 'name' => $agent['name'], 'company_name' => $agent['company_name'] ?? '',
 											'gst_number' => $agent['gst_number'] ?? '', 'email' => $agent['email'], 'phone' => $agent['phone'],
 											'location' => $agent['location'],
 										], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES, 'UTF-8'); ?>" onclick="openAgentEdit(this)">
 											<i class="bi bi-pencil-square me-1"></i> Update Details
 										</button>
+										<form method="post" class="m-0" onsubmit="return confirmDeleteAgent('<?php echo htmlspecialchars(addslashes($agent['name']), ENT_QUOTES, 'UTF-8'); ?>');">
+											<input type="hidden" name="action" value="delete_agent">
+											<input type="hidden" name="agent_id" value="<?php echo (int) $agent['id']; ?>">
+											<button type="submit" class="btn btn-delete"><i class="bi bi-trash me-1"></i> Delete</button>
+										</form>
 									</div>
-									<form method="post" class="m-0" onsubmit="return confirmDeleteAgent('<?php echo htmlspecialchars(addslashes($agent['name']), ENT_QUOTES, 'UTF-8'); ?>');">
-										<input type="hidden" name="action" value="delete_agent">
-										<input type="hidden" name="agent_id" value="<?php echo (int) $agent['id']; ?>">
-										<button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3"><i class="bi bi-trash me-1"></i> Delete</button>
-									</form>
 								</div>
 							</div>
 						<?php endforeach; ?>
