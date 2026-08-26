@@ -237,16 +237,14 @@ try {
                         <td><?php $isLocked = !empty($item['lock_until']) && strtotime($item['lock_until']) > time(); ?><span class="badge <?php echo $isLocked ? 'bg-danger' : 'bg-success'; ?>"><?php echo $isLocked ? 'Agent Locked' : 'Unlocked'; ?></span></td>
                         <td><?php echo $isLocked ? date('d M Y, h:i A', strtotime($item['lock_until'])) : 'Unlocked'; ?></td>
                         <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewAdminQuery(this)">View</button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('', this)">Copy</button>
                             <?php if (!empty($item['agent_phone'])): ?>
-                                <button class="btn btn-sm btn-outline-primary" onclick="viewAdminQuery(this)">View</button>
-                                <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('', this)">Copy</button>
                                 <form method="post" style="display:inline-block; margin:0;">
                                     <input type="hidden" name="action" value="<?php echo $isLocked ? 'unlock_query' : 'lock_query'; ?>">
                                     <input type="hidden" name="query_id" value="<?php echo (int) $item['id']; ?>">
                                     <button type="submit" class="btn btn-sm <?php echo $isLocked ? 'btn-success' : 'btn-warning'; ?>"><i class="bi bi-<?php echo $isLocked ? 'unlock' : 'lock'; ?> me-1"></i><?php echo $isLocked ? 'Unlock Agent' : 'Lock Agent'; ?></button>
                                 </form>
-                            <?php else: ?>
-                                <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('', this)">Copy</button>
                             <?php endif; ?>
                         </td>
                     </tr>
