@@ -1,5 +1,3 @@
-                                          bqh.nights, bqh.adults, bqh.children, bqh.rooms, bqh.budget, bqh.matched_hotels_json, bqh.query_number,
-            queryNumber: window.adminBookingQueryNumber,
 <?php
 require_once __DIR__ . '/includes/auth_session.php';
 require_once __DIR__ . '/includes/db_connect.php';

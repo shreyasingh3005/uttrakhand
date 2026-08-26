@@ -21,6 +21,7 @@ The shared customer quotation source of truth is `assets/js/quotation-template.j
 - Added all available meal-plan pricing to quotations.
 - Fixed multi-room selection output so a hotel with several room categories produces one combined message rather than repeated complete quotation blocks.
 - Added shared UI consistency CSS and sidebar/profile normalization.
+- Repaired the local `employee_management.agents_details` InnoDB table after MySQL reported it as present but missing from the storage engine; the corrupted table's old rows were not readable and the recreated table is currently empty.
 
 ## 3. Currently Working
 
@@ -40,6 +41,8 @@ Next work should prioritize:
 4. Consolidate legacy and canonical schemas or document a supported bridge/migration.
 5. Rotate credentials, lock down seed scripts, configure HTTPS, backups, and deployment monitoring.
 6. Remove or explicitly deprecate the stale router-style code in `assets/js/app.js`.
+
+The local dashboard was verified after repair with an authenticated admin smoke test and returned HTTP 200 with rendered dashboard HTML.
 
 ## 4. Updates
 
