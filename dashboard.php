@@ -10,6 +10,7 @@ if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $selectedDate)) {
 
 if (isset($_GET['action']) && $_GET['action'] === 'live_metrics') {
     header('Content-Type: application/json; charset=utf-8');
+    $liveEmployeeUsername = sanitize_input($_GET['emp_user'] ?? '');
 
     $liveTotalBookings = (int) $conn->query('SELECT COUNT(*) FROM bookings_details')->fetchColumn();
     $liveTotalAgents = (int) $conn->query('SELECT COUNT(*) FROM agents_details')->fetchColumn();
@@ -50,6 +51,55 @@ if (isset($_GET['action']) && $_GET['action'] === 'live_metrics') {
         $liveWeeklyCounts = array_slice($liveWeeklyCounts, -7);
     }
 
+    $liveMonthLabels = [];
+    $liveMonthCounts = [];
+    $liveMonthlyStmt = $conn->query(
+        'SELECT DATE_FORMAT(booking_date, "%b %Y") AS month_label, COUNT(*) AS total
+         FROM bookings_details
+         GROUP BY YEAR(booking_date), MONTH(booking_date)
+         ORDER BY YEAR(booking_date), MONTH(booking_date)'
+    );
+    foreach ($liveMonthlyStmt->fetchAll() as $row) {
+        $liveMonthLabels[] = $row['month_label'];
+        $liveMonthCounts[] = (int) $row['total'];
+    }
+
+    $liveEmployeeTrendLabels = [];
+    $liveEmployeeBookingTrend = [];
+    $liveEmployeeAgentTrend = [];
+    if ($liveEmployeeUsername !== '') {
+        $liveEmployeeBookingMap = [];
+        $liveEmployeeBookingStmt = $conn->prepare(
+            'SELECT DATE(booking_date) AS metric_date, COUNT(*) AS total
+             FROM bookings_details
+             WHERE created_by = :username AND booking_date >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+             GROUP BY DATE(booking_date)'
+        );
+        $liveEmployeeBookingStmt->execute([':username' => $liveEmployeeUsername]);
+        foreach ($liveEmployeeBookingStmt->fetchAll() as $row) {
+            $liveEmployeeBookingMap[$row['metric_date']] = (int) $row['total'];
+        }
+
+        $liveEmployeeAgentMap = [];
+        $liveEmployeeAgentStmt = $conn->prepare(
+            'SELECT DATE(created_at) AS metric_date, COUNT(*) AS total
+             FROM agents_details
+             WHERE created_by = :username AND DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+             GROUP BY DATE(created_at)'
+        );
+        $liveEmployeeAgentStmt->execute([':username' => $liveEmployeeUsername]);
+        foreach ($liveEmployeeAgentStmt->fetchAll() as $row) {
+            $liveEmployeeAgentMap[$row['metric_date']] = (int) $row['total'];
+        }
+
+        for ($i = 6; $i >= 0; $i--) {
+            $dateKey = date('Y-m-d', strtotime('-' . $i . ' day'));
+            $liveEmployeeTrendLabels[] = date('d M', strtotime($dateKey));
+            $liveEmployeeBookingTrend[] = $liveEmployeeBookingMap[$dateKey] ?? 0;
+            $liveEmployeeAgentTrend[] = $liveEmployeeAgentMap[$dateKey] ?? 0;
+        }
+    }
+
     echo json_encode([
         'success' => true,
         'cards' => [
@@ -61,6 +111,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'live_metrics') {
         'weekly' => [
             'labels' => $liveWeeklyLabels,
             'counts' => $liveWeeklyCounts,
+        ],
+        'monthly' => [
+            'labels' => $liveMonthLabels,
+            'counts' => $liveMonthCounts,
+        ],
+        'employeeTrend' => [
+            'labels' => $liveEmployeeTrendLabels,
+            'bookingCounts' => $liveEmployeeBookingTrend,
+            'agentCounts' => $liveEmployeeAgentTrend,
         ],
         'statusCounts' => [
               $liveStatusCounts['pending'],
@@ -538,7 +597,7 @@ $statusLabels = ['pending', 'completed', 'cancelled'];
 $statusCounts = [0, 0, 0];
 $statusStmt = $conn->query('SELECT booking_status, COUNT(*) AS total FROM bookings_details GROUP BY booking_status');
 foreach ($statusStmt->fetchAll() as $row) {
-    $idx = array_search($row['booking_status'], $statusLabels, true);
+    $idx = array_search(strtolower((string) $row['booking_status']), $statusLabels, true);
     if ($idx !== false) {
         $statusCounts[$idx] = (int) $row['total'];
     }
@@ -2171,7 +2230,8 @@ if (document.getElementById('employeePerformanceChart')) {
 
 function refreshLiveDashboard() {
     const selectedDate = document.querySelector('input[name="date"]')?.value || '<?php echo htmlspecialchars($selectedDate, ENT_QUOTES, 'UTF-8'); ?>';
-    fetch(`/dashboard.php?action=live_metrics&date=${encodeURIComponent(selectedDate)}`)
+    const selectedEmployee = document.querySelector('select[name="emp_user"]')?.value || '';
+    fetch(`/dashboard.php?action=live_metrics&date=${encodeURIComponent(selectedDate)}&emp_user=${encodeURIComponent(selectedEmployee)}`)
         .then(response => response.json())
         .then(data => {
             if (!data.success) {
@@ -2192,6 +2252,19 @@ function refreshLiveDashboard() {
                 employeeStatusChart.data.labels = data.weekly.labels;
                 employeeStatusChart.data.datasets[0].data = data.weekly.counts;
                 employeeStatusChart.update('none');
+            }
+
+            if (employeePerformanceChart && data.employeeTrend) {
+                employeePerformanceChart.data.labels = data.employeeTrend.labels;
+                employeePerformanceChart.data.datasets[0].data = data.employeeTrend.bookingCounts;
+                employeePerformanceChart.data.datasets[1].data = data.employeeTrend.agentCounts;
+                employeePerformanceChart.update('none');
+            }
+
+            if (revenueTrendChart && data.monthly) {
+                revenueTrendChart.data.labels = data.monthly.labels;
+                revenueTrendChart.data.datasets[0].data = data.monthly.counts;
+                revenueTrendChart.update('none');
             }
 
             if (bookingStatusChart) {
