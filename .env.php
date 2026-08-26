@@ -31,12 +31,12 @@ return [
     'APP_DEBUG'                => false,
     'APP_URL'                  => 'http://paleturquoise-tarsier-877492.hostingersite.com',
 
-    // SMTP (set these for admin password reset emails)
-    'MAIL_HOST'                => '',
-    'MAIL_PORT'                => 587,
-    'MAIL_USERNAME'            => '',
-    'MAIL_PASSWORD'            => '',
-    'MAIL_ENCRYPTION'          => 'tls', // tls | ssl | none
-    'MAIL_FROM_ADDRESS'        => '',
-    'MAIL_FROM_NAME'           => 'Uttarakhand Ventures CRM',
+   // SMTP (set these for admin password reset emails)
+'MAIL_HOST'               => 'smtp.gmail.com',
+'MAIL_PORT'               => 587,
+'MAIL_USERNAME'           => 'itnaukari2000@gmail.com',
+'MAIL_PASSWORD'           => 'wecwqvrzlzatxngh',
+'MAIL_ENCRYPTION'         => 'tls',
+'MAIL_FROM_ADDRESS'       => 'itnaukari2000@gmail.com',
+'MAIL_FROM_NAME'          => 'Uttarakhand Ventures CRM',
 ];
