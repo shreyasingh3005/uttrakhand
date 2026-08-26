@@ -17,7 +17,7 @@ The shared customer quotation source of truth is `assets/js/quotation-template.j
 - Added booking-query matching, agent locking, generated query history, date/search filters, and admin history controls.
 - Standardized quotation copy/WhatsApp paths across admin and employee flows.
 - Changed quotation numbering from legacy `L...`/`N/A` fallbacks to `UV-0001` style.
-- Removed the `18% inclusive taxes` sentence from customer quotations.
+- Removed the `Copyinclusive taxes` sentence from customer quotations.
 - Added all available meal-plan pricing to quotations.
 - Fixed multi-room selection output so a hotel with several room categories produces one combined message rather than repeated complete quotation blocks.
 - Added shared UI consistency CSS and sidebar/profile normalization.

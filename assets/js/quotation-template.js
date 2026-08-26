@@ -137,7 +137,7 @@
             '*Airways Travels | Quotation*', '',
             `Greetings from Airways Travels. Further with reference to query number *${queryNumber}*, find below the quotation as desired:`, '',
             '---', ...optionLines, '', '---',
-            '*Above rates are inclusive of 18% taxes.*', '',
+            '*Above rates are inclusive of taxes.*', '',
             `*Cancellation Policy*: ${cancellation}`, '',
             '*Rooms and Rates are Subject to Availability, please confirm the same at the earliest to proceed with the booking.*', '',
             'Thank you for contacting Airways Travels.', 'In case of any support please contact us:',
