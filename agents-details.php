@@ -6,6 +6,39 @@ require_role('admin');
 $flashMessage = null;
 $flashType = 'success';
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_agent') {
+	$agentId = (int) ($_POST['agent_id'] ?? 0);
+	$agentName = trim((string) ($_POST['name'] ?? ''));
+	$companyName = trim((string) ($_POST['company_name'] ?? ''));
+	$gstNumber = strtoupper(trim((string) ($_POST['gst_number'] ?? '')));
+	$email = trim((string) ($_POST['email'] ?? ''));
+	$phone = trim((string) ($_POST['phone'] ?? ''));
+	$location = trim((string) ($_POST['location'] ?? ''));
+	$gstValid = $gstNumber === '' || preg_match('/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/', $gstNumber);
+
+	if ($agentId <= 0 || $agentName === '' || $companyName === '' || $email === '' || $phone === '' || $location === '' || !$gstValid || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+		$flashMessage = 'Please enter valid agent details. GSTIN is optional but must be valid when provided.';
+		$flashType = 'danger';
+	} else {
+		try {
+			$updateStmt = $conn->prepare('UPDATE agents_details SET name = :name, company_name = :company_name, gst_number = :gst_number, email = :email, phone = :phone, location = :location WHERE id = :id');
+			$updateStmt->execute([
+				':name' => $agentName,
+				':company_name' => $companyName,
+				':gst_number' => $gstNumber !== '' ? $gstNumber : null,
+				':email' => $email,
+				':phone' => $phone,
+				':location' => $location,
+				':id' => $agentId,
+			]);
+			$flashMessage = 'Agent details updated successfully.';
+		} catch (PDOException $e) {
+			$flashMessage = 'Agent details could not be updated. Please verify the mobile number and try again.';
+			$flashType = 'danger';
+		}
+	}
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_agent') {
 	$agentId = (int) ($_POST['agent_id'] ?? 0);
 	if ($agentId > 0) {
@@ -240,6 +273,13 @@ function status_badge_class($status) {
 										<a class="btn btn-sm btn-outline-success rounded-pill px-3" href="/export-agent-excel.php?agent_id=<?php echo (int) $agent['id']; ?>">
 											<i class="bi bi-file-earmark-spreadsheet me-1"></i> Download Full Data
 										</a>
+										<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" data-agent="<?php echo htmlspecialchars(json_encode([
+											'id' => $agent['id'], 'name' => $agent['name'], 'company_name' => $agent['company_name'] ?? '',
+											'gst_number' => $agent['gst_number'] ?? '', 'email' => $agent['email'], 'phone' => $agent['phone'],
+											'location' => $agent['location'],
+										], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES, 'UTF-8'); ?>" onclick="openAgentEdit(this)">
+											<i class="bi bi-pencil-square me-1"></i> Update Details
+										</button>
 									</div>
 									<form method="post" class="mt-3 text-center" onsubmit="return confirmDeleteAgent('<?php echo htmlspecialchars(addslashes($agent['name']), ENT_QUOTES, 'UTF-8'); ?>');">
 										<input type="hidden" name="action" value="delete_agent">
@@ -259,6 +299,32 @@ function status_badge_class($status) {
 					<canvas id="agentStatusChart" height="220"></canvas>
 				</div>
 			</div>
+		</div>
+	</div>
+</div>
+
+<div class="modal fade" id="agentEditModal" tabindex="-1" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+		<div class="modal-content">
+			<form method="post">
+				<div class="modal-header">
+					<h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Update Agent Details</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<input type="hidden" name="action" value="update_agent">
+					<input type="hidden" name="agent_id" id="editAgentId">
+					<div class="row g-3">
+						<div class="col-md-6"><label class="form-label">Agent Name</label><input class="form-control" name="name" id="editAgentName" required></div>
+						<div class="col-md-6"><label class="form-label">Company Name</label><input class="form-control" name="company_name" id="editAgentCompany" required></div>
+						<div class="col-md-6"><label class="form-label">GST Number</label><input class="form-control" name="gst_number" id="editAgentGst" maxlength="15"></div>
+						<div class="col-md-6"><label class="form-label">Email</label><input type="email" class="form-control" name="email" id="editAgentEmail" required></div>
+						<div class="col-md-6"><label class="form-label">Mobile Number</label><input type="tel" class="form-control" name="phone" id="editAgentPhone" required></div>
+						<div class="col-md-6"><label class="form-label">Location</label><input class="form-control" name="location" id="editAgentLocation" required></div>
+					</div>
+				</div>
+				<div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1"></i>Save Changes</button></div>
+			</form>
 		</div>
 	</div>
 </div>
@@ -289,6 +355,19 @@ function agentLiveFilter() {
 
 function confirmDeleteAgent(agentName) {
 	return confirm('Are you sure you want to delete agent "' + agentName + '"? This action cannot be undone.');
+}
+
+function openAgentEdit(button) {
+	var agent = {};
+	try { agent = JSON.parse(button.dataset.agent || '{}'); } catch (error) { return; }
+	 document.getElementById('editAgentId').value = agent.id || '';
+	 document.getElementById('editAgentName').value = agent.name || '';
+	 document.getElementById('editAgentCompany').value = agent.company_name || '';
+	 document.getElementById('editAgentGst').value = agent.gst_number || '';
+	 document.getElementById('editAgentEmail').value = agent.email || '';
+	 document.getElementById('editAgentPhone').value = agent.phone || '';
+	 document.getElementById('editAgentLocation').value = agent.location || '';
+	 bootstrap.Modal.getOrCreateInstance(document.getElementById('agentEditModal')).show();
 }
 
 (() => {
