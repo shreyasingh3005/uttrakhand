@@ -34,7 +34,6 @@
         const availablePrices = prices && typeof prices === 'object' ? prices : {};
         const labels = { EP: 'EP', CP: 'CP', MAP: 'MAP', AP: 'AP', AI: 'AI' };
         const selectedPlan = decodeHtml(value(input, 'mealPlan', ''));
-        if (selectedPlan) return selectedPlan;
         const plans = Object.entries(availablePrices)
             .filter(([, price]) => Number(price) > 0)
             .map(([code, price]) => `${labels[code] || code} - ${formatPrice(price)}/- per room per night`);

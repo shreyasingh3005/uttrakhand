@@ -381,7 +381,7 @@ try {
 </div><!-- /.main-wrapper -->
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="/assets/js/quotation-template.js?v=20260820-2"></script>
+<script src="/assets/js/quotation-template.js?v=20260826-1"></script>
 <script src="/assets/js/ui-common.js"></script>
 <script>
 const listingPayload = <?php echo json_encode($listingDataForJs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
