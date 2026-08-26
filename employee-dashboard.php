@@ -3253,7 +3253,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
 
                         <div class="col-md-3">
                             <label for="bookingQueryAdults" class="form-label small fw-semibold text-secondary">Adults</label>
-                            <input type="number" class="form-control query-required-field" id="bookingQueryAdults" min="1" value="1" required>
+                            <input type="number" class="form-control query-required-field" id="bookingQueryAdults" min="1" value="2" required>
                         </div>
                         <div class="col-md-3">
                             <label for="bookingQueryChildren" class="form-label small fw-semibold text-secondary">Children</label>
@@ -4886,7 +4886,8 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         const [year, month, day] = checkIn.value.split('-').map(Number);
         const nextDay = new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
         checkOut.min = nextDay;
-        if (checkOut.value && checkOut.value < nextDay) checkOut.value = nextDay;
+        if (!checkOut.value || checkOut.value < nextDay) checkOut.value = nextDay;
+        checkIn.blur();
 
         if (!checkOut.value) {
             nights.value = 0;
