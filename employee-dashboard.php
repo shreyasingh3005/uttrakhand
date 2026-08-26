@@ -2257,8 +2257,8 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             <li class="nav-item"><a class="nav-link" data-target="add-agent-view" href="#" onclick="showSection('add-agent-view'); return false;"><i class="bi bi-person-plus"></i> Add Agent</a></li>
             <li class="nav-item"><a class="nav-link" data-target="booking-query-view" href="#" onclick="showSection('booking-query-view'); return false;"><i class="bi bi-chat-dots"></i> Booking Query</a></li>
             <li class="nav-item"><a class="nav-link" data-target="query-history-view" href="#" onclick="showSection('query-history-view'); return false;"><i class="bi bi-clock-history"></i> Query History</a></li>
-            <li class="nav-item"><a class="nav-link" data-target="#" href="#" onclick="showSection('my-bookings-view'); return false;"><i class="bi bi-calendar-check"></i> Bookings(soon)</a></li>
-            <li class="nav-item"><a class="nav-link" data-target="#" href="#" onclick="showSection('create-booking-view'); return false;"><i class="bi bi-calendar-plus"></i> Create Booking(soon)</a></li>
+            <li class="nav-item"><a class="nav-link" data-target="my-bookings-view" href="#" click="showSection('my-bookings-view'); return false;"><i class="bi bi-calendar-check"></i> Bookings(soon)</a></li>
+            <li class="nav-item"><a class="nav-link" data-target="create-booking-view" href="#" click="showSection('create-booking-view'); return false;"><i class="bi bi-calendar-plus"></i> Create Booking(soon)</a></li>
             
         </ul>
     </div>
