@@ -38,36 +38,42 @@ if ($agentSearch !== '') {
 	$agentFilterParams[':search'] = '%' . $agentSearch . '%';
 }
 
-if ($agentStatusFilter !== '' && in_array($agentStatusFilter, ['Active', 'On Leave', 'Inactive'], true)) {
-	$agentFilterClauses[] = 'status = :status';
-	$agentFilterParams[':status'] = $agentStatusFilter;
-}
-
 $agentWhereSql = count($agentFilterClauses) > 0 ? ' WHERE ' . implode(' AND ', $agentFilterClauses) : '';
 
-$agentsStmt = $conn->prepare('SELECT * FROM agents_details' . $agentWhereSql . ' ORDER BY created_at DESC, id DESC');
+$agentsStmt = $conn->prepare('SELECT a.*, GREATEST(
+        a.created_at,
+        COALESCE((SELECT MAX(b.created_at) FROM bookings_details b WHERE b.agent_id = a.id), a.created_at),
+        COALESCE((SELECT MAX(h.generated_at) FROM booking_query_history h WHERE h.agent_id = a.id), a.created_at),
+        COALESCE((SELECT MAX(l.generated_at) FROM agent_query_locks l WHERE l.agent_id = a.id), a.created_at)
+    ) AS last_activity_at
+    FROM agents_details a' . $agentWhereSql . ' ORDER BY a.created_at DESC, a.id DESC');
 $agentsStmt->execute($agentFilterParams);
 $agents = $agentsStmt->fetchAll();
 
-$summaryStmt = $conn->prepare(
-	'SELECT
-		COUNT(*) AS total_agents,
-		SUM(CASE WHEN status = "Active" THEN 1 ELSE 0 END) AS active_agents,
-		COALESCE(SUM(total_deals), 0) AS total_deals,
-		COALESCE(SUM(total_revenue), 0) AS total_revenue
-	 FROM agents_details' . $agentWhereSql
-);
-$summaryStmt->execute($agentFilterParams);
-$summary = $summaryStmt->fetch();
-
-$statusChartStmt = $conn->prepare('SELECT status, COUNT(*) AS total FROM agents_details' . $agentWhereSql . ' GROUP BY status');
-$statusChartStmt->execute($agentFilterParams);
-$statusLabels = [];
-$statusValues = [];
-foreach ($statusChartStmt->fetchAll() as $row) {
-	$statusLabels[] = $row['status'];
-	$statusValues[] = (int) $row['total'];
+$agentActivityCutoff = new DateTimeImmutable('-15 days');
+foreach ($agents as &$agent) {
+	$lastActivity = !empty($agent['last_activity_at']) ? new DateTimeImmutable($agent['last_activity_at']) : null;
+	$agent['effective_status'] = $lastActivity && $lastActivity >= $agentActivityCutoff ? 'Active' : 'Inactive';
 }
+unset($agent);
+
+if ($agentStatusFilter !== '' && in_array($agentStatusFilter, ['Active', 'Inactive'], true)) {
+	$agents = array_values(array_filter($agents, static function ($agent) use ($agentStatusFilter) {
+		return $agent['effective_status'] === $agentStatusFilter;
+	}));
+}
+
+$summary = [
+	'total_agents' => count($agents),
+	'active_agents' => count(array_filter($agents, static fn($agent) => $agent['effective_status'] === 'Active')),
+	'total_deals' => array_sum(array_map(static fn($agent) => (int) $agent['total_deals'], $agents)),
+	'total_revenue' => array_sum(array_map(static fn($agent) => (float) $agent['total_revenue'], $agents)),
+];
+$statusLabels = ['Active', 'Inactive'];
+$statusValues = [
+	$summary['active_agents'],
+	count(array_filter($agents, static fn($agent) => $agent['effective_status'] === 'Inactive')),
+];
 
 function status_badge_class($status) {
 	if ($status === 'Active') {
@@ -222,7 +228,7 @@ function status_badge_class($status) {
 									<p class="text-muted small mb-2 text-center"><i class="bi bi-telephone me-1"></i><?php echo htmlspecialchars($agent['phone'], ENT_QUOTES, 'UTF-8'); ?></p>
 									<p class="text-muted small mb-2 text-center"><i class="bi bi-receipt me-1"></i>GST: <?php echo htmlspecialchars($agent['gst_number'] ?? 'N/A', ENT_QUOTES, 'UTF-8'); ?></p>
 									<div class="mb-3 d-flex gap-2 justify-content-center flex-wrap">
-										<span class="badge <?php echo status_badge_class($agent['status']); ?>"><?php echo htmlspecialchars($agent['status'], ENT_QUOTES, 'UTF-8'); ?></span>
+										<span class="badge <?php echo status_badge_class($agent['effective_status']); ?>"><?php echo htmlspecialchars($agent['effective_status'], ENT_QUOTES, 'UTF-8'); ?></span>
 										<span class="badge badge-created"><i class="bi bi-person-fill me-1"></i><?php echo htmlspecialchars($agent['created_by'], ENT_QUOTES, 'UTF-8'); ?></span>
 									</div>
 									<div class="row g-2 small text-center mb-2">
