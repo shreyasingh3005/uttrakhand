@@ -29,7 +29,7 @@ return [
     // App
     'APP_ENV'                  => 'production',  // development | production
     'APP_DEBUG'                => false,
-    'APP_URL'                  => 'http://paleturquoise-tarsier-877492.hostingersite.com',
+    'APP_URL'                  => 'https://villaholic.com/',  //http://paleturquoise-tarsier-877492.hostingersite.com
 
    // SMTP (set these for admin password reset emails)
 'MAIL_HOST'               => 'smtp.gmail.com',
