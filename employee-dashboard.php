@@ -644,7 +644,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 }
                 $where[] = '(' . implode(' AND ', $tokenClauses) . ')';
             }
-            if ($filterCategory !== '' && strtolower(trim($filterCategory)) !== 'all categories') {
+            if ($filterCategory !== '' && !in_array(strtolower(trim($filterCategory)), ['all categories', 'all catgs'], true)) {
                 $where[] = "LOWER(TRIM(COALESCE(NULLIF(h.property_category, ''), CONCAT(h.star_rating, ' Star')))) = LOWER(TRIM(:category))";
                 $params[':category'] = $filterCategory;
             }
@@ -852,7 +852,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         header('Content-Type: application/json; charset=utf-8');
 
         $location = sanitize_input($_POST['location'] ?? '');
-        $category = sanitize_input($_POST['category'] ?? 'All Categories');
+        $category = sanitize_input($_POST['category'] ?? 'All Catgs');
+        if ($category === '' || in_array(strtolower($category), ['all categories', 'all catgs'], true)) {
+            $category = 'All Catgs';
+        }
         $checkIn = sanitize_input($_POST['check_in'] ?? '');
         $checkOut = sanitize_input($_POST['check_out'] ?? '');
         $nights = max(0, (int)($_POST['nights'] ?? 0));
@@ -904,7 +907,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             'Booking Query',
                 $queryType === 'agent' ? 'Agent: ' . (($agent['name'] ?? '') . ' (' . ($agent['phone'] ?? '') . ')') : '',
             'Location: ' . ($location ?: 'Any'),
-            'Hotel Category: ' . ($category ?: 'All Categories'),
+            'Hotel Category: ' . $category,
             'Check-In: ' . ($checkIn ?: 'N/A'),
             'Check-Out: ' . ($checkOut ?: 'N/A'),
             'Nights: ' . $nights,
@@ -967,7 +970,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 ':agent_phone' => $agent['phone'] ?? null,
                 ':lock_until' => $lockUntil,
                 ':location' => $location ?: null,
-                ':category' => $category ?: 'All Categories',
+                ':category' => $category,
                 ':hotel_name' => $hotelName ?: null,
                 ':room_category' => $roomCategory ?: null,
                 ':check_in' => $checkIn ?: null,
@@ -1006,6 +1009,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $historyStmt->execute($historyParams);
             $history = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
             foreach ($history as &$historyRow) {
+                if (in_array(strtolower(trim((string)($historyRow['hotel_category'] ?? ''))), ['all categories', 'all catgs'], true)) {
+                    $historyRow['hotel_category'] = 'All Catgs';
+                }
                 $historyRow['matched_hotels'] = json_decode($historyRow['matched_hotels_json'] ?? '[]', true) ?: [];
             }
             unset($historyRow);
@@ -3297,7 +3303,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                         <div class="col-md-6">
                             <label for="bookingQueryHotelCategory" class="form-label small fw-semibold text-secondary">Hotel Category</label>
                             <select class="form-select query-required-field" id="bookingQueryHotelCategory" required>
-                                <option value="all categories" selected>All Catgs</option>
+                                <option value="all catgs" selected>All Catgs</option>
                                 <?php foreach ($hotel_category_options as $cat): ?>
                                     <option value="<?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?></option>
                                 <?php endforeach; ?>
@@ -5991,7 +5997,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             const mealSummary = hotels.map(h => formatBookingMealPlans(h.prices)).join('<br>') || 'N/A';
             const text = item.query_text || '';
             html += `<tr class="query-history-row" data-history-date="${item.generated_at}" data-history-text="${(item.query_text || '').toLowerCase()}">
-                <td>Booking Query</td><td>${escapeQueryHistoryHtml(item.agent_name || 'N/A')}</td><td>${escapeQueryHistoryHtml(item.agent_phone || 'N/A')}</td><td>${escapeQueryHistoryHtml(item.location || 'Any')}</td><td>${escapeQueryHistoryHtml(item.hotel_category || 'All Categories')}</td>
+                                <td>Booking Query</td><td>${escapeQueryHistoryHtml(item.agent_name || 'N/A')}</td><td>${escapeQueryHistoryHtml(item.agent_phone || 'N/A')}</td><td>${escapeQueryHistoryHtml(item.location || 'Any')}</td><td>${escapeQueryHistoryHtml(item.hotel_category || 'All Catgs')}</td>
                 <td>${hotelSummary}</td><td>${mealSummary}</td><td>${dates}</td>
                 <td>A:${item.adults || 1} C:${item.children || 0} R:${item.rooms || 1}</td>
                 <td>₹${Number(item.budget || 0).toLocaleString('en-IN')}/night</td><td>${lockStatus}</td><td>${lockUntil}</td><td>${generatedAt}</td>

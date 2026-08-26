@@ -297,7 +297,7 @@ try {
             <div class="col-md-6">
                 <label for="adminQueryCategory" class="form-label small fw-semibold text-secondary">Hotel Category</label>
                 <select class="form-select form-select-sm query-required-field" id="adminQueryCategory" required>
-                    <option value="all categories" selected>All Catgs</option>
+                    <option value="all catgs" selected>All Catgs</option>
                     <?php foreach ($hotel_category_options as $cat): ?>
                         <option value="<?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?></option>
                     <?php endforeach; ?>
@@ -470,7 +470,7 @@ function loadAdminGeneratedQueryHistory() {
                 const meals = hotels.map((hotel) => formatAdminBookingMealPlans(hotel.prices)).join('<br>') || 'N/A';
                 return `<tr class="admin-history-row" data-history-date="${escapeAdminHistoryHtml(item.generated_at)}" data-history-text="${escapeAdminHistoryHtml((item.query_text || '').toLowerCase())}">
                     <td>${escapeAdminHistoryHtml(item.created_by_username)}</td><td>${escapeAdminHistoryHtml(item.agent_name || 'Admin')}</td><td>${escapeAdminHistoryHtml(item.agent_phone || '')}</td><td>${escapeAdminHistoryHtml(item.location || 'Any')}</td>
-                    <td>${escapeAdminHistoryHtml(item.hotel_category || 'All Categories')}</td><td>${hotelNames}</td><td>${meals}</td>
+                    <td>${escapeAdminHistoryHtml(item.hotel_category || 'All Catgs')}</td><td>${hotelNames}</td><td>${meals}</td>
                     <td>${escapeAdminHistoryHtml(item.check_in || 'N/A')} - ${escapeAdminHistoryHtml(item.check_out || 'N/A')}</td>
                     <td>₹${Number(item.budget || 0).toLocaleString('en-IN')}/night</td><td>${item.lock_until && new Date(item.lock_until).getTime() > Date.now() ? '<span class="badge bg-danger">Agent Locked</span>' : '<span class="badge bg-success">Unlocked</span>'}</td><td>${escapeAdminHistoryHtml(item.lock_until && new Date(item.lock_until).getTime() > Date.now() ? formatAdminHistoryDate(item.lock_until) : 'Unlocked')}</td><td>${escapeAdminHistoryHtml(formatAdminHistoryDate(item.generated_at))}</td>
                     <td><button type="button" class="btn btn-sm btn-outline-secondary" data-query-text="${escapeAdminHistoryHtml(item.query_text)}" data-quotation="${escapeAdminHistoryHtml(JSON.stringify({ queryNumber: item.query_number, queryText: item.query_text, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: null, agentName: item.agent_name, agentPhone: item.agent_phone, matchedHotels: hotels }))}" onclick="copyAdminHistoryQuotation(this)">Copy</button></td>
