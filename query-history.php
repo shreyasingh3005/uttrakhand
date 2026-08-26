@@ -241,7 +241,6 @@ try {
                             <?php if (!empty($item['agent_phone'])): ?>
                                 <button class="btn btn-sm btn-outline-primary" onclick="viewAdminQuery(this)">View</button>
                                 <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('', this)">Copy</button>
-                                <button type="button" class="btn btn-sm btn-success" onclick="openAdminHistoryWhatsApp(this)">WA</button>
                                 <form method="post" style="display:inline-block; margin:0;">
                                     <input type="hidden" name="action" value="<?php echo $isLocked ? 'unlock_query' : 'lock_query'; ?>">
                                     <input type="hidden" name="query_id" value="<?php echo (int) $item['id']; ?>">
@@ -390,29 +389,6 @@ function copyQueryText(queryText, buttonElement) {
         document.body.removeChild(textarea);
         alert('Query copied to clipboard!');
     });
-}
-
-function openAdminHistoryWhatsApp(buttonElement) {
-    const row = buttonElement?.closest('.admin-history-row');
-    if (!row) return;
-    let matchedHotels = [];
-    try { matchedHotels = JSON.parse(row.dataset.hotels || '[]'); } catch (e) {}
-    const firstHotel = matchedHotels[0] || {};
-    const firstRoom = firstHotel.rooms?.[0] || firstHotel;
-    const text = AirwaysQuotation.format({
-        id: row.dataset.queryId, queryText: row.dataset.historyText,
-        hotelName: firstHotel.name || row.dataset.hotel,
-        hotelLocation: firstHotel.location || firstHotel.city || row.dataset.location,
-        roomCategory: firstRoom.room_name || firstRoom.category || row.dataset.room,
-        checkIn: row.dataset.checkin,
-        checkOut: row.dataset.checkout,
-        adults: row.dataset.adults,
-        children: row.dataset.children,
-        rooms: row.dataset.rooms,
-        roomPrice: firstRoom.selected_price || firstRoom.basePrice || row.dataset.budget,
-        matchedHotels
-    });
-    window.open(`https://wa.me/${(row.cells[2]?.textContent || '').replace(/\D/g, '')}?text=${encodeURIComponent(text)}`, '_blank');
 }
 
 function viewAdminQuery(buttonElement) {

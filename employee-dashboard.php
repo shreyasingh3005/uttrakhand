@@ -5934,7 +5934,6 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                 <td>
                     <button class="btn btn-sm btn-outline-primary me-1" onclick="viewQuery(${item.id})">View</button>
                     <button class="btn btn-sm btn-outline-secondary me-1" onclick="copyQueryDetails(${item.id})">Copy</button>
-                    <button class="btn btn-sm btn-success" type="button" onclick="openEmployeeHistoryWhatsApp(${item.id})"><i class="bi bi-whatsapp"></i></button>
                 </td>
             </tr>`;
         });
@@ -6004,23 +6003,6 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         } catch (error) {
             console.error('Copy query details failed:', error);
             showErrorToast('Unable to copy query details');
-        }
-    }
-
-    async function openEmployeeHistoryWhatsApp(queryId) {
-        try {
-            const response = await fetch('employee-dashboard.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ action: 'get_query_by_id', queryId })
-            });
-            const data = await response.json();
-            if (!data.success) return showErrorToast(data.message || 'Unable to load query details');
-            const text = AirwaysQuotation.format({ ...data, id: queryId, hotelName: data.hotel_name, roomCategory: data.room_category, matchedHotels: data.hotels });
-            window.open(`https://wa.me/${(data.agent_phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(text)}`, '_blank');
-        } catch (error) {
-            console.error('Open WhatsApp failed:', error);
-            showErrorToast('Unable to prepare WhatsApp message');
         }
     }
 
