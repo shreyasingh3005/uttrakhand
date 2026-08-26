@@ -269,7 +269,7 @@ function status_badge_class($status) {
 										<div class="col-6"><div class="text-muted">Revenue</div><strong>₹<?php echo number_format((float) $agent['total_revenue'], 0); ?></strong></div>
 									</div>
 									<p class="mb-0 text-muted small text-center"><?php echo htmlspecialchars($agent['email'], ENT_QUOTES, 'UTF-8'); ?></p>
-									<div class="mt-3 text-center">
+									<div class="mt-3 d-flex justify-content-center align-items-center gap-2 flex-wrap">
 										<a class="btn btn-sm btn-outline-success rounded-pill px-3" href="/export-agent-excel.php?agent_id=<?php echo (int) $agent['id']; ?>">
 											<i class="bi bi-file-earmark-spreadsheet me-1"></i> Download Full Data
 										</a>
@@ -281,7 +281,7 @@ function status_badge_class($status) {
 											<i class="bi bi-pencil-square me-1"></i> Update Details
 										</button>
 									</div>
-									<form method="post" class="mt-3 text-center" onsubmit="return confirmDeleteAgent('<?php echo htmlspecialchars(addslashes($agent['name']), ENT_QUOTES, 'UTF-8'); ?>');">
+									<form method="post" class="m-0" onsubmit="return confirmDeleteAgent('<?php echo htmlspecialchars(addslashes($agent['name']), ENT_QUOTES, 'UTF-8'); ?>');">
 										<input type="hidden" name="action" value="delete_agent">
 										<input type="hidden" name="agent_id" value="<?php echo (int) $agent['id']; ?>">
 										<button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3"><i class="bi bi-trash me-1"></i> Delete</button>
