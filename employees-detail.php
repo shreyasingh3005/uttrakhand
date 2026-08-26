@@ -12,8 +12,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset
 	$newPassword = (string) ($_POST['new_password'] ?? '');
 	$confirmPassword = (string) ($_POST['confirm_password'] ?? '');
 
-	if ($employeeId <= 0 || strlen($newPassword) < 8 || strlen($newPassword) > 128 || $newPassword !== $confirmPassword) {
-		$flashMessage = 'Password must be 8 to 128 characters and both fields must match.';
+	if ($employeeId <= 0 || strlen($newPassword) < 6 || strlen($newPassword) > 128 || $newPassword !== $confirmPassword) {
+		$flashMessage = 'Password must be 6 to 128 characters and both fields must match.';
 		$flashType = 'danger';
 	} else {
 		try {
@@ -383,8 +383,8 @@ function time_ago_label($dateTime) {
 					<input type="hidden" name="action" value="reset_employee_password">
 					<input type="hidden" name="employee_id" id="resetEmployeeId">
 					<?php echo csrf_field(); ?>
-					<div class="mb-3"><label class="form-label" for="employeeNewPassword">New Password</label><input class="form-control" type="password" name="new_password" id="employeeNewPassword" minlength="8" maxlength="128" autocomplete="new-password" required></div>
-					<div><label class="form-label" for="employeeConfirmPassword">Confirm Password</label><input class="form-control" type="password" name="confirm_password" id="employeeConfirmPassword" minlength="8" maxlength="128" autocomplete="new-password" required></div>
+					<div class="mb-3"><label class="form-label" for="employeeNewPassword">New Password</label><input class="form-control" type="password" name="new_password" id="employeeNewPassword" minlength="6" maxlength="128" autocomplete="new-password" required><div class="form-text">Use at least 6 characters.</div></div>
+					<div><label class="form-label" for="employeeConfirmPassword">Confirm Password</label><input class="form-control" type="password" name="confirm_password" id="employeeConfirmPassword" minlength="6" maxlength="128" autocomplete="new-password" required></div>
 				</div>
 				<div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1"></i>Update Password</button></div>
 			</form>
