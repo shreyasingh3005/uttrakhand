@@ -3348,7 +3348,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                         </div>
 
                         <div class="modal fade" id="queryHistoryModal" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
                                 <div class="modal-content">
                                     <div class="modal-header">
                                         <h5 class="modal-title" id="queryHistoryModalTitle">Query Details</h5>
@@ -3357,7 +3357,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                                     </div>
                                     <div class="modal-body">
                                         <pre id="queryHistoryModalBody" class="p-3"
-                                            style="white-space: pre-wrap; background: #f8f9fa; border-radius: .75rem; min-height: 220px;"></pre>
+                                            style="white-space: pre-wrap; overflow-wrap: anywhere; background: #f8f9fa; border-radius: .75rem; min-height: 220px; max-height: 65vh; overflow-y: auto; font: 500 .9rem/1.65 ui-monospace, SFMono-Regular, Consolas, monospace;"></pre>
                                     </div>
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-secondary"
@@ -6133,7 +6133,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         const modal = document.getElementById('queryHistoryModal');
         const text = button?.dataset.queryText || '';
         if (!modal) return showErrorToast('Query modal not available');
-        document.getElementById('queryHistoryModalTitle').textContent = 'Query Details';
+        document.getElementById('queryHistoryModalTitle').textContent = 'Quotation Preview';
         let quotation = null;
         try { quotation = button?.dataset.quotation ? JSON.parse(button.dataset.quotation) : null; } catch (error) { quotation = null; }
         const quotationItems = quotation?.matchedHotels?.length
