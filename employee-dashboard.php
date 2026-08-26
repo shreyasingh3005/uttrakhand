@@ -6134,9 +6134,13 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         const text = button?.dataset.queryText || '';
         if (!modal) return showErrorToast('Query modal not available');
         document.getElementById('queryHistoryModalTitle').textContent = 'Query Details';
-        const quotation = button?.dataset.quotation ? JSON.parse(button.dataset.quotation) : null;
-        document.getElementById('queryHistoryModalBody').textContent = quotation
-            ? AirwaysQuotation.format(quotation)
+        let quotation = null;
+        try { quotation = button?.dataset.quotation ? JSON.parse(button.dataset.quotation) : null; } catch (error) { quotation = null; }
+        const quotationItems = quotation?.matchedHotels?.length
+            ? quotation.matchedHotels.map((hotel) => ({ ...quotation, hotelName: hotel.name, hotelLocation: hotel.location, roomCategory: hotel.room_name, matchedHotels: [hotel] }))
+            : quotation ? [quotation] : [];
+        document.getElementById('queryHistoryModalBody').textContent = quotationItems.length
+            ? AirwaysQuotation.formatMany(quotationItems)
             : AirwaysQuotation.plainText(text);
         bootstrap.Modal.getOrCreateInstance(modal).show();
     }
