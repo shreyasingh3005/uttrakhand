@@ -2156,6 +2156,30 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         display: none;
     }
 
+    #queryHistoryModal .modal-dialog {
+        width: calc(100% - 2rem);
+        max-width: 1100px;
+        margin: 1rem auto;
+    }
+
+    #queryHistoryModal .modal-content {
+        max-height: calc(100vh - 2rem);
+        overflow: hidden;
+    }
+
+    #queryHistoryModal .modal-body {
+        min-width: 0;
+        overflow-y: auto;
+    }
+
+    #queryHistoryModalBody {
+        width: 100%;
+        margin: 0;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
     @media (max-width: 992px) {
         .mobile-menu-btn {
             display: inline-flex;
@@ -2210,6 +2234,47 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
 
         .main-wrapper {
             margin-left: 0;
+        }
+
+        #queryHistoryModal .modal-dialog {
+            width: calc(100% - 1.5rem);
+            max-width: none;
+            margin: .75rem auto;
+        }
+
+        #queryHistoryModal .modal-content {
+            max-height: calc(100vh - 1.5rem);
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        #queryHistoryModal .modal-dialog {
+            width: 100%;
+            margin: 0;
+        }
+
+        #queryHistoryModal .modal-content {
+            min-height: 100vh;
+            max-height: 100vh;
+            border-radius: 0 !important;
+        }
+
+        #queryHistoryModal .modal-header,
+        #queryHistoryModal .modal-footer {
+            padding: .85rem 1rem;
+        }
+
+        #queryHistoryModal .modal-body {
+            padding: .75rem;
+        }
+
+        #queryHistoryModalBody {
+            min-height: 0 !important;
+            max-height: none !important;
+            height: 100%;
+            padding: .85rem !important;
+            font-size: .78rem !important;
+            line-height: 1.55 !important;
         }
     }
     </style>
