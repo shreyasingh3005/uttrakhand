@@ -225,6 +225,7 @@ try {
                         data-hotels="<?php echo htmlspecialchars($item['matched_hotels_json'] ?? '[]', ENT_QUOTES, 'UTF-8'); ?>"
                         data-history-date="<?php echo htmlspecialchars($item['generated_at'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
                         data-history-text="<?php echo htmlspecialchars(strtolower((string)($item['query_text'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>">
+                        <td><?php echo htmlspecialchars($item['created_by_username'] ?? $item['employee_name'] ?? ''); ?></td>
                         <td><?php echo htmlspecialchars($item['agent_name'] ?? 'N/A'); ?></td>
                         <td><?php echo htmlspecialchars($item['agent_phone'] ?? 'N/A'); ?></td>
                         <td><?php echo htmlspecialchars($item['hotel_name'] ?? ($item['hotel_category'] ?? '')); ?></td>
@@ -237,14 +238,16 @@ try {
                         <td><?php $isLocked = !empty($item['lock_until']) && strtotime($item['lock_until']) > time(); ?><span class="badge <?php echo $isLocked ? 'bg-danger' : 'bg-success'; ?>"><?php echo $isLocked ? 'Agent Locked' : 'Unlocked'; ?></span></td>
                         <td><?php echo $isLocked ? date('d M Y, h:i A', strtotime($item['lock_until'])) : 'Unlocked'; ?></td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary" onclick="viewAdminQuery(this)">View</button>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('', this)">Copy</button>
                             <?php if (!empty($item['agent_phone'])): ?>
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewAdminQuery(this)">View</button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('', this)">Copy</button>
                                 <form method="post" style="display:inline-block; margin:0;">
                                     <input type="hidden" name="action" value="<?php echo $isLocked ? 'unlock_query' : 'lock_query'; ?>">
                                     <input type="hidden" name="query_id" value="<?php echo (int) $item['id']; ?>">
                                     <button type="submit" class="btn btn-sm <?php echo $isLocked ? 'btn-success' : 'btn-warning'; ?>"><i class="bi bi-<?php echo $isLocked ? 'unlock' : 'lock'; ?> me-1"></i><?php echo $isLocked ? 'Unlock Agent' : 'Lock Agent'; ?></button>
                                 </form>
+                            <?php else: ?>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('', this)">Copy</button>
                             <?php endif; ?>
                         </td>
                     </tr>

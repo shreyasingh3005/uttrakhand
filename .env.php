@@ -32,4 +32,3 @@ return [
     'APP_URL'                  => 'http://paleturquoise-tarsier-877492.hostingersite.com',
 ];
 
-
