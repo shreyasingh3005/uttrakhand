@@ -31,3 +31,7 @@ return [
     'APP_DEBUG'                => false,
     'APP_URL'                  => 'http://paleturquoise-tarsier-877492.hostingersite.com',
 ];
+
+
+
+
