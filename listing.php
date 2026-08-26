@@ -133,6 +133,7 @@ try {
 
 /* ── For each hotel fetch rooms + base prices ───────────────────────────── */
 foreach ($hotels as &$hotel) {
+  $hotel['name'] = html_entity_decode((string)($hotel['name'] ?? ''), ENT_QUOTES, 'UTF-8');
     try {
         $rStmt = $pdo->prepare("SELECT * FROM hotel_room_categories WHERE hotel_id=? AND status='active' ORDER BY id");
         $rStmt->execute([$hotel['id']]);

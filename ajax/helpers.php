@@ -61,7 +61,7 @@ function hl_body(): array {
         return json_decode(file_get_contents('php://input'), true) ?? [];
     return $_POST;
 }
-function s(mixed $v): string { return htmlspecialchars(trim((string)$v), ENT_QUOTES, 'UTF-8'); }
+function s(mixed $v): string { return trim((string)$v); }
 function f(mixed $v): float  { return max(0.0, (float)$v); }
 function i(mixed $v): int    { return (int)$v; }
 
