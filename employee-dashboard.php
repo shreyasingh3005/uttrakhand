@@ -3240,7 +3240,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
 
                         <div class="col-md-4">
                             <label for="bookingQueryCheckIn" class="form-label small fw-semibold text-secondary">Check-In</label>
-                            <input type="date" class="form-control query-required-field" id="bookingQueryCheckIn" required>
+                            <input type="date" class="form-control query-required-field" id="bookingQueryCheckIn" min="<?php echo date('Y-m-d'); ?>" required>
                         </div>
                         <div class="col-md-4">
                             <label for="bookingQueryCheckOut" class="form-label small fw-semibold text-secondary">Check-out</label>

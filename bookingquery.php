@@ -306,7 +306,7 @@ try {
 
             <div class="col-md-4">
                 <label for="adminQueryCheckIn" class="form-label small fw-semibold text-secondary">Check-In</label>
-                <input type="date" class="form-control form-control-sm query-required-field" id="adminQueryCheckIn" required>
+                <input type="date" class="form-control form-control-sm query-required-field" id="adminQueryCheckIn" min="<?php echo date('Y-m-d'); ?>" required>
             </div>
             <div class="col-md-4">
                 <label for="adminQueryCheckOut" class="form-label small fw-semibold text-secondary">Check-out</label>
