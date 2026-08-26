@@ -3,6 +3,46 @@ require_once __DIR__ . '/includes/auth_session.php';
 require_once __DIR__ . '/includes/db_connect.php';
 require_role('admin');
 
+$flashMessage = null;
+$flashType = 'success';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset_employee_password') {
+	verify_csrf();
+	$employeeId = (int) ($_POST['employee_id'] ?? 0);
+	$newPassword = (string) ($_POST['new_password'] ?? '');
+	$confirmPassword = (string) ($_POST['confirm_password'] ?? '');
+
+	if ($employeeId <= 0 || strlen($newPassword) < 8 || strlen($newPassword) > 128 || $newPassword !== $confirmPassword) {
+		$flashMessage = 'Password must be 8 to 128 characters and both fields must match.';
+		$flashType = 'danger';
+	} else {
+		try {
+			$userStmt = $conn->prepare(
+				'SELECT u.id FROM users u INNER JOIN employees_details e ON e.email = u.email WHERE e.id = :employee_id AND u.role = :role LIMIT 1'
+			);
+			$userStmt->execute([':employee_id' => $employeeId, ':role' => 'employee']);
+			$employeeUser = $userStmt->fetch();
+
+			if (!$employeeUser) {
+				$flashMessage = 'This employee does not have an active login account.';
+				$flashType = 'danger';
+			} else {
+				$updateStmt = $conn->prepare('UPDATE users SET password = :password WHERE id = :id AND role = :role');
+				$updateStmt->execute([
+					':password' => password_hash($newPassword, PASSWORD_BCRYPT),
+					':id' => (int) $employeeUser['id'],
+					':role' => 'employee',
+				]);
+				$flashMessage = 'Employee password updated successfully.';
+			}
+		} catch (PDOException $e) {
+			error_log('Employee password reset failed: ' . $e->getMessage());
+			$flashMessage = 'Employee password could not be updated. Please try again.';
+			$flashType = 'danger';
+		}
+	}
+}
+
 $employeeSearch = sanitize_input($_GET['q'] ?? '');
 $employeeDepartmentFilter = sanitize_input($_GET['department'] ?? '');
 $employeeStatusFilter = sanitize_input($_GET['status'] ?? '');
@@ -27,7 +67,7 @@ if ($employeeStatusFilter !== '' && in_array($employeeStatusFilter, ['Active', '
 $employeeWhereSql = count($employeeFilterClauses) > 0 ? ' WHERE ' . implode(' AND ', $employeeFilterClauses) : '';
 
 $employeesStmt = $conn->prepare(
-	'SELECT e.*, u.username AS login_username, u.is_logged_in, u.last_login_at, u.last_logout_at, COUNT(b.id) AS booking_count, COALESCE(SUM(b.amount), 0) AS booking_amount
+	' SELECT e.*, u.id AS login_user_id, u.username AS login_username, u.is_logged_in, u.last_login_at, u.last_logout_at, COUNT(b.id) AS booking_count, COALESCE(SUM(b.amount), 0) AS booking_amount
 	 FROM employees_details e
 	 LEFT JOIN users u ON u.email = e.email AND u.role = "employee"
 	 LEFT JOIN bookings_details b ON b.employee_id = e.id' . $employeeWhereSql . '
@@ -157,6 +197,8 @@ function time_ago_label($dateTime) {
 		.summary-value { font-size:1.3rem; font-weight:800; letter-spacing:-.02em; }
 		.employee-card { border:1px solid var(--border); border-radius:20px; background:#fff; font-size:.88rem; transition:all .25s cubic-bezier(.16,1,.3,1); box-shadow:0 1px 2px rgba(0,0,0,.04); }
 		.employee-card:hover { transform:translateY(-4px); box-shadow:0 10px 15px -3px rgba(0,0,0,.08); border-color:var(--primary-200); }
+		.employee-actions { display:flex; flex-direction:column; align-items:stretch; gap:.55rem; max-width:260px; margin-top:1rem; }
+		.employee-actions .btn { width:100%; min-height:40px; }
 		.login-meta { font-size:.78rem; color:#64748b; }
 		.archived-card { border:1px dashed var(--border); border-radius:14px; background:#f8fafc; }
 		.filter-grid .form-control,.filter-grid .form-select { border-radius:10px; border-color:var(--border); transition:all .25s; }
@@ -221,6 +263,9 @@ function time_ago_label($dateTime) {
 	</header>
 
 	<div class="container-fluid p-4">
+		<?php if ($flashMessage): ?>
+			<div class="alert alert-<?php echo htmlspecialchars($flashType, ENT_QUOTES, 'UTF-8'); ?> shadow-sm mb-4"><?php echo htmlspecialchars($flashMessage, ENT_QUOTES, 'UTF-8'); ?></div>
+		<?php endif; ?>
 		<div class="panel mb-4">
 			<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
 				<h4 class="fw-bold mb-0">Employees Operations Board</h4>
@@ -276,9 +321,16 @@ function time_ago_label($dateTime) {
 									<p class="mb-1 small"><strong>Email:</strong> <?php echo htmlspecialchars($employee['email'], ENT_QUOTES, 'UTF-8'); ?></p>
 									<p class="mb-1 small"><strong>Salary:</strong> <?php echo '₹' . number_format((float) $employee['monthly_salary'], 0); ?></p>
 									<p class="mb-0 small"><strong>Bookings:</strong> <?php echo (int) $employee['booking_count']; ?> | <strong>Amount:</strong> <?php echo '₹' . number_format((float) $employee['booking_amount'], 0); ?></p>
-									<a class="btn btn-sm btn-outline-success mt-3" href="/export-employee-excel.php?employee_id=<?php echo (int) $employee['id']; ?>">
-										<i class="bi bi-file-earmark-spreadsheet me-1"></i>Download Full Data
-									</a>
+									<div class="employee-actions">
+										<a class="btn btn-sm btn-outline-success" href="/export-employee-excel.php?employee_id=<?php echo (int) $employee['id']; ?>">
+											<i class="bi bi-file-earmark-spreadsheet me-1"></i>Download Full Data
+										</a>
+										<?php if (!empty($employee['login_user_id'])): ?>
+											<button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#resetEmployeePasswordModal" data-employee-id="<?php echo (int) $employee['id']; ?>" data-employee-name="<?php echo htmlspecialchars($employee['name'], ENT_QUOTES, 'UTF-8'); ?>">
+												<i class="bi bi-key me-1"></i>Reset Password
+											</button>
+										<?php endif; ?>
+									</div>
 								</div>
 							</div>
 						<?php endforeach; ?>
@@ -314,6 +366,28 @@ function time_ago_label($dateTime) {
 					<canvas id="departmentChart" height="220"></canvas>
 				</div>
 			</div>
+		</div>
+	</div>
+</div>
+
+<div class="modal fade" id="resetEmployeePasswordModal" tabindex="-1" aria-labelledby="resetEmployeePasswordTitle" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content">
+			<form method="post">
+				<div class="modal-header">
+					<h5 class="modal-title" id="resetEmployeePasswordTitle"><i class="bi bi-key me-2"></i>Reset Employee Password</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<p class="text-muted small mb-3">Set a new login password for <strong id="resetEmployeeName">this employee</strong>.</p>
+					<input type="hidden" name="action" value="reset_employee_password">
+					<input type="hidden" name="employee_id" id="resetEmployeeId">
+					<?php echo csrf_field(); ?>
+					<div class="mb-3"><label class="form-label" for="employeeNewPassword">New Password</label><input class="form-control" type="password" name="new_password" id="employeeNewPassword" minlength="8" maxlength="128" autocomplete="new-password" required></div>
+					<div><label class="form-label" for="employeeConfirmPassword">Confirm Password</label><input class="form-control" type="password" name="confirm_password" id="employeeConfirmPassword" minlength="8" maxlength="128" autocomplete="new-password" required></div>
+				</div>
+				<div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1"></i>Update Password</button></div>
+			</form>
 		</div>
 	</div>
 </div>
@@ -365,6 +439,16 @@ if (document.getElementById('departmentChart')) {
 		options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
 	});
 }
+</script>
+<script>
+document.getElementById('resetEmployeePasswordModal')?.addEventListener('show.bs.modal', function (event) {
+	var button = event.relatedTarget;
+	if (!button) return;
+	document.getElementById('resetEmployeeId').value = button.dataset.employeeId || '';
+	document.getElementById('resetEmployeeName').textContent = button.dataset.employeeName || 'this employee';
+	document.getElementById('employeeNewPassword').value = '';
+	document.getElementById('employeeConfirmPassword').value = '';
+});
 </script>
 <script>
 (() => {
