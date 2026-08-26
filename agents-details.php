@@ -283,7 +283,7 @@ function status_badge_class($status) {
 											'gst_number' => $agent['gst_number'] ?? '', 'email' => $agent['email'], 'phone' => $agent['phone'],
 											'location' => $agent['location'],
 										], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES, 'UTF-8'); ?>" onclick="openAgentEdit(this)">
-											<i class="bi bi-pencil-square me-1"></i> Update Details
+											<i class="bi bi-pencil-square me-1"></i> Update
 										</button>
 									<form method="post" onsubmit="return confirmDeleteAgent('<?php echo htmlspecialchars(addslashes($agent['name']), ENT_QUOTES, 'UTF-8'); ?>');">
 										<input type="hidden" name="action" value="delete_agent">
