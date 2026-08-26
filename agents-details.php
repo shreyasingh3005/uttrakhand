@@ -204,7 +204,7 @@ function status_badge_class($status) {
 			</div>
 			<div class="row g-3 filter-grid">
 				<div class="col-lg-7 col-md-6"><input class="form-control" id="agentFilterQ" placeholder="Agent name, phone, email, location" onkeyup="agentLiveFilter()"></div>
-				<div class="col-lg-3 col-md-4"><select class="form-select" id="agentFilterStatus" onchange="agentLiveFilter()"><option value="">All Status</option><option value="Active">Active</option><option value="On Leave">On Leave</option><option value="Inactive">Inactive</option></select></div>
+				<div class="col-lg-3 col-md-4"><select class="form-select" id="agentFilterStatus" onchange="agentLiveFilter()"><option value="">All Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></div>
 				<div class="col-lg-2 col-md-2 d-flex gap-2">
 					<button class="btn btn-outline-secondary" type="button" onclick="document.getElementById('agentFilterQ').value=''; document.getElementById('agentFilterStatus').value=''; agentLiveFilter();"><i class="bi bi-x-circle"></i> Reset</button>
 				</div>
