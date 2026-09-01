@@ -4,6 +4,19 @@ require_once __DIR__ . '/includes/auth_session.php';
 require_once __DIR__ . '/includes/db_connect.php';
 require_role('admin');
 
+function format_ist_datetime(?string $value): string {
+    if ($value === null || trim((string)$value) === '') {
+        return 'N/A';
+    }
+
+    try {
+        $dt = new DateTimeImmutable((string)$value, new DateTimeZone('UTC'));
+        return $dt->setTimezone(new DateTimeZone('Asia/Kolkata'))->format('d M Y, h:i A');
+    } catch (Exception $e) {
+        return date('d M Y, h:i A', strtotime((string)$value));
+    }
+}
+
 $unlockMessage = '';
 $unlockMessageType = 'success';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array(($_POST['action'] ?? ''), ['unlock_query', 'lock_query'], true)) {
@@ -441,8 +454,10 @@ function formatCountdownTimer(totalSeconds) {
 function refreshAdminLockCountdowns() {
     document.querySelectorAll('.admin-history-row').forEach((row) => {
         const lockUntil = row.dataset.lockUntil || '';
+        const timerCell = row.querySelector('.lock-timer-cell');
+        const statusBadge = row.querySelector('.lock-status-badge');
+
         if (!lockUntil) {
-            const timerCell = row.querySelector('.lock-timer-cell');
             if (timerCell) timerCell.textContent = 'Unlocked';
             return;
         }
@@ -450,8 +465,6 @@ function refreshAdminLockCountdowns() {
         const normalizedLock = lockUntil.trim();
         const expiresAt = new Date(normalizedLock.replace(' ', 'T') + '+05:30').getTime();
         const remainingMs = expiresAt - Date.now();
-        const timerCell = row.querySelector('.lock-timer-cell');
-        const statusBadge = row.querySelector('.lock-status-badge');
 
         if (remainingMs <= 0) {
             if (timerCell) timerCell.textContent = '00:00:00';
@@ -460,6 +473,11 @@ function refreshAdminLockCountdowns() {
                 statusBadge.className = 'lock-status-badge badge bg-success';
             }
             row.dataset.lockUntil = '';
+            row.dataset.lockActive = '0';
+            if (!row.dataset.expiredReloaded) {
+                row.dataset.expiredReloaded = '1';
+                setTimeout(() => window.location.reload(), 1000);
+            }
             return;
         }
 

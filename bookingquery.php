@@ -448,8 +448,23 @@ function formatAdminBookingMealPlans(prices) {
 
 function formatAdminHistoryDate(value) {
     if (!value) return 'N/A';
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? 'N/A' : date.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+
+    const raw = String(value).trim();
+    const isoValue = raw.includes(' ') ? raw.replace(' ', 'T') : raw;
+    const normalized = isoValue.includes('T') && !/[Zz]|[+-]\d{2}:?\d{2}$/.test(isoValue)
+        ? isoValue + '+05:30'
+        : isoValue;
+
+    const date = new Date(normalized);
+    return Number.isNaN(date.getTime()) ? 'N/A' : date.toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'Asia/Kolkata'
+    });
 }
 
 function loadAdminGeneratedQueryHistory() {

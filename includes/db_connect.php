@@ -19,6 +19,11 @@ try {
             PDO::ATTR_EMULATE_PREPARES   => false
         ]
     );
+    try {
+        $conn->exec("SET time_zone = '+05:30'");
+    } catch (PDOException $e) {
+        // Non-blocking: database timezone remains on server default when unavailable.
+    }
 } catch (PDOException $e) {
     safe_error_response(500, 'Unable to connect to the database. Please try again later.', $e);
 }
