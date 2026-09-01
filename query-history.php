@@ -256,9 +256,9 @@ try {
                         <td><?php echo 'A:' . ((int)($item['adults'] ?? 1)) . ' C:' . ((int)($item['children'] ?? 0)) . ' R:' . ((int)($item['rooms'] ?? 1)); ?></td>
                         <td>₹<?php echo number_format((float)($item['total_amount'] ?? $item['budget'] ?? 0),0); ?></td>
                         <td><?php echo htmlspecialchars($item['location'] ?? ''); ?></td>
-                        <td><?php echo date('d M Y, h:i A', strtotime($item['generated_at'])); ?></td>
+                        <td><?php echo format_ist_datetime((string)($item['generated_at'] ?? '')); ?></td>
                         <td><span class="lock-status-badge badge <?php echo $isLocked ? 'bg-danger' : 'bg-success'; ?>"><?php echo $isLocked ? 'Agent Locked' : 'Unlocked'; ?></span></td>
-                        <td><?php echo $isLocked ? date('d M Y, h:i A', strtotime($item['lock_until'])) : 'Unlocked'; ?></td>
+                        <td><?php echo $isLocked ? format_ist_datetime((string)($item['lock_until'] ?? '')) : 'Unlocked'; ?></td>
                         <td class="lock-timer-cell" data-lock-until="<?php echo htmlspecialchars($lockUntilRaw, ENT_QUOTES, 'UTF-8'); ?>"><?php echo $countdownDisplay; ?></td>
                         <td>
                             <?php if (!empty($item['agent_phone'])): ?>
