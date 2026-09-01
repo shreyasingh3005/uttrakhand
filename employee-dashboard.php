@@ -959,11 +959,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $saveStmt = $conn->prepare('INSERT INTO booking_query_history (
                 created_by_user_id, created_by_username, created_by_role, query_type, agent_id, agent_name, agent_phone, lock_until, location, hotel_category,
                 hotel_name, room_category, check_in, check_out, nights, adults, children, rooms, budget,
-                query_text, matched_hotels_json, query_number
+                query_text, matched_hotels_json, status, query_number
             ) VALUES (
                 :user_id, :username, :role, :query_type, :agent_id, :agent_name, :agent_phone, :lock_until, :location, :category, :hotel_name, :room_category,
                 :check_in, :check_out, :nights, :adults, :children, :rooms, :budget,
-                :query_text, :matched_hotels_json, :query_number
+                :query_text, :matched_hotels_json, :status, :query_number
             )');
             $saveStmt->execute([
                 ':user_id' => $user_id,
@@ -987,6 +987,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 ':budget' => $budget,
                 ':query_text' => implode("\n", $lines),
                 ':matched_hotels_json' => json_encode($matchedHotels, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                ':status' => 'New',
                 ':query_number' => $queryNumber,
             ]);
             $conn->commit();

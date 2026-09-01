@@ -19,6 +19,16 @@ function format_ist_datetime(?string $value): string {
 
 $unlockMessage = '';
 $unlockMessageType = 'success';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_query_status') {
+    $queryId = (int)($_POST['query_id'] ?? 0);
+    $statusValue = in_array((string)($_POST['status'] ?? ''), ['New', 'On Hold', 'Won', 'Lost'], true) ? (string)$_POST['status'] : 'New';
+    if ($queryId > 0) {
+        $updateStmt = $conn->prepare('UPDATE booking_query_history SET status = :status WHERE id = :id');
+        $updateStmt->execute([':status' => $statusValue, ':id' => $queryId]);
+        $unlockMessage = 'Query status updated successfully.';
+        $unlockMessageType = 'success';
+    }
+}
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array(($_POST['action'] ?? ''), ['unlock_query', 'lock_query'], true)) {
     $queryId = (int)($_POST['query_id'] ?? 0);
     if ($queryId <= 0) {
@@ -59,7 +69,7 @@ try {
     $historyStmt = $conn->prepare("SELECT bqh.id, bqh.created_by_user_id, bqh.created_by_username, bqh.created_by_role, bqh.generated_at, bqh.query_text,
                                           bqh.query_type, bqh.agent_id, bqh.agent_name, bqh.agent_phone, bqh.lock_until,
                                           bqh.location, bqh.hotel_category, bqh.check_in, bqh.check_out,
-                                          bqh.nights, bqh.adults, bqh.children, bqh.rooms, bqh.budget, bqh.matched_hotels_json,
+                                          bqh.nights, bqh.adults, bqh.children, bqh.rooms, bqh.budget, bqh.matched_hotels_json, bqh.status,
                                           COALESCE(NULLIF(bqh.created_by_username, ''), 'Unknown') AS employee_name
                                           FROM booking_query_history bqh
                                           ORDER BY bqh.generated_at DESC LIMIT 200");
@@ -205,7 +215,17 @@ try {
                 <label class="form-label small text-muted mb-1">Date To</label>
                 <input type="date" class="form-control form-control-sm" id="adminHistoryToFilter">
             </div>
-            <div class="col-md-2 d-flex align-items-end">
+<div class="col-md-2">
+                    <label class="form-label small text-muted mb-1">Status</label>
+                    <select class="form-select form-select-sm" id="adminHistoryStatusFilter">
+                        <option value="">All</option>
+                        <option value="New">New</option>
+                        <option value="On Hold">On Hold</option>
+                        <option value="Won">Won</option>
+                        <option value="Lost">Lost</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
                 <button type="button" class="btn btn-sm btn-outline-secondary w-100" id="adminHistoryResetFilters">Reset</button>
             </div>
         </div>
@@ -220,7 +240,7 @@ try {
 
         <div class="table-responsive">
             <table class="table table-sm table-hover">
-                <thead class="table-light"><tr><th>Employee</th><th>Agent</th><th>Phone</th><th>Hotel</th><th>Room Category</th><th>Dates</th><th>Pax</th><th>Amount</th><th>Location</th><th>Generated At</th><th>Lock Status</th><th>Lock Until</th><th>Countdown / Lock Timer</th><th>Actions</th></tr></thead>
+                <thead class="table-light"><tr><th>Employee</th><th>Agent</th><th>Phone</th><th>Hotel</th><th>Room Category</th><th>Dates</th><th>Pax</th><th>Amount</th><th>Location</th><th>Generated At</th><th>Lock Status</th><th>Lock Until</th><th>Status</th><th>Countdown / Lock Timer</th><th>Actions</th></tr></thead>
                 <tbody>
                     <?php foreach ($admin_history as $item): ?>
                     <?php
@@ -228,10 +248,13 @@ try {
                         $isLocked = $lockUntilRaw !== '' && strtotime($lockUntilRaw) > time();
                         $countdownSeconds = $isLocked ? max(0, (int) (strtotime($lockUntilRaw) - time())) : 0;
                         $countdownDisplay = $isLocked ? gmdate('H:i:s', $countdownSeconds) : 'Unlocked';
+                        $statusValue = in_array((string)($item['status'] ?? 'New'), ['New', 'On Hold', 'Won', 'Lost'], true) ? (string)$item['status'] : 'New';
+                        $statusBadgeClass = $statusValue === 'Won' ? 'bg-success' : ($statusValue === 'Lost' ? 'bg-danger' : ($statusValue === 'On Hold' ? 'bg-warning text-dark' : 'bg-primary'));
                     ?>
                     <tr class="admin-history-row" data-query-id="<?php echo (int)($item['id'] ?? 0); ?>"
                         data-lock-until="<?php echo htmlspecialchars($lockUntilRaw, ENT_QUOTES, 'UTF-8'); ?>"
                         data-lock-active="<?php echo $isLocked ? '1' : '0'; ?>"
+                        data-status="<?php echo htmlspecialchars($statusValue, ENT_QUOTES, 'UTF-8'); ?>"
                         data-employee="<?php echo htmlspecialchars(strtolower((string)($item['created_by_username'] ?? $item['employee_name'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>"
                         data-hotel="<?php echo htmlspecialchars(strtolower((string)($item['hotel_name'] ?? ($item['hotel_category'] ?? ''))), ENT_QUOTES, 'UTF-8'); ?>"
                         data-location="<?php echo htmlspecialchars(strtolower((string)($item['location'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>"
@@ -259,6 +282,17 @@ try {
                         <td><?php echo format_ist_datetime((string)($item['generated_at'] ?? '')); ?></td>
                         <td><span class="lock-status-badge badge <?php echo $isLocked ? 'bg-danger' : 'bg-success'; ?>"><?php echo $isLocked ? 'Agent Locked' : 'Unlocked'; ?></span></td>
                         <td><?php echo $isLocked ? format_ist_datetime((string)($item['lock_until'] ?? '')) : 'Unlocked'; ?></td>
+                        <td>
+                            <form method="post" class="d-inline-block m-0" style="min-width: 140px;">
+                                <input type="hidden" name="action" value="update_query_status">
+                                <input type="hidden" name="query_id" value="<?php echo (int)($item['id'] ?? 0); ?>">
+                                <select name="status" class="form-select form-select-sm status-select" onchange="this.form.submit()" aria-label="Query status">
+                                    <?php foreach (['New', 'On Hold', 'Won', 'Lost'] as $option): ?>
+                                        <option value="<?php echo htmlspecialchars($option, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $statusValue === $option ? 'selected' : ''; ?>><?php echo htmlspecialchars($option, ENT_QUOTES, 'UTF-8'); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </form>
+                        </td>
                         <td class="lock-timer-cell" data-lock-until="<?php echo htmlspecialchars($lockUntilRaw, ENT_QUOTES, 'UTF-8'); ?>"><?php echo $countdownDisplay; ?></td>
                         <td>
                             <?php if (!empty($item['agent_phone'])): ?>
@@ -313,7 +347,8 @@ function getAdminHistoryControls() {
         checkIn: document.getElementById('adminHistoryCheckInFilter')?.value || '',
         checkOut: document.getElementById('adminHistoryCheckOutFilter')?.value || '',
         from: document.getElementById('adminHistoryFromFilter')?.value || '',
-        to: document.getElementById('adminHistoryToFilter')?.value || ''
+        to: document.getElementById('adminHistoryToFilter')?.value || '',
+        status: document.getElementById('adminHistoryStatusFilter')?.value || ''
     };
 }
 
@@ -340,8 +375,9 @@ function applyAdminQueryHistoryFilter(filter) {
         const fromMatch = !controls.from || (row.dataset.historyDate || '').slice(0, 10) >= controls.from;
         const toMatch = !controls.to || (row.dataset.historyDate || '').slice(0, 10) <= controls.to;
         const quickMatch = !quickSearch || row.dataset.historyText.includes(quickSearch) || row.textContent.toLowerCase().includes(quickSearch);
+        const statusMatch = !controls.status || (row.dataset.status || '').toLowerCase() === controls.status.toLowerCase();
 
-        row.style.display = dateMatch && employeeMatch && hotelMatch && locationMatch && categoryMatch && roomMatch && budgetMatch && checkInMatch && checkOutMatch && fromMatch && toMatch && quickMatch ? '' : 'none';
+        row.style.display = dateMatch && employeeMatch && hotelMatch && locationMatch && categoryMatch && roomMatch && budgetMatch && checkInMatch && checkOutMatch && fromMatch && toMatch && quickMatch && statusMatch ? '' : 'none';
     });
 
     document.querySelectorAll('.admin-query-history-filter').forEach((button) => {
@@ -356,14 +392,14 @@ document.addEventListener('click', (event) => {
     const button = event.target.closest('.admin-query-history-filter');
     if (button) applyAdminQueryHistoryFilter(button.dataset.historyFilter || 'all');
 });
-["adminHistoryEmployeeFilter","adminHistoryHotelFilter","adminHistoryLocationFilter","adminHistoryCategoryFilter","adminHistoryRoomFilter","adminHistoryBudgetFilter","adminHistoryCheckInFilter","adminHistoryCheckOutFilter","adminHistoryFromFilter","adminHistoryToFilter"].forEach((id) => {
+["adminHistoryEmployeeFilter","adminHistoryHotelFilter","adminHistoryLocationFilter","adminHistoryCategoryFilter","adminHistoryRoomFilter","adminHistoryBudgetFilter","adminHistoryCheckInFilter","adminHistoryCheckOutFilter","adminHistoryFromFilter","adminHistoryToFilter","adminHistoryStatusFilter"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', () => applyAdminQueryHistoryFilter('all'));
     if (el) el.addEventListener('change', () => applyAdminQueryHistoryFilter('all'));
 });
 document.getElementById('adminQueryHistorySearch')?.addEventListener('input', () => applyAdminQueryHistoryFilter('all'));
 document.getElementById('adminHistoryResetFilters')?.addEventListener('click', () => {
-    ["adminHistoryEmployeeFilter","adminHistoryHotelFilter","adminHistoryLocationFilter","adminHistoryCategoryFilter","adminHistoryRoomFilter","adminHistoryBudgetFilter","adminHistoryCheckInFilter","adminHistoryCheckOutFilter","adminHistoryFromFilter","adminHistoryToFilter"].forEach((id) => {
+    ["adminHistoryEmployeeFilter","adminHistoryHotelFilter","adminHistoryLocationFilter","adminHistoryCategoryFilter","adminHistoryRoomFilter","adminHistoryBudgetFilter","adminHistoryCheckInFilter","adminHistoryCheckOutFilter","adminHistoryFromFilter","adminHistoryToFilter","adminHistoryStatusFilter"].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });

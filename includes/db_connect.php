@@ -751,6 +751,7 @@ function ensure_booking_query_history_table(PDO $conn) {
             room_category VARCHAR(150) DEFAULT NULL,
             query_text TEXT NOT NULL,
             matched_hotels_json LONGTEXT DEFAULT NULL,
+            status ENUM('New','On Hold','Won','Lost') NOT NULL DEFAULT 'New',
             generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_bqh_user (created_by_user_id),
             INDEX idx_bqh_generated (generated_at)
@@ -778,6 +779,7 @@ function ensure_booking_query_history_columns(PDO $conn) {
             'query_text' => 'ADD COLUMN query_text TEXT NOT NULL AFTER room_category',
             'matched_hotels_json' => 'ADD COLUMN matched_hotels_json LONGTEXT DEFAULT NULL AFTER query_text',
             'query_number' => 'ADD COLUMN query_number VARCHAR(8) DEFAULT NULL AFTER matched_hotels_json',
+            'status' => "ADD COLUMN status ENUM('New','On Hold','Won','Lost') NOT NULL DEFAULT 'New' AFTER matched_hotels_json",
             'query_date' => 'ADD COLUMN query_date DATETIME DEFAULT NULL AFTER generated_at',
         ];
 
