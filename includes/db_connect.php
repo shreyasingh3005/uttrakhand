@@ -626,7 +626,70 @@ function ensure_agent_query_locks_table(PDO $conn) {
         if (!in_array('locked_at', $columns, true)) {
             $conn->exec('ALTER TABLE agent_query_locks ADD COLUMN locked_at DATETIME DEFAULT NULL AFTER generated_at');
         }
+        if (!in_array('location', $columns, true)) {
+            $conn->exec('ALTER TABLE agent_query_locks ADD COLUMN location VARCHAR(255) DEFAULT NULL AFTER agent_id');
+        }
+        try {
+            $conn->exec('CREATE INDEX idx_agent_query_locks_agent_location ON agent_query_locks (agent_id, location, status, lock_until)');
+        } catch (PDOException $e) { /* non-blocking */ }
     } catch (PDOException $e) { /* non-blocking */ }
+}
+
+function normalize_agent_lock_location(?string $value): ?string {
+    if ($value === null) {
+        return null;
+    }
+    $normalized = strtolower(trim((string)$value));
+    $normalized = preg_replace('/\s+/', ' ', $normalized);
+    if ($normalized === '') {
+        return null;
+    }
+    return $normalized;
+}
+
+function expire_agent_query_locks(PDO $conn): void {
+    try {
+        $conn->prepare('UPDATE agent_query_locks SET status = "Open" WHERE status = "Locked" AND lock_until <= NOW()')->execute();
+    } catch (PDOException $e) {
+        // Non-blocking: expired locks are automatically treated as unlocked on the next check.
+    }
+}
+
+function get_active_agent_location_lock(PDO $conn, int $agentId, ?string $location, ?int $employeeId = null, ?string $employeeUsername = null): ?array {
+    expire_agent_query_locks($conn);
+    $locationKey = normalize_agent_lock_location($location);
+    $sql = 'SELECT id, agent_id, employee_id, employee_username, lock_until, location, status
+            FROM agent_query_locks
+            WHERE agent_id = :agent_id
+              AND status = "Locked"
+              AND lock_until > NOW()';
+    $params = [':agent_id' => $agentId];
+
+    if ($locationKey !== null) {
+        $sql .= ' AND LOWER(TRIM(COALESCE(location, ""))) = :location';
+        $params[':location'] = $locationKey;
+    } else {
+        $sql .= ' AND (location IS NULL OR TRIM(location) = "")';
+    }
+
+    $sql .= ' ORDER BY lock_until DESC LIMIT 1';
+    $stmt = $conn->prepare($sql);
+    $stmt->execute($params);
+    $lock = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$lock) {
+        return null;
+    }
+
+    $sameEmployee = false;
+    if ($employeeId !== null && ((int)($lock['employee_id'] ?? 0) === (int)$employeeId)) {
+        $sameEmployee = true;
+    }
+    if (!$sameEmployee && $employeeUsername !== null && trim((string)($lock['employee_username'] ?? '')) === trim((string)$employeeUsername)) {
+        $sameEmployee = true;
+    }
+
+    return $sameEmployee ? $lock : $lock;
 }
 
 function ensure_activity_logs_table(PDO $conn) {

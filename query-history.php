@@ -17,12 +17,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array(($_POST['action'] ?? ''), 
             $agentId = (int)($historyStmt->fetchColumn() ?: 0);
 
             if ($agentId > 0 && ($_POST['action'] ?? '') === 'lock_query') {
-                $lockUntil = date('Y-m-d H:i:s', strtotime('+6 hours'));
+                $lockUntil = date('Y-m-d H:i:s', strtotime('+1 hour'));
                 $lockStmt = $conn->prepare('UPDATE agent_query_locks SET lock_until = :lock_until, status = "Locked" WHERE agent_id = :agent_id ORDER BY id DESC LIMIT 1');
                 $lockStmt->execute([':agent_id' => $agentId, ':lock_until' => $lockUntil]);
                 $historyLockStmt = $conn->prepare('UPDATE booking_query_history SET lock_until = :lock_until WHERE id = :id');
                 $historyLockStmt->execute([':lock_until' => $lockUntil, ':id' => $queryId]);
-                $unlockMessage = 'Agent locked again for 6 hours.';
+                $unlockMessage = 'Agent locked again for 1 hour.';
             } elseif ($agentId > 0) {
                 $unlockStmt = $conn->prepare('UPDATE agent_query_locks SET lock_until = NOW(), status = "Open" WHERE agent_id = :agent_id AND status = "Locked"');
                 $unlockStmt->execute([':agent_id' => $agentId]);
@@ -206,10 +206,18 @@ try {
 
         <div class="table-responsive">
             <table class="table table-sm table-hover">
-                <thead class="table-light"><tr><th>Employee</th><th>Agent</th><th>Phone</th><th>Hotel</th><th>Room Category</th><th>Dates</th><th>Pax</th><th>Amount</th><th>Location</th><th>Generated At</th><th>Lock Status</th><th>Lock Until</th><th>Actions</th></tr></thead>
+                <thead class="table-light"><tr><th>Employee</th><th>Agent</th><th>Phone</th><th>Hotel</th><th>Room Category</th><th>Dates</th><th>Pax</th><th>Amount</th><th>Location</th><th>Generated At</th><th>Lock Status</th><th>Lock Until</th><th>Countdown / Lock Timer</th><th>Actions</th></tr></thead>
                 <tbody>
                     <?php foreach ($admin_history as $item): ?>
+                    <?php
+                        $lockUntilRaw = (string)($item['lock_until'] ?? '');
+                        $isLocked = $lockUntilRaw !== '' && strtotime($lockUntilRaw) > time();
+                        $countdownSeconds = $isLocked ? max(0, (int) (strtotime($lockUntilRaw) - time())) : 0;
+                        $countdownDisplay = $isLocked ? gmdate('H:i:s', $countdownSeconds) : 'Unlocked';
+                    ?>
                     <tr class="admin-history-row" data-query-id="<?php echo (int)($item['id'] ?? 0); ?>"
+                        data-lock-until="<?php echo htmlspecialchars($lockUntilRaw, ENT_QUOTES, 'UTF-8'); ?>"
+                        data-lock-active="<?php echo $isLocked ? '1' : '0'; ?>"
                         data-employee="<?php echo htmlspecialchars(strtolower((string)($item['created_by_username'] ?? $item['employee_name'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>"
                         data-hotel="<?php echo htmlspecialchars(strtolower((string)($item['hotel_name'] ?? ($item['hotel_category'] ?? ''))), ENT_QUOTES, 'UTF-8'); ?>"
                         data-location="<?php echo htmlspecialchars(strtolower((string)($item['location'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>"
@@ -235,8 +243,9 @@ try {
                         <td>₹<?php echo number_format((float)($item['total_amount'] ?? $item['budget'] ?? 0),0); ?></td>
                         <td><?php echo htmlspecialchars($item['location'] ?? ''); ?></td>
                         <td><?php echo date('d M Y, h:i A', strtotime($item['generated_at'])); ?></td>
-                        <td><?php $isLocked = !empty($item['lock_until']) && strtotime($item['lock_until']) > time(); ?><span class="badge <?php echo $isLocked ? 'bg-danger' : 'bg-success'; ?>"><?php echo $isLocked ? 'Agent Locked' : 'Unlocked'; ?></span></td>
+                        <td><span class="lock-status-badge badge <?php echo $isLocked ? 'bg-danger' : 'bg-success'; ?>"><?php echo $isLocked ? 'Agent Locked' : 'Unlocked'; ?></span></td>
                         <td><?php echo $isLocked ? date('d M Y, h:i A', strtotime($item['lock_until'])) : 'Unlocked'; ?></td>
+                        <td class="lock-timer-cell" data-lock-until="<?php echo htmlspecialchars($lockUntilRaw, ENT_QUOTES, 'UTF-8'); ?>"><?php echo $countdownDisplay; ?></td>
                         <td>
                             <?php if (!empty($item['agent_phone'])): ?>
                                 <button class="btn btn-sm btn-outline-primary" onclick="viewAdminQuery(this)">View</button>
@@ -420,6 +429,46 @@ function viewAdminQuery(buttonElement) {
     bootstrap.Modal.getOrCreateInstance(modalElement).show();
 }
 
+function formatCountdownTimer(totalSeconds) {
+    const total = Math.max(0, Math.floor(totalSeconds));
+    const hours = String(Math.floor(total / 3600)).padStart(2, '0');
+    const minutes = String(Math.floor((total % 3600) / 60)).padStart(2, '0');
+    const seconds = String(total % 60).padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+}
+
+function refreshAdminLockCountdowns() {
+    document.querySelectorAll('.admin-history-row').forEach((row) => {
+        const lockUntil = row.dataset.lockUntil || '';
+        if (!lockUntil) {
+            const timerCell = row.querySelector('.lock-timer-cell');
+            if (timerCell) timerCell.textContent = 'Unlocked';
+            return;
+        }
+
+        const expiresAt = new Date(lockUntil.replace(' ', 'T')).getTime();
+        const remainingMs = expiresAt - Date.now();
+        const timerCell = row.querySelector('.lock-timer-cell');
+        const statusBadge = row.querySelector('.lock-status-badge');
+
+        if (remainingMs <= 0) {
+            if (timerCell) timerCell.textContent = '00:00:00';
+            if (statusBadge) {
+                statusBadge.textContent = 'Unlocked';
+                statusBadge.className = 'lock-status-badge badge bg-success';
+            }
+            row.dataset.lockUntil = '';
+            return;
+        }
+
+        if (timerCell) timerCell.textContent = formatCountdownTimer(remainingMs / 1000);
+        if (statusBadge) {
+            statusBadge.textContent = 'Agent Locked';
+            statusBadge.className = 'lock-status-badge badge bg-danger';
+        }
+    });
+}
+
 function toggleSidebarMenu(open) {
     const sidebar = document.getElementById('adminSidebar');
     const backdrop = document.getElementById('sidebarBackdrop');
@@ -427,6 +476,9 @@ function toggleSidebarMenu(open) {
     sidebar.classList.toggle('open', !!open);
     backdrop.classList.toggle('show', !!open);
 }
+
+refreshAdminLockCountdowns();
+setInterval(refreshAdminLockCountdowns, 1000);
 
 (() => {
     const btn = document.getElementById('mobileMenuBtn');

@@ -162,6 +162,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'live_metrics') {
     exit;
 }
 
+expire_agent_query_locks($conn);
+
 // Handle Agent Creation Form Submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'create_agent') {
@@ -815,24 +817,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 exit;
             }
 
+            $locationKey = normalize_agent_lock_location($_POST['location'] ?? '');
             $conn->beginTransaction();
-            $lockStmt = $conn->prepare('SELECT id, employee_id, employee_username, lock_until FROM agent_query_locks WHERE agent_id = :agent_id AND lock_until > NOW() AND status = "Locked" ORDER BY lock_until DESC LIMIT 1 FOR UPDATE');
-            $lockStmt->execute([':agent_id' => (int)$agent['id']]);
+            $lockStmt = $conn->prepare('SELECT id, employee_id, employee_username, lock_until, location FROM agent_query_locks WHERE agent_id = :agent_id AND status = "Locked" AND lock_until > NOW() AND LOWER(TRIM(COALESCE(location, ""))) = :location ORDER BY lock_until DESC LIMIT 1 FOR UPDATE');
+            $lockStmt->execute([':agent_id' => (int)$agent['id'], ':location' => $locationKey ?? '']);
             $activeLock = $lockStmt->fetch(PDO::FETCH_ASSOC);
-            if ($activeLock && $user_role !== 'admin' && ((int)$activeLock['employee_id'] !== (int)$user_id) && $activeLock['employee_username'] !== $username) {
+            if ($activeLock && $user_role !== 'admin' && ((int)($activeLock['employee_id'] ?? 0) !== (int)$user_id) && trim((string)($activeLock['employee_username'] ?? '')) !== trim((string)$username)) {
                 $conn->rollBack();
-                echo json_encode(['success' => false, 'message' => 'This agent is currently locked with another employee and cannot be booked by you until the lock expires.', 'lock_until' => $activeLock['lock_until']]);
+                echo json_encode(['success' => false, 'message' => 'This agent is currently locked for this location with another employee and cannot be booked by you until the lock expires.', 'lock_until' => $activeLock['lock_until']]);
                 exit;
             }
 
             if ($activeLock) {
                 $lockUntil = $activeLock['lock_until'];
             } else {
-                $lockUntil = $user_role === 'admin' ? date('Y-m-d H:i:s') : date('Y-m-d H:i:s', strtotime('+6 hours'));
-                $newLockStmt = $conn->prepare('INSERT INTO agent_query_locks (agent_id, employee_id, employee_username, created_by_user_id, created_by_role, generated_at, locked_at, lock_until, query_text, status, booking_status, ip_address, user_agent) VALUES (:agent_id, :employee_id, :employee_username, :created_by_user_id, :created_by_role, NOW(), NOW(), :lock_until, :query_text, :status, "Unbooked", :ip_address, :user_agent)');
+                $lockUntil = $user_role === 'admin' ? date('Y-m-d H:i:s') : date('Y-m-d H:i:s', strtotime('+1 hour'));
+                $newLockStmt = $conn->prepare('INSERT INTO agent_query_locks (agent_id, employee_id, employee_username, created_by_user_id, created_by_role, generated_at, locked_at, lock_until, location, query_text, status, booking_status, ip_address, user_agent) VALUES (:agent_id, :employee_id, :employee_username, :created_by_user_id, :created_by_role, NOW(), NOW(), :lock_until, :location, :query_text, :status, "Unbooked", :ip_address, :user_agent)');
                 $newLockStmt->execute([
                     ':agent_id' => (int)$agent['id'], ':employee_id' => $user_id, ':employee_username' => $username,
-                    ':created_by_user_id' => $user_id, ':created_by_role' => $user_role, ':lock_until' => $lockUntil,
+                    ':created_by_user_id' => $user_id, ':created_by_role' => $user_role, ':lock_until' => $lockUntil, ':location' => $locationKey,
                     ':query_text' => 'Booking Query generated for agent ' . $agent['name'] . ' (' . $agent['phone'] . ')',
                     ':status' => $user_role === 'admin' ? 'Open' : 'Locked',
                     ':ip_address' => $_SERVER['REMOTE_ADDR'] ?? null, ':user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? null,
@@ -929,21 +932,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         try {
             $conn->beginTransaction();
             if ($agent) {
-                $lockStmt = $conn->prepare('SELECT id, employee_id, employee_username, lock_until FROM agent_query_locks WHERE agent_id = :agent_id AND lock_until > NOW() AND status = "Locked" ORDER BY lock_until DESC LIMIT 1 FOR UPDATE');
-                $lockStmt->execute([':agent_id' => (int)$agent['id']]);
+                $locationKey = normalize_agent_lock_location($location);
+                $lockStmt = $conn->prepare('SELECT id, employee_id, employee_username, lock_until, location FROM agent_query_locks WHERE agent_id = :agent_id AND status = "Locked" AND lock_until > NOW() AND LOWER(TRIM(COALESCE(location, ""))) = :location ORDER BY lock_until DESC LIMIT 1 FOR UPDATE');
+                $lockStmt->execute([':agent_id' => (int)$agent['id'], ':location' => $locationKey ?? '']);
                 $activeLock = $lockStmt->fetch(PDO::FETCH_ASSOC);
-                $ownsActiveLock = $activeLock && (((int)($activeLock['employee_id'] ?? 0) === (int)$user_id) || $activeLock['employee_username'] === $username);
+                $ownsActiveLock = $activeLock && (((int)($activeLock['employee_id'] ?? 0) === (int)$user_id) || trim((string)($activeLock['employee_username'] ?? '')) === trim((string)$username));
                 if ($activeLock && $user_role !== 'admin' && !$ownsActiveLock) {
                     $conn->rollBack();
-                    echo json_encode(['success' => false, 'message' => 'This agent is currently locked with another employee and cannot be booked by you until the lock expires.', 'lock_until' => $activeLock['lock_until']]);
+                    echo json_encode(['success' => false, 'message' => 'This agent is currently locked for this location with another employee and cannot be booked by you until the lock expires.', 'lock_until' => $activeLock['lock_until']]);
                     exit;
                 }
-                $lockUntil = $activeLock['lock_until'] ?? ($user_role === 'admin' ? date('Y-m-d H:i:s') : date('Y-m-d H:i:s', strtotime('+6 hours')));
+                $lockUntil = $activeLock['lock_until'] ?? ($user_role === 'admin' ? date('Y-m-d H:i:s') : date('Y-m-d H:i:s', strtotime('+1 hour')));
                 if (!$activeLock || !$ownsActiveLock) {
-                    $newLockStmt = $conn->prepare('INSERT INTO agent_query_locks (agent_id, employee_id, employee_username, created_by_user_id, created_by_role, generated_at, locked_at, lock_until, query_text, hotel_name, room_category, check_in, check_out, adults, children, rooms, status, booking_status, ip_address, user_agent) VALUES (:agent_id, :employee_id, :employee_username, :created_by_user_id, :created_by_role, NOW(), NOW(), :lock_until, :query_text, :hotel_name, :room_category, :check_in, :check_out, :adults, :children, :rooms, :status, "Unbooked", :ip_address, :user_agent)');
+                    $newLockStmt = $conn->prepare('INSERT INTO agent_query_locks (agent_id, employee_id, employee_username, created_by_user_id, created_by_role, generated_at, locked_at, lock_until, location, query_text, hotel_name, room_category, check_in, check_out, adults, children, rooms, status, booking_status, ip_address, user_agent) VALUES (:agent_id, :employee_id, :employee_username, :created_by_user_id, :created_by_role, NOW(), NOW(), :lock_until, :location, :query_text, :hotel_name, :room_category, :check_in, :check_out, :adults, :children, :rooms, :status, "Unbooked", :ip_address, :user_agent)');
                     $newLockStmt->execute([
                         ':agent_id' => (int)$agent['id'], ':employee_id' => $user_id, ':employee_username' => $username,
-                        ':created_by_user_id' => $user_id, ':created_by_role' => $user_role, ':lock_until' => $lockUntil,
+                        ':created_by_user_id' => $user_id, ':created_by_role' => $user_role, ':lock_until' => $lockUntil, ':location' => $locationKey,
                         ':query_text' => implode("\n", $lines), ':hotel_name' => $hotelName ?: null, ':room_category' => $roomCategory ?: null,
                         ':check_in' => $checkIn ?: null, ':check_out' => $checkOut ?: null, ':adults' => $adults, ':children' => $children,
                         ':rooms' => $rooms, ':status' => $user_role === 'admin' ? 'Open' : 'Locked',
@@ -1046,12 +1050,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             $agent_id = $agent['id'];
 
-            // Check if agent is locked
+            $location = sanitize_input($_POST['location'] ?? '');
+            $locationKey = normalize_agent_lock_location($location);
             $lock = null;
             try {
-                $lockStmt = $conn->prepare("SELECT employee_username, lock_until FROM agent_query_locks 
-                                           WHERE agent_id = :agent_id AND lock_until > NOW() ORDER BY lock_until DESC LIMIT 1");
-                $lockStmt->execute([':agent_id' => $agent_id]);
+                $lockStmt = $conn->prepare("SELECT employee_username, lock_until, location FROM agent_query_locks 
+                                           WHERE agent_id = :agent_id AND status = \"Locked\" AND lock_until > NOW() AND LOWER(TRIM(COALESCE(location, \"\"))) = :location ORDER BY lock_until DESC LIMIT 1");
+                $lockStmt->execute([':agent_id' => $agent_id, ':location' => $locationKey ?? '']);
                 $lock = $lockStmt->fetch(PDO::FETCH_ASSOC);
             } catch (PDOException $e) {
                 // Table may not exist, ignore
@@ -1061,7 +1066,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $locked_by = $lock['employee_username'];
                 $lock_until = $lock['lock_until'];
                 if ($user_role !== 'admin' && $locked_by !== $username) {
-                    echo json_encode(['success' => false, 'message' => 'This agent is currently locked with another employee and cannot be booked by you until the lock expires.', 'lock_until' => $lock_until]);
+                    echo json_encode(['success' => false, 'message' => 'This agent is currently locked for this location with another employee and cannot be booked by you until the lock expires.', 'lock_until' => $lock_until]);
                     exit;
                 }
             }
@@ -1082,15 +1087,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $query_text .= "GST: " . $hotel['gst'] . "%\n\n";
             }
 
-            // Save query and lock agent for 6 hours for non-admins; admin gets no active lock
-            $lock_until = ($user_role === 'admin') ? date('Y-m-d H:i:s') : date('Y-m-d H:i:s', strtotime('+6 hours'));
+            $lock_until = ($user_role === 'admin') ? date('Y-m-d H:i:s') : date('Y-m-d H:i:s', strtotime('+1 hour'));
             try {
                 $insertStmt = $conn->prepare("INSERT INTO agent_query_locks (
                                                agent_id, employee_id, employee_username, created_by_user_id, created_by_role,
-                                               lock_until, query_text, status, booking_status, ip_address, user_agent
+                                               lock_until, location, query_text, status, booking_status, ip_address, user_agent
                                              ) VALUES (
                                                :agent_id, :employee_id, :employee_username, :created_by_user_id, :created_by_role,
-                                               :lock_until, :query_text, :status, :booking_status, :ip_address, :user_agent
+                                               :lock_until, :location, :query_text, :status, :booking_status, :ip_address, :user_agent
                                              )");
                 $insertStmt->execute([
                     ':agent_id' => $agent_id,
@@ -1099,6 +1103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     ':created_by_user_id' => $user_id,
                     ':created_by_role' => $user_role,
                     ':lock_until' => $lock_until,
+                    ':location' => $locationKey,
                     ':query_text' => $query_text,
                     ':status' => $user_role === 'admin' ? 'Open' : 'Locked',
                     ':booking_status' => 'Unbooked',
@@ -1192,19 +1197,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
 
             $agent_id = $agent['id'];
-            // For admin, don't apply a 6-hour lock (set lock_until = now so it's not considered locked)
-            $lock_until = ($user_role === 'admin') ? date('Y-m-d H:i:s') : date('Y-m-d H:i:s', strtotime('+6 hours'));
+            $locationKey = normalize_agent_lock_location($query_text ?: '');
+            $lock_until = ($user_role === 'admin') ? date('Y-m-d H:i:s') : date('Y-m-d H:i:s', strtotime('+1 hour'));
 
-            // Append a new query history row and lock record
             $lockStmt = $conn->prepare("INSERT INTO agent_query_locks (
                                        agent_id, employee_id, employee_username, created_by_user_id, created_by_role,
-                                       generated_at, lock_until, query_text,
+                                       generated_at, lock_until, location, query_text,
                                        hotel_name, room_category, check_in, check_out, adults, children, rooms, extra_bed,
                                        meal_plan, total_amount, paid_amount, client_name, client_mobile, client_email, special_request,
                                        status, booking_status, ip_address, user_agent)
                                        VALUES (
                                        :agent_id, :employee_id, :employee_username, :created_by_user_id, :created_by_role,
-                                       NOW(), :lock_until, :query_text,
+                                       NOW(), :lock_until, :location, :query_text,
                                        :hotel_name, :room_category, :check_in, :check_out, :adults, :children, :rooms, :extra_bed,
                                        :meal_plan, :total_amount, :paid_amount, :client_name, :client_mobile, :client_email, :special_request,
                                        :status, :booking_status, :ip_address, :user_agent)");
@@ -1216,6 +1220,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 ':created_by_user_id' => $user_id,
                 ':created_by_role' => $user_role,
                 ':lock_until' => $lock_until,
+                ':location' => $locationKey,
                 ':query_text' => $query_text,
                 ':hotel_name' => $hotel_name,
                 ':room_category' => $room_category,
@@ -5118,9 +5123,10 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                     : '<tr><td colspan="9" class="text-center text-muted py-4">No active hotels match this location/category/budget.</td></tr>';
 
                 if (bookingQueryType === 'agent' && results.length) {
+                    const queryLocation = document.getElementById('bookingQueryLocation')?.value.trim() || '';
                     fetch('employee-dashboard.php', {
                         method: 'POST',
-                        body: new URLSearchParams({ action: 'acquire_booking_query_agent_lock', agent_phone: bookingQueryAgent.phone })
+                        body: new URLSearchParams({ action: 'acquire_booking_query_agent_lock', agent_phone: bookingQueryAgent.phone, location: queryLocation })
                     }).then((lockResponse) => lockResponse.json()).then((lockData) => {
                         if (!lockData.success) {
                             bookingQueryLastResults = [];

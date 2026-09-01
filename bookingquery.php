@@ -631,9 +631,10 @@ function generateBookingResultsFromInputs(locationId, categoryId, checkInId, che
             : '<tr><td colspan="9" class="text-center text-muted py-4">No active hotels match this location/category/budget.</td></tr>';
 
         if (adminBookingQueryType === 'agent' && results.length) {
+            const adminLockLocation = document.getElementById('adminBookingQueryLocation')?.value.trim() || '';
             fetch('employee-dashboard.php', {
                 method: 'POST',
-                body: new URLSearchParams({ action: 'acquire_booking_query_agent_lock', agent_phone: adminBookingQueryAgent.phone })
+                body: new URLSearchParams({ action: 'acquire_booking_query_agent_lock', agent_phone: adminBookingQueryAgent.phone, location: adminLockLocation })
             }).then((lockResponse) => lockResponse.json()).then((lockData) => {
                 if (!lockData.success) {
                     resultsDataStore[resultBodyId] = [];
