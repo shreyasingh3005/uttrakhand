@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('Asia/Kolkata');
 session_start();
 require_once 'includes/auth_session.php';
 require_once 'includes/db_connect.php';

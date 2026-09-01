@@ -10,7 +10,7 @@ function format_ist_datetime(?string $value): string {
     }
 
     try {
-        $dt = new DateTimeImmutable((string)$value, new DateTimeZone('UTC'));
+        $dt = new DateTimeImmutable((string)$value, new DateTimeZone('Asia/Kolkata'));
         return $dt->setTimezone(new DateTimeZone('Asia/Kolkata'))->format('d M Y, h:i A');
     } catch (Exception $e) {
         return date('d M Y, h:i A', strtotime((string)$value));
