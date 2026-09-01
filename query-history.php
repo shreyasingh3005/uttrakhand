@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('Asia/Kolkata');
 require_once __DIR__ . '/includes/auth_session.php';
 require_once __DIR__ . '/includes/db_connect.php';
 require_role('admin');
@@ -446,7 +447,8 @@ function refreshAdminLockCountdowns() {
             return;
         }
 
-        const expiresAt = new Date(lockUntil.replace(' ', 'T')).getTime();
+        const normalizedLock = lockUntil.trim();
+        const expiresAt = new Date(normalizedLock.replace(' ', 'T') + '+05:30').getTime();
         const remainingMs = expiresAt - Date.now();
         const timerCell = row.querySelector('.lock-timer-cell');
         const statusBadge = row.querySelector('.lock-status-badge');
