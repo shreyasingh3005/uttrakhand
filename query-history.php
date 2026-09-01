@@ -474,10 +474,6 @@ function refreshAdminLockCountdowns() {
             }
             row.dataset.lockUntil = '';
             row.dataset.lockActive = '0';
-            if (!row.dataset.expiredReloaded) {
-                row.dataset.expiredReloaded = '1';
-                setTimeout(() => window.location.reload(), 1000);
-            }
             return;
         }
 
