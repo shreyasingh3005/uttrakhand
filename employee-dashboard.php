@@ -1000,6 +1000,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit;
     }
 
+    if (($_POST['action'] ?? '') === 'update_query_status') {
+        http_response_code(200);
+        header('Content-Type: application/json; charset=utf-8');
+        $queryId = (int)($_POST['query_id'] ?? 0);
+        $status = in_array((string)($_POST['status'] ?? ''), ['New', 'On Hold', 'Won', 'Lost'], true) ? (string)$_POST['status'] : 'New';
+
+        if ($queryId <= 0) {
+            echo json_encode(['success' => false, 'message' => 'Invalid query selected.']);
+            exit;
+        }
+
+        try {
+            $stmt = $conn->prepare('UPDATE booking_query_history SET status = :status WHERE id = :id AND (created_by_user_id = :user_id OR created_by_username = :username OR :role = "admin")');
+            $stmt->execute([':status' => $status, ':id' => $queryId, ':user_id' => $user_id, ':username' => $username, ':role' => $user_role]);
+            echo json_encode(['success' => true, 'status' => $status]);
+        } catch (Throwable $e) {
+            echo json_encode(['success' => false, 'message' => 'Unable to update query status.']);
+        }
+        exit;
+    }
+
     if ($_POST['action'] === 'get_booking_query_history') {
         http_response_code(200);
         header('Content-Type: application/json; charset=utf-8');
@@ -5993,7 +6014,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             return;
         }
 
-        let html = '<div class="table-responsive"><table class="table table-custom table-hover align-middle"><thead class="bg-light"><tr><th>Type</th><th>Agent Name</th><th>Agent Number</th><th>Location</th><th>Category</th><th>Hotel / Room</th><th>Meal</th><th>Dates</th><th>Pax</th><th>Budget</th><th>Lock Status</th><th>Lock Until</th><th>Generated At</th><th>Actions</th></tr></thead><tbody>';
+        let html = '<div class="table-responsive"><table class="table table-custom table-hover align-middle"><thead class="bg-light"><tr><th>Type</th><th>Agent Name</th><th>Agent Number</th><th>Location</th><th>Category</th><th>Hotel / Room</th><th>Meal</th><th>Dates</th><th>Pax</th><th>Budget</th><th>Lock Status</th><th>Lock Until</th><th>Generated At</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
         generated.forEach(item => {
             const generatedAt = formatQueryHistoryDate(item.generated_at);
             const isLocked = item.lock_until && new Date(item.lock_until).getTime() > Date.now();
@@ -6004,11 +6025,13 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             const hotelSummary = hotels.map(h => `${h.name || 'Hotel'} / ${h.room_name || 'Room'}`).join('<br>') || 'No matches';
             const mealSummary = hotels.map(h => formatBookingMealPlans(h.prices)).join('<br>') || 'N/A';
             const text = item.query_text || '';
+            const currentStatus = ['New', 'On Hold', 'Won', 'Lost'].includes(item.status) ? item.status : 'New';
             html += `<tr class="query-history-row" data-history-date="${item.generated_at}" data-history-text="${(item.query_text || '').toLowerCase()}">
                                 <td>Booking Query</td><td>${escapeQueryHistoryHtml(item.agent_name || 'N/A')}</td><td>${escapeQueryHistoryHtml(item.agent_phone || 'N/A')}</td><td>${escapeQueryHistoryHtml(item.location || 'Any')}</td><td>${escapeQueryHistoryHtml(item.hotel_category || 'All Catgs')}</td>
                 <td>${hotelSummary}</td><td>${mealSummary}</td><td>${dates}</td>
                 <td>A:${item.adults || 1} C:${item.children || 0} R:${item.rooms || 1}</td>
                 <td>₹${Number(item.budget || 0).toLocaleString('en-IN')}/night</td><td>${lockStatus}</td><td>${lockUntil}</td><td>${generatedAt}</td>
+                <td><form method="post" class="d-inline-block m-0"><input type="hidden" name="action" value="update_query_status"><input type="hidden" name="query_id" value="${item.id || ''}"><select name="status" class="form-select form-select-sm" onchange="this.form.submit()">${['New', 'On Hold', 'Won', 'Lost'].map(option => `<option value="${option}" ${currentStatus === option ? 'selected' : ''}>${option}</option>`).join('')}</select></form></td>
                 <td><button class="btn btn-sm btn-outline-primary me-1" data-query-text="${escapeQueryHistoryHtml(text)}" data-quotation="${escapeQueryHistoryHtml(JSON.stringify({ queryNumber: item.query_number, queryText: text, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, mealPlan: item.meal_plan, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: item.total_amount, agentName: item.agent_name, agentPhone: item.agent_phone, matchedHotels: hotels }))}" onclick="viewGeneratedQuery(this)">View</button><button class="btn btn-sm btn-outline-secondary" data-query-text="${escapeQueryHistoryHtml(text)}" data-quotation="${escapeQueryHistoryHtml(JSON.stringify({ queryNumber: item.query_number, queryText: text, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, mealPlan: item.meal_plan, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: item.total_amount, agentName: item.agent_name, agentPhone: item.agent_phone, matchedHotels: hotels }))}" onclick="copyQueryText(this.dataset.queryText, this)">Copy</button></td>
             </tr>`;
         });
@@ -6020,10 +6043,12 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             const escapedQuery = (item.query_text || '').replace(/'/g, "\\'");
             const dates = (item.check_in ? item.check_in : '') + (item.check_out ? (' - ' + item.check_out) : '');
             const pax = `A:${item.adults||1} C:${item.children||0} R:${item.rooms||1}`;
+            const currentStatus = ['New', 'On Hold', 'Won', 'Lost'].includes(item.status) ? item.status : 'New';
             html += `<tr class="query-history-row" data-history-date="${item.generated_at}" data-history-text="${(item.query_text || '').toLowerCase()}">
                 <td>Agent Query</td><td>${escapeQueryHistoryHtml(item.agent_name || 'N/A')}</td><td>${escapeQueryHistoryHtml(item.agent_phone || 'N/A')}</td><td>${escapeQueryHistoryHtml(item.location || 'Any')}</td><td>${escapeQueryHistoryHtml(item.hotel_name || '')}</td>
                 <td>${item.room_category || ''}</td><td>${item.meal_plan || ''}</td><td>${dates}</td><td>${pax}</td>
                 <td>₹${Number(item.total_amount||0).toLocaleString('en-IN')}</td><td>${lockStatus}</td><td>${lockUntil}</td><td>${generatedAt}</td>
+                <td><form method="post" class="d-inline-block m-0"><input type="hidden" name="action" value="update_query_status"><input type="hidden" name="query_id" value="${item.id || ''}"><select name="status" class="form-select form-select-sm" onchange="this.form.submit()">${['New', 'On Hold', 'Won', 'Lost'].map(option => `<option value="${option}" ${currentStatus === option ? 'selected' : ''}>${option}</option>`).join('')}</select></form></td>
                 <td>
                     <button class="btn btn-sm btn-outline-primary me-1" onclick="viewQuery(${item.id})">View</button>
                     <button class="btn btn-sm btn-outline-secondary me-1" onclick="copyQueryDetails(${item.id})">Copy</button>
