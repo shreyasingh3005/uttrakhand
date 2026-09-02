@@ -6066,6 +6066,14 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         applyQueryHistoryFilter('all');
     }
 
+    .query-status-select {
+        min-width: 140px;
+        max-width: 170px;
+        font-size: 12px;
+        padding: 0.35rem 0.5rem;
+        height: 34px;
+    }
+
     function applyQueryHistoryFilter(filter) {
         const now = new Date();
         const rows = document.querySelectorAll('.query-history-row');
