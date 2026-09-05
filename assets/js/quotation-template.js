@@ -87,8 +87,8 @@
         const rooms = Number(value(input, 'rooms', 1));
         const occupancy = value(input, 'occupancy', adults === 2 ? 'Double' : adults === 1 ? 'Single' : `${adults} Persons`);
         const roomPrice = value(input, 'roomPrice', value(room, 'selected_price', prices.EP || prices.MAP || prices.MAPAI || input.budget || 0));
-        const extraBedAllowed = Boolean(value(input, 'extraBedAllowed', value(room, 'extra_bed_allowed', false)));
         const extraBedPrice = value(input, 'extraBedPrice', value(room, 'extra_bed_price', 0));
+        const extraBedAllowed = Boolean(value(input, 'extraBedAllowed', value(room, 'extra_bed_allowed', Number(extraBedPrice) > 0)));
         const maxExtraBeds = value(input, 'maxExtraBeds', value(room, 'max_extra_beds', 0));
         return {
             optionNumber,
@@ -115,7 +115,7 @@
         const first = quotations[0] || {};
         const cancellation = decodeHtml(value(first, 'cancellationPolicy', 'Free cancellation 1 day prior to arrival hotel local time (12:00 Hours). Thereafter, any cancellation/no show leads to 100% retention charges.'));
         const quotationContact = window.AirwaysQuotationContact || {};
-        const contactPerson = decodeHtml(value(first, 'contactPerson', value(first, 'createdByName', quotationContact.name || 'Manish Bhatia')));
+        const contactPerson = decodeHtml(value(first, 'contactPerson', value(first, 'createdByName', value(first, 'created_by_username', quotationContact.name || 'Manish Bhatia'))));
         const contactPhone = decodeHtml(value(first, 'contactPhone', value(first, 'createdByPhone', quotationContact.name ? quotationContact.phone : '919999831144')));
         const contactEmail = decodeHtml(value(first, 'contactEmail', value(first, 'createdByEmail', quotationContact.name ? quotationContact.email : 'manish@airwaystravels.com')));
         const seen = new Set();

@@ -672,7 +672,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
                 $roomStmt = $conn->prepare(
                     "SELECT hrc.id, hrc.hotel_id, hrc.name, hrc.bed_type, hrc.room_size,
-                            hrc.total_rooms, hrc.available_rooms, hrc.extra_bed_allowed, hrc.extra_bed_price,
+                            hrc.total_rooms, hrc.available_rooms, hrc.extra_bed_allowed, hrc.extra_bed_price, hrc.max_extra_beds,
                             mp.code AS meal_code, rp.rate_date, COALESCE(NULLIF(rp.base_price, 0), rp.date_wise_price, 0) AS base_price
                      FROM hotel_room_categories hrc
                      LEFT JOIN room_prices rp ON rp.room_category_id = hrc.id
@@ -696,6 +696,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             'available_rooms' => (int)$row['available_rooms'],
                             'extra_bed_allowed' => (bool)$row['extra_bed_allowed'],
                             'extra_bed_price' => (float)$row['extra_bed_price'],
+                            'max_extra_beds' => (int)$row['max_extra_beds'],
                             'prices' => [],
                         ];
                     }
@@ -877,6 +878,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $roomCategory = sanitize_input($_POST['room_category'] ?? '');
         $matchedHotels = json_decode($_POST['matched_hotels'] ?? '[]', true);
         $matchedHotels = is_array($matchedHotels) ? $matchedHotels : [];
+        $roomDetailsStmt = $conn->prepare('SELECT hrc.extra_bed_allowed, hrc.extra_bed_price, hrc.max_extra_beds FROM hotel_room_categories hrc INNER JOIN hotels h ON h.id = hrc.hotel_id WHERE h.name = :hotel_name AND hrc.name = :room_name AND hrc.status = "active" LIMIT 1');
+        foreach ($matchedHotels as &$matchedHotel) {
+            $roomDetailsStmt->execute([
+                ':hotel_name' => (string)($matchedHotel['name'] ?? ''),
+                ':room_name' => (string)($matchedHotel['room_name'] ?? ''),
+            ]);
+            $roomDetails = $roomDetailsStmt->fetch(PDO::FETCH_ASSOC);
+            if ($roomDetails) {
+                $matchedHotel['extra_bed_allowed'] = (bool)$roomDetails['extra_bed_allowed'];
+                $matchedHotel['extra_bed_price'] = (float)$roomDetails['extra_bed_price'];
+                $matchedHotel['max_extra_beds'] = (int)$roomDetails['max_extra_beds'];
+            }
+        }
+        unset($matchedHotel);
         $queryNumber = strtoupper(trim((string)($_POST['query_number'] ?? '')));
         if (!preg_match('/^UV-\d{3,5}$/', $queryNumber)) {
             $queryNumber = 'UV-' . random_int(100, 99999);
@@ -1047,11 +1062,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $historyStmt = $conn->prepare($historySql);
             $historyStmt->execute($historyParams);
             $history = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
+            $historyRoomStmt = $conn->prepare('SELECT hrc.extra_bed_allowed, hrc.extra_bed_price, hrc.max_extra_beds FROM hotel_room_categories hrc INNER JOIN hotels h ON h.id = hrc.hotel_id WHERE h.name = :hotel_name AND hrc.name = :room_name AND hrc.status = "active" LIMIT 1');
             foreach ($history as &$historyRow) {
                 if (in_array(strtolower(trim((string)($historyRow['hotel_category'] ?? ''))), ['all categories', 'all catgs'], true)) {
                     $historyRow['hotel_category'] = 'All Catgs';
                 }
                 $historyRow['matched_hotels'] = json_decode($historyRow['matched_hotels_json'] ?? '[]', true) ?: [];
+                foreach ($historyRow['matched_hotels'] as &$historyHotel) {
+                    $historyRoomStmt->execute([
+                        ':hotel_name' => (string)($historyHotel['name'] ?? ''),
+                        ':room_name' => (string)($historyHotel['room_name'] ?? ''),
+                    ]);
+                    $historyRoom = $historyRoomStmt->fetch(PDO::FETCH_ASSOC);
+                    if ($historyRoom) {
+                        $historyHotel['extra_bed_allowed'] = (bool)$historyRoom['extra_bed_allowed'];
+                        $historyHotel['extra_bed_price'] = (float)$historyRoom['extra_bed_price'];
+                        $historyHotel['max_extra_beds'] = (int)$historyRoom['max_extra_beds'];
+                    }
+                }
+                unset($historyHotel);
             }
             unset($historyRow);
             echo json_encode(['success' => true, 'history' => $history]);
@@ -6316,7 +6345,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
     };
     </script>
     <script>window.AirwaysQuotationContact = <?php echo json_encode($quotationContact, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
-    <script src="/assets/js/quotation-template.js?v=20260826-1"></script>
+    <script src="/assets/js/quotation-template.js?v=20260905-1"></script>
 <script src="/assets/js/ui-common.js"></script>
 </body>
 
