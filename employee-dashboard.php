@@ -10,6 +10,9 @@ $username = $_SESSION['username'];
 $user_role = $_SESSION['role'];
 $user_id = $_SESSION['user_id'] ?? null;
 $user_initial = strtoupper(substr($username, 0, 1));
+$quotationContactStmt = $conn->prepare('SELECT COALESCE(NULLIF(e.name, ""), u.username) AS name, COALESCE(e.phone, "") AS phone, u.email FROM users u LEFT JOIN employees_details e ON e.email = u.email WHERE u.id = :user_id LIMIT 1');
+$quotationContactStmt->execute([':user_id' => (int)$user_id]);
+$quotationContact = $quotationContactStmt->fetch(PDO::FETCH_ASSOC) ?: ['name' => $username, 'phone' => '', 'email' => ''];
 
 function get_employee_live_metrics(PDO $conn, string $username): array {
     $summaryStmt = $conn->prepare(
@@ -1031,7 +1034,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         http_response_code(200);
         header('Content-Type: application/json; charset=utf-8');
         try {
-            $historySql = 'SELECT * FROM booking_query_history';
+            $historySql = 'SELECT bqh.*, COALESCE(NULLIF(ed.name, ""), NULLIF(u.username, ""), bqh.created_by_username) AS created_by_name, COALESCE(ed.phone, "") AS created_by_phone, COALESCE(u.email, "") AS created_by_email
+                           FROM booking_query_history bqh
+                           LEFT JOIN users u ON u.id = bqh.created_by_user_id
+                           LEFT JOIN employees_details ed ON ed.email = u.email';
             $historyParams = [];
             if ($user_role !== 'admin') {
                 $historySql .= ' WHERE created_by_user_id = :user_id OR created_by_username = :username';
@@ -5250,6 +5256,9 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             phone: hotel.phone || '',
             email: hotel.email || '',
             available_rooms: Number(room.available_rooms || 0),
+            extra_bed_allowed: Boolean(room.extra_bed_allowed),
+            extra_bed_price: Number(room.extra_bed_price || 0),
+            max_extra_beds: Number(room.max_extra_beds || 0),
             selected_price: Number(room.prices?.EP || hotel.est_budget || hotel.min_price || 0),
         }));
 
@@ -6038,7 +6047,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                 <td>A:${item.adults || 1} C:${item.children || 0} R:${item.rooms || 1}</td>
                 <td>₹${Number(item.budget || 0).toLocaleString('en-IN')}/night</td><td>${lockStatus}</td><td>${lockUntil}</td><td>${generatedAt}</td>
                 <td><select class="form-select form-select-sm query-status-select" data-query-id="${item.id || ''}" data-current-status="${currentStatus}">${['New', 'On Hold', 'Won', 'Lost'].map(option => `<option value="${option}" ${currentStatus === option ? 'selected' : ''}>${option}</option>`).join('')}</select></td>
-                <td><button class="btn btn-sm btn-outline-primary me-1" data-query-text="${escapeQueryHistoryHtml(text)}" data-quotation="${escapeQueryHistoryHtml(JSON.stringify({ queryNumber: item.query_number, queryText: text, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, mealPlan: item.meal_plan, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: item.total_amount, agentName: item.agent_name, agentPhone: item.agent_phone, matchedHotels: hotels }))}" onclick="viewGeneratedQuery(this)">View</button><button class="btn btn-sm btn-outline-secondary" data-query-text="${escapeQueryHistoryHtml(text)}" data-quotation="${escapeQueryHistoryHtml(JSON.stringify({ queryNumber: item.query_number, queryText: text, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, mealPlan: item.meal_plan, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: item.total_amount, agentName: item.agent_name, agentPhone: item.agent_phone, matchedHotels: hotels }))}" onclick="copyQueryText(this.dataset.queryText, this)">Copy</button></td>
+                <td><button class="btn btn-sm btn-outline-primary me-1" data-query-text="${escapeQueryHistoryHtml(text)}" data-quotation="${escapeQueryHistoryHtml(JSON.stringify({ queryNumber: item.query_number, queryText: text, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, mealPlan: item.meal_plan, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: item.total_amount, agentName: item.agent_name, agentPhone: item.agent_phone, createdByName: item.created_by_name, createdByPhone: item.created_by_phone, createdByEmail: item.created_by_email, matchedHotels: hotels }))}" onclick="viewGeneratedQuery(this)">View</button><button class="btn btn-sm btn-outline-secondary" data-query-text="${escapeQueryHistoryHtml(text)}" data-quotation="${escapeQueryHistoryHtml(JSON.stringify({ queryNumber: item.query_number, queryText: text, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, mealPlan: item.meal_plan, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: item.total_amount, agentName: item.agent_name, agentPhone: item.agent_phone, createdByName: item.created_by_name, createdByPhone: item.created_by_phone, createdByEmail: item.created_by_email, matchedHotels: hotels }))}" onclick="copyQueryText(this.dataset.queryText, this)">Copy</button></td>
             </tr>`;
         });
         history.forEach(item => {
@@ -6306,6 +6315,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         }
     };
     </script>
+    <script>window.AirwaysQuotationContact = <?php echo json_encode($quotationContact, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
     <script src="/assets/js/quotation-template.js?v=20260826-1"></script>
 <script src="/assets/js/ui-common.js"></script>
 </body>

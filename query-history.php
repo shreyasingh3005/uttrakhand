@@ -70,8 +70,12 @@ try {
                                           bqh.query_type, bqh.agent_id, bqh.agent_name, bqh.agent_phone, bqh.lock_until,
                                           bqh.location, bqh.hotel_category, bqh.check_in, bqh.check_out,
                                           bqh.nights, bqh.adults, bqh.children, bqh.rooms, bqh.budget, bqh.matched_hotels_json, bqh.status,
+                                          COALESCE(NULLIF(ed.name, ''), NULLIF(u.username, ''), bqh.created_by_username) AS created_by_name,
+                                          COALESCE(ed.phone, '') AS created_by_phone, COALESCE(u.email, '') AS created_by_email,
                                           COALESCE(NULLIF(bqh.created_by_username, ''), 'Unknown') AS employee_name
                                           FROM booking_query_history bqh
+                                          LEFT JOIN users u ON u.id = bqh.created_by_user_id
+                                          LEFT JOIN employees_details ed ON ed.email = u.email
                                           ORDER BY bqh.generated_at DESC LIMIT 200");
     $historyStmt->execute();
     $admin_history = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -267,6 +271,9 @@ try {
                         data-adults="<?php echo htmlspecialchars((string)($item['adults'] ?? 1), ENT_QUOTES, 'UTF-8'); ?>"
                         data-children="<?php echo htmlspecialchars((string)($item['children'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>"
                         data-rooms="<?php echo htmlspecialchars((string)($item['rooms'] ?? 1), ENT_QUOTES, 'UTF-8'); ?>"
+                        data-creator-name="<?php echo htmlspecialchars((string)($item['created_by_name'] ?? $item['created_by_username'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
+                        data-creator-phone="<?php echo htmlspecialchars((string)($item['created_by_phone'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
+                        data-creator-email="<?php echo htmlspecialchars((string)($item['created_by_email'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
                         data-hotels="<?php echo htmlspecialchars($item['matched_hotels_json'] ?? '[]', ENT_QUOTES, 'UTF-8'); ?>"
                         data-history-date="<?php echo htmlspecialchars($item['generated_at'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
                         data-history-text="<?php echo htmlspecialchars(strtolower((string)($item['query_text'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>">
@@ -276,7 +283,7 @@ try {
                         <td><?php echo htmlspecialchars($item['hotel_name'] ?? ($item['hotel_category'] ?? '')); ?></td>
                         <td><?php echo htmlspecialchars($item['room_category'] ?? ($item['hotel_category'] ?? '')); ?></td>
                         <td><?php echo htmlspecialchars(($item['check_in'] ?? '') . (isset($item['check_out']) && $item['check_out'] ? ' - ' . $item['check_out'] : '')); ?></td>
-                        <td><?php echo 'A:' . ((int)($item['adults'] ?? 1)) . ' C:' . ((int)($item['children'] ?? 0)) . ' R:' . ((int)($item['rooms'] ?? 1)); ?></td>
+                           <td><?php echo 'A:' . ((int)($item['adults'] ?? 1)) . ' C:' . ((int)($item['children'] ?? 0)) . ' R:' . ((int)($item['rooms'] ?? 1)); ?></td>
                         <td>₹<?php echo number_format((float)($item['total_amount'] ?? $item['budget'] ?? 0),0); ?></td>
                         <td><?php echo htmlspecialchars($item['location'] ?? ''); ?></td>
                         <td><?php echo format_ist_datetime((string)($item['generated_at'] ?? '')); ?></td>
@@ -437,6 +444,7 @@ function copyQueryText(queryText, buttonElement) {
         checkIn: row.dataset.checkin, checkOut: row.dataset.checkout,
         adults: row.dataset.adults, children: row.dataset.children, rooms: row.dataset.rooms,
         roomPrice: firstRoom.selected_price || firstRoom.basePrice || row.dataset.budget,
+        createdByName: row.dataset.creatorName, createdByPhone: row.dataset.creatorPhone, createdByEmail: row.dataset.creatorEmail,
         matchedHotels
     });
     navigator.clipboard.writeText(quotationText).then(() => alert('Query copied to clipboard!')).catch(() => {

@@ -87,6 +87,9 @@
         const rooms = Number(value(input, 'rooms', 1));
         const occupancy = value(input, 'occupancy', adults === 2 ? 'Double' : adults === 1 ? 'Single' : `${adults} Persons`);
         const roomPrice = value(input, 'roomPrice', value(room, 'selected_price', prices.EP || prices.MAP || prices.MAPAI || input.budget || 0));
+        const extraBedAllowed = Boolean(value(input, 'extraBedAllowed', value(room, 'extra_bed_allowed', false)));
+        const extraBedPrice = value(input, 'extraBedPrice', value(room, 'extra_bed_price', 0));
+        const maxExtraBeds = value(input, 'maxExtraBeds', value(room, 'max_extra_beds', 0));
         return {
             optionNumber,
             hotelName,
@@ -99,6 +102,9 @@
             roomCategory,
             mealPlan,
             roomPrice: formatPrice(roomPrice),
+            extraBedAllowed,
+            extraBedPrice: formatPrice(extraBedPrice),
+            maxExtraBeds: Number(maxExtraBeds) || 0,
         };
     }
 
@@ -108,9 +114,10 @@
         const queryNumber = normalizeQueryNumber(quotations[0]);
         const first = quotations[0] || {};
         const cancellation = decodeHtml(value(first, 'cancellationPolicy', 'Free cancellation 1 day prior to arrival hotel local time (12:00 Hours). Thereafter, any cancellation/no show leads to 100% retention charges.'));
-        const contactPerson = decodeHtml(value(first, 'contactPerson', 'Manish Bhatia'));
-        const contactPhone = decodeHtml(value(first, 'contactPhone', '919999831144'));
-        const contactEmail = decodeHtml(value(first, 'contactEmail', 'manish@airwaystravels.com'));
+        const quotationContact = window.AirwaysQuotationContact || {};
+        const contactPerson = decodeHtml(value(first, 'contactPerson', value(first, 'createdByName', quotationContact.name || 'Manish Bhatia')));
+        const contactPhone = decodeHtml(value(first, 'contactPhone', value(first, 'createdByPhone', quotationContact.name ? quotationContact.phone : '919999831144')));
+        const contactEmail = decodeHtml(value(first, 'contactEmail', value(first, 'createdByEmail', quotationContact.name ? quotationContact.email : 'manish@airwaystravels.com')));
         const seen = new Set();
         const options = [];
         quotations.forEach((item) => {
@@ -130,6 +137,7 @@
             `*Room Category*: ${option.roomCategory}`,
             `*Meal Plan*: ${option.mealPlan}`,
             `*Room Price*: ${option.roomPrice}/- per room per night`,
+            ...(option.extraBedAllowed ? [`*Extra Bed*: ${option.extraBedPrice}/- per extra bed${option.maxExtraBeds > 0 ? ` | Max ${option.maxExtraBeds}` : ''}`] : []),
             ...(index < options.length - 1 ? ['', '---', ''] : [])
         ]);
         return [

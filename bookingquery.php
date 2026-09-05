@@ -121,8 +121,12 @@ try {
                                           bqh.query_type, bqh.agent_id, bqh.agent_name, bqh.agent_phone, bqh.lock_until,
                                           bqh.location, bqh.hotel_category, bqh.check_in, bqh.check_out,
                                           bqh.nights, bqh.adults, bqh.children, bqh.rooms, bqh.budget, bqh.matched_hotels_json,
+                                          COALESCE(NULLIF(ed.name, ''), NULLIF(u.username, ''), bqh.created_by_username) AS created_by_name,
+                                          COALESCE(ed.phone, '') AS created_by_phone, COALESCE(u.email, '') AS created_by_email,
                                           COALESCE(NULLIF(bqh.created_by_username, ''), 'Unknown') AS employee_name
                                           FROM booking_query_history bqh
+                                          LEFT JOIN users u ON u.id = bqh.created_by_user_id
+                                          LEFT JOIN employees_details ed ON ed.email = u.email
                                           ORDER BY bqh.generated_at DESC LIMIT 200");
     $historyStmt->execute();
     $admin_history = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -487,7 +491,7 @@ function loadAdminGeneratedQueryHistory() {
                     <td>${escapeAdminHistoryHtml(item.hotel_category || 'All Catgs')}</td><td>${hotelNames}</td><td>${meals}</td>
                     <td>${escapeAdminHistoryHtml(item.check_in || 'N/A')} - ${escapeAdminHistoryHtml(item.check_out || 'N/A')}</td>
                     <td>₹${Number(item.budget || 0).toLocaleString('en-IN')}/night</td><td>${item.lock_until && new Date(item.lock_until).getTime() > Date.now() ? '<span class="badge bg-danger">Agent Locked</span>' : '<span class="badge bg-success">Unlocked</span>'}</td><td>${escapeAdminHistoryHtml(item.lock_until && new Date(item.lock_until).getTime() > Date.now() ? formatAdminHistoryDate(item.lock_until) : 'Unlocked')}</td><td>${escapeAdminHistoryHtml(formatAdminHistoryDate(item.generated_at))}</td>
-                    <td><button type="button" class="btn btn-sm btn-outline-secondary" data-query-text="${escapeAdminHistoryHtml(item.query_text)}" data-quotation="${escapeAdminHistoryHtml(JSON.stringify({ queryNumber: item.query_number, queryText: item.query_text, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: null, agentName: item.agent_name, agentPhone: item.agent_phone, matchedHotels: hotels }))}" onclick="copyAdminHistoryQuotation(this)">Copy</button></td>
+                    <td><button type="button" class="btn btn-sm btn-outline-secondary" data-query-text="${escapeAdminHistoryHtml(item.query_text)}" data-quotation="${escapeAdminHistoryHtml(JSON.stringify({ queryNumber: item.query_number, queryText: item.query_text, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: null, agentName: item.agent_name, agentPhone: item.agent_phone, createdByName: item.created_by_name, createdByPhone: item.created_by_phone, createdByEmail: item.created_by_email, matchedHotels: hotels }))}" onclick="copyAdminHistoryQuotation(this)">Copy</button></td>
                 </tr>`;
             }).join('')}</tbody></table></div>` : '<div class="text-center py-3 text-muted">No generated Booking Query history found.</div>';
         applyAdminQueryHistoryFilter('all');
