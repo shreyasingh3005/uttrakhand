@@ -43,6 +43,17 @@
         return fallbackPlanCodes.map((plan) => plan === selectedCode && selectedPlan ? selectedPlan : plan).join(', ');
     }
 
+    function formatRateLine(label, prices, fallbackPrices) {
+        const rateMap = prices && typeof prices === 'object' ? prices : {};
+        const fallbackMap = fallbackPrices && typeof fallbackPrices === 'object' ? fallbackPrices : {};
+        const merged = { ...fallbackMap, ...rateMap };
+        const labels = { EP: 'EP', CP: 'CP', MAP: 'MAP', AP: 'AP', AI: 'AI' };
+        const plans = Object.entries(merged)
+            .filter(([, price]) => Number(price) > 0)
+            .map(([code, price]) => `${labels[code] || code} - ${formatPrice(price)}/- per room per night`);
+        return `*Room Price:(${label})* ${plans.join(', ') || 'Rates not available'}`;
+    }
+
     function decodeHtml(value) {
         const text = String(value ?? '')
             .replace(/<br\s*\/?>/gi, '\n')
@@ -78,6 +89,8 @@
         const hotel = selected.hotel;
         const room = selected.room;
         const prices = selected.prices;
+        const weekdayPrices = room.weekday_prices || hotel.weekday_prices || {};
+        const weekendPrices = room.weekend_prices || hotel.weekend_prices || {};
         const hotelName = decodeHtml(value(input, 'hotelName', value(hotel, 'name', '-')));
         const location = decodeHtml(value(input, 'hotelLocation', value(hotel, 'location', value(hotel, 'city', '-'))));
         const roomCategory = decodeHtml(value(input, 'roomCategory', value(room, 'room_name', value(room, 'name', '-'))));
@@ -102,6 +115,8 @@
             roomCategory,
             mealPlan,
             roomPrice: formatPrice(roomPrice),
+            weekdayPriceLine: formatRateLine('Weekdays', weekdayPrices, Object.keys(prices).length ? prices : { EP: roomPrice }),
+            weekendPriceLine: formatRateLine('Weekend', weekendPrices, weekdayPrices && Object.keys(weekdayPrices).length ? weekdayPrices : (Object.keys(prices).length ? prices : { EP: roomPrice })),
             extraBedAllowed,
             extraBedPrice: formatPrice(extraBedPrice),
             maxExtraBeds: Number(maxExtraBeds) || 0,
@@ -136,7 +151,8 @@
             `*No. of Person*: ${option.people} | *No. of Rooms*: ${option.rooms} Room | *Occupancy*: ${option.occupancy}`,
             `*Room Category*: ${option.roomCategory}`,
             `*Meal Plan*: ${option.mealPlan}`,
-            `*Room Price*: ${option.roomPrice}/- per room per night`,
+            option.weekdayPriceLine,
+            option.weekendPriceLine,
             ...(option.extraBedAllowed ? [`*Extra Bed*: ${option.extraBedPrice}/- per extra bed${option.maxExtraBeds > 0 ? ` | Max ${option.maxExtraBeds}` : ''}`] : []),
             ...(index < options.length - 1 ? ['', '---', ''] : [])
         ]);
@@ -148,7 +164,7 @@
             `*Cancellation Policy*: ${cancellation}`, '',
             '*Rooms and Rates are Subject to Availability, please confirm the same at the earliest to proceed with the booking.*', '',
             'Thank you for contacting Airways Travels.', 'In case of any support please contact us:',
-            contactPerson, `☎️ Mobile : ${contactPhone}`, `✉️ Email : ${contactEmail}`, '', '_Powered by Airways Travels_'
+            contactPerson, `☎️ Mobile : ${contactPhone}`, `✉️ Email : ${contactEmail}`, '', '_Powered by Airways Travels/Uttarakhand Ventures_'
         ].join('\n');
     }
 

@@ -698,14 +698,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             'extra_bed_price' => (float)$row['extra_bed_price'],
                             'max_extra_beds' => (int)$row['max_extra_beds'],
                             'prices' => [],
+                            'weekday_prices' => [],
+                            'weekend_prices' => [],
                         ];
                     }
                     if (!empty($row['meal_code'])) {
                         $rateDate = (string)($row['rate_date'] ?? '');
                         $code = (string)$row['meal_code'];
                         $price = (float)$row['base_price'];
-                        $hasSelectedDateRate = $filterCheckIn !== '' && $rateDate === $filterCheckIn;
                         $isBaseRate = $rateDate === '';
+                        if ($isBaseRate) {
+                            $roomsByHotel[$hid][$rid]['weekday_prices'][$code] = $price;
+                            $roomsByHotel[$hid][$rid]['weekend_prices'][$code] = $price;
+                        } else {
+                            $dayOfWeek = (int)date('w', strtotime($rateDate));
+                            $target = ($dayOfWeek === 0 || $dayOfWeek === 6) ? 'weekend_prices' : 'weekday_prices';
+                            $roomsByHotel[$hid][$rid][$target][$code] = $price;
+                        }
+                        $hasSelectedDateRate = $filterCheckIn !== '' && $rateDate === $filterCheckIn;
                         if ($hasSelectedDateRate || ($isBaseRate && !array_key_exists($code, $roomsByHotel[$hid][$rid]['prices']))) {
                             $roomsByHotel[$hid][$rid]['prices'][$code] = $price;
                         }
