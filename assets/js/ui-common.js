@@ -49,6 +49,18 @@
     });
   }
 
+  function ensureCalculatorLink() {
+    document.querySelectorAll('#adminSidebar').forEach(function (sidebar) {
+      if (sidebar.querySelector('a[data-uv-calculator-link="1"]')) return;
+      var list = sidebar.querySelector('ul.nav, .sidebar-nav');
+      if (!list) return;
+      var item = document.createElement('li');
+      item.className = 'nav-item';
+      item.innerHTML = '<a class="nav-link" data-uv-calculator-link="1" href="/hotel_calculator.php" target="_blank" rel="noopener noreferrer"><i class="bi bi-calculator"></i> Hotel Calculator</a>';
+      list.appendChild(item);
+    });
+  }
+
   function isEmployeeContext() {
     var p = window.location.pathname.toLowerCase();
     if (p.indexOf('/employee-') >= 0) return true;
@@ -136,6 +148,7 @@
 
   function run() {
     normalizeSidebarLabels();
+    ensureCalculatorLink();
     ensureProfileMenuOption();
   }
 

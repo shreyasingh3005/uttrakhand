@@ -16,6 +16,7 @@ $navItems = [
     'bookings'      => ['label' => 'Bookings',       'icon' => 'bi-calendar-check','href' => '/booking-details.php'],
     'query'         => ['label' => 'Booking Query',  'icon' => 'bi-chat-dots',     'href' => '/bookingquery.php'],
     'query-history' => ['label' => 'Query History',  'icon' => 'bi-clock-history', 'href' => '/query-history.php'],
+    'calculator'    => ['label' => 'Hotel Calculator','icon' => 'bi-calculator',   'href' => '/hotel_calculator.php', 'new_tab' => true],
     'employees'     => ['label' => 'Employees',      'icon' => 'bi-person-vcard',  'href' => '/employees-detail.php'],
     'accounts'      => ['label' => 'Accounts',       'icon' => 'bi-wallet2',       'href' => '/accounts-detail.php'],
     'listing'       => ['label' => 'Hotel Listings', 'icon' => 'bi-building',      'href' => '/listing.php'],
@@ -59,6 +60,7 @@ if ($navRole === 'employee') {
       ?>
       <a class="nav-link <?php echo $isActive; ?>"
          href="<?php echo htmlspecialchars($href, ENT_QUOTES, 'UTF-8'); ?>"
+        <?php echo !empty($item['new_tab']) ? 'target="_blank" rel="noopener noreferrer"' : ''; ?>
          <?php echo $ariaCurrent; ?>>
         <i class="bi <?php echo $item['icon']; ?> nav-icon"></i>
         <?php echo htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8'); ?>
