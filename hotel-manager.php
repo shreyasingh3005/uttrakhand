@@ -382,7 +382,8 @@ body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--slate)
       <div class="topbar-profile-menu" id="topbarProfileMenu">
         <a class="topbar-profile-link" href="/dashboard.php"><i class="bi bi-person-circle"></i> Profile</a>
         <a class="topbar-profile-link" href="/booking-details.php"><i class="bi bi-clock-history"></i> Booking History</a>
-        <a class="topbar-profile-link" href="/listing.php"><i class="bi bi-building"></i> Hotel Listings</a>
+        <a class="topbar-profile-link" href="/export-bookings-excel.php"><i class="bi bi-file-earmark-spreadsheet"></i> Download Excel</a>
+        <div style="border-top:1px solid var(--border);margin:6px 0;"></div>
         <a class="topbar-profile-link logout" href="/logout.php"><i class="bi bi-box-arrow-right"></i> Logout</a>
       </div>
     </div>

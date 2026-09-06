@@ -79,11 +79,15 @@ require_once __DIR__ . '/config.php';
               <div style="font-size:.74rem;color:#94a3b8;text-transform:capitalize;"><?php echo htmlspecialchars($currentRole, ENT_QUOTES, 'UTF-8'); ?></div>
             </div>
             <a href="/dashboard.php" style="display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:.84rem;border-radius:10px;color:#0f172a;margin-top:4px;transition:all .15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'">
-              <i class="bi bi-speedometer2" style="color:#4f46e5;"></i> Dashboard
+              <i class="bi bi-person-circle" style="color:#4f46e5;"></i> Profile
             </a>
             <a href="/booking-details.php" style="display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:.84rem;border-radius:10px;color:#0f172a;margin-top:2px;transition:all .15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'">
               <i class="bi bi-clock-history" style="color:#06b6d4;"></i> Booking History
             </a>
+            <a href="/export-bookings-excel.php" style="display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:.84rem;border-radius:10px;color:#0f172a;margin-top:2px;transition:all .15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'">
+              <i class="bi bi-file-earmark-spreadsheet" style="color:#059669;"></i> Download Excel
+            </a>
+            <div style="border-top:1px solid #e2e8f0;margin:6px 0;"></div>
             <a href="/logout.php" style="display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:.84rem;border-radius:10px;color:#ef4444;margin-top:2px;transition:all .15s;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='none'">
               <i class="bi bi-box-arrow-right"></i> Logout
             </a>

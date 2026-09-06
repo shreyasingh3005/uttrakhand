@@ -58,6 +58,35 @@
   function ensureProfileMenuOption() {
     var profileHref = isEmployeeContext() ? '/employee-dashboard.php' : '/dashboard.php';
 
+    function hasAction(menu, path) {
+      return Array.prototype.some.call(menu.querySelectorAll('a[href]'), function (link) {
+        return toPath(link.getAttribute('href') || '').endsWith(path);
+      });
+    }
+
+    function addBootstrapAction(menu, path, label, iconClass, iconColor) {
+      if (hasAction(menu, path)) return;
+      var logoutItem = Array.prototype.find.call(menu.children, function (item) {
+        var link = item.querySelector && item.querySelector('a[href]');
+        return link && toPath(link.getAttribute('href') || '').endsWith('/logout.php');
+      });
+      var li = document.createElement('li');
+      li.innerHTML = '<a class="dropdown-item" href="' + path + '"><i class="bi ' + iconClass + ' me-2' + (iconColor ? ' ' + iconColor : '') + '"></i> ' + label + '</a>';
+      if (logoutItem) menu.insertBefore(li, logoutItem); else menu.appendChild(li);
+    }
+
+    function addLegacyAction(menu, path, label, iconClass, iconColor) {
+      if (hasAction(menu, path)) return;
+      var logoutLink = Array.prototype.find.call(menu.querySelectorAll('a[href]'), function (link) {
+        return toPath(link.getAttribute('href') || '').endsWith('/logout.php');
+      });
+      var link = document.createElement('a');
+      link.href = path;
+      link.style.cssText = 'display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:.84rem;border-radius:10px;color:#0f172a;margin-top:2px;';
+      link.innerHTML = '<i class="bi ' + iconClass + '"' + (iconColor ? ' style="color:' + iconColor + ';"' : '') + '></i> ' + label;
+      if (logoutLink) menu.insertBefore(link, logoutLink); else menu.appendChild(link);
+    }
+
     document.querySelectorAll('.user-menu-corner .dropdown-menu').forEach(function (menu) {
       if (menu.querySelector('[data-uv-profile-link="1"]')) return;
 
@@ -71,6 +100,10 @@
       } else {
         menu.appendChild(li);
       }
+    });
+
+    document.querySelectorAll('.user-menu-corner .dropdown-menu').forEach(function (menu) {
+      addBootstrapAction(menu, '/export-bookings-excel.php', 'Download Excel', 'bi-file-earmark-spreadsheet', 'text-success');
     });
 
     var legacyMenu = document.getElementById('userDropdown');
@@ -94,6 +127,10 @@
       } else {
         legacyMenu.appendChild(profileLink);
       }
+    }
+
+    if (legacyMenu) {
+      addLegacyAction(legacyMenu, '/export-bookings-excel.php', 'Download Excel', 'bi-file-earmark-spreadsheet', '#059669');
     }
   }
 

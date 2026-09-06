@@ -2431,7 +2431,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item" href="#" onclick="showSection('my-bookings-view'); return false;">
+                            <a class="dropdown-item" href="/booking-details.php">
                                 <i class="bi bi-clock-history me-2"></i> Booking History
                             </a>
                         </li>
