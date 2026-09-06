@@ -929,9 +929,12 @@ CSS;
       <div class="hm-frow">
         <label>Apply on Days</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+          <label style="display:flex;align-items:center;gap:4px;font-size:.8rem;background:#e0f2fe;padding:5px 10px;border-radius:7px;font-weight:700;color:#075985">
+            <input type="checkbox" id="bulk-select-all-days" checked onchange="toggleBulkDays(this)"> Select All
+          </label>
           <?php foreach(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] as $dw): ?>
           <label style="display:flex;align-items:center;gap:4px;font-size:.8rem;background:#f1f5f9;padding:5px 10px;border-radius:7px">
-            <input type="checkbox" name="bulk-day" value="<?= $dw ?>" checked> <?= $dw ?>
+            <input type="checkbox" name="bulk-day" value="<?= $dw ?>" checked onchange="syncBulkSelectAll()"> <?= $dw ?>
           </label>
           <?php endforeach; ?>
         </div>
@@ -1488,9 +1491,26 @@ function openBulk(hotelId) {
     opt.textContent = row.querySelector('td:first-child')?.textContent?.trim()||'Room';
     sel.appendChild(opt);
   });
+  const selectAll = document.getElementById('bulk-select-all-days');
+  if (selectAll) selectAll.checked = true;
+  document.querySelectorAll('#modal-bulk input[name="bulk-day"]').forEach(cb => { cb.checked = true; });
   document.getElementById('modal-bulk').classList.add('open');
 }
 function closeBulk() { document.getElementById('modal-bulk').classList.remove('open'); }
+
+function toggleBulkDays(selectAll) {
+  document.querySelectorAll('#modal-bulk input[name="bulk-day"]').forEach(cb => {
+    cb.checked = selectAll.checked;
+  });
+}
+
+function syncBulkSelectAll() {
+  const days = Array.from(document.querySelectorAll('#modal-bulk input[name="bulk-day"]'));
+  const selectAll = document.getElementById('bulk-select-all-days');
+  if (!selectAll || !days.length) return;
+  selectAll.checked = days.every(cb => cb.checked);
+  selectAll.indeterminate = days.some(cb => cb.checked) && !selectAll.checked;
+}
 
 async function applyBulkRates() {
   const hotelId  = parseInt(document.getElementById('bulk-hotel-id').value);
@@ -1502,6 +1522,7 @@ async function applyBulkRates() {
   const days     = Array.from(document.querySelectorAll('input[name="bulk-day"]:checked')).map(c=>c.value);
   if (!fromDate || !toDate || fromDate > toDate) { showToast('Invalid date range','err'); return; }
   if (price <= 0) { showToast('Enter a valid price','err'); return; }
+  if (!days.length) { showToast('Select at least one day','err'); return; }
   try {
     const res = await api('bulk_rate_update.php', {hotel_id:hotelId,room_id:roomId,meal_plan:mealPlan,from_date:fromDate,to_date:toDate,price,days_of_week:days});
     showToast(`Bulk rates applied: ${res.data?.count||0} records ✓`,'ok');

@@ -29,6 +29,7 @@ foreach ($raw_days as $dv) {
     if (is_string($dv) && isset(DOW[$dv]))                  { $days[] = DOW[$dv]; continue; }
 }
 $days = array_values(array_unique($days));
+if (empty($days)) hl_err('Select at least one day to apply the rate.');
 
 // Get room IDs
 if ($room_id_raw === 'all') {
