@@ -810,6 +810,7 @@ function sendSelectedAdminQueryQuotes() {
         prices: room.prices || {},
         weekday_prices: room.weekday_prices || room.prices || {},
         weekend_prices: room.weekend_prices || room.prices || {},
+        nightly_prices: room.nightly_prices || {},
         location: hotel.location || hotel.city || '',
         address: hotel.address || '',
         phone: hotel.phone || '',

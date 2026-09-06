@@ -37,6 +37,7 @@ function refresh_history_quotation_rates(PDO $conn, array &$history): void {
             $rateStmt->execute([':hotel_name' => (string)($hotel['name'] ?? $hotelName), ':room_name' => (string)($hotel['room_name'] ?? $roomName)]);
             $weekday = [];
             $weekend = [];
+            $datePrices = [];
             foreach ($rateStmt->fetchAll(PDO::FETCH_ASSOC) as $rate) {
                 $code = (string)($rate['code'] ?? '');
                 if ($code === '') continue;
@@ -46,6 +47,7 @@ function refresh_history_quotation_rates(PDO $conn, array &$history): void {
                     $weekday[$code] = $price;
                     $weekend[$code] = $price;
                 } elseif ($date >= (string)($item['check_in'] ?? '') && $date < (string)($item['check_out'] ?? '')) {
+                    $datePrices[$date][$code] = $price;
                     $day = (int)(new DateTime($date))->format('w');
                     if (in_array($day, [0, 6], true)) $weekend[$code] = $price;
                     else $weekday[$code] = $price;
@@ -54,6 +56,23 @@ function refresh_history_quotation_rates(PDO $conn, array &$history): void {
             if ($weekday || $weekend) {
                 $hotel['weekday_prices'] = $weekday;
                 $hotel['weekend_prices'] = $weekend;
+            }
+            $checkIn = (string)($item['check_in'] ?? '');
+            $checkOut = (string)($item['check_out'] ?? '');
+            if ($checkIn !== '' && $checkOut !== '') {
+                $nightly = [];
+                $stayDate = new DateTime($checkIn);
+                $checkoutDate = new DateTime($checkOut);
+                while ($stayDate < $checkoutDate) {
+                    $dateKey = $stayDate->format('Y-m-d');
+                    $nightly[$dateKey] = array_replace(
+                        $weekday,
+                        in_array((int)$stayDate->format('w'), [0, 6], true) ? $weekend : [],
+                        $datePrices[$dateKey] ?? []
+                    );
+                    $stayDate->modify('+1 day');
+                }
+                $hotel['nightly_prices'] = $nightly;
             }
         }
         unset($hotel);

@@ -700,6 +700,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             'prices' => [],
                             'weekday_prices' => [],
                             'weekend_prices' => [],
+                            'date_prices' => [],
                         ];
                     }
                     if (!empty($row['meal_code'])) {
@@ -715,6 +716,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             $roomsByHotel[$hid][$rid]['weekday_prices'][$code] = $price;
                             $roomsByHotel[$hid][$rid]['weekend_prices'][$code] = $price;
                         } elseif ($rateDate !== '' && $filterCheckIn !== '' && $filterCheckOut !== '') {
+                            $roomsByHotel[$hid][$rid]['date_prices'][$rateDate][$code] = $price;
                             try {
                                 $rateDay = (int)(new DateTime($rateDate))->format('w');
                                 $targetMap = in_array($rateDay, [0, 6], true) ? 'weekend_prices' : 'weekday_prices';
@@ -733,6 +735,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 foreach ($hotelRows as $hotel) {
                     $hid = (int)$hotel['id'];
                     $allRooms = array_values($roomsByHotel[$hid] ?? []);
+                    foreach ($allRooms as &$room) {
+                        $room['nightly_prices'] = [];
+                        if ($filterCheckIn !== '' && $filterCheckOut !== '') {
+                            try {
+                                $stayDate = new DateTime($filterCheckIn);
+                                $checkoutDate = new DateTime($filterCheckOut);
+                                while ($stayDate < $checkoutDate) {
+                                    $dateKey = $stayDate->format('Y-m-d');
+                                    $room['nightly_prices'][$dateKey] = array_replace(
+                                        $room['weekday_prices'],
+                                        in_array((int)$stayDate->format('w'), [0, 6], true) ? $room['weekend_prices'] : [],
+                                        $room['date_prices'][$dateKey] ?? []
+                                    );
+                                    $stayDate->modify('+1 day');
+                                }
+                            } catch (Exception $e) {
+                                // Keep the base meal-plan prices when dates are invalid.
+                            }
+                        }
+                    }
+                    unset($room);
                     // Only rooms that can actually cover the requested room count are eligible.
                     $eligibleRooms = array_values(array_filter($allRooms, static function ($room) use ($filterRooms) {
                         return (int)$room['available_rooms'] >= $filterRooms;
@@ -1105,6 +1128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     ]);
                     $weekdayPrices = [];
                     $weekendPrices = [];
+                    $datePrices = [];
                     $checkInDate = (string)($historyRow['check_in'] ?? '');
                     $checkOutDate = (string)($historyRow['check_out'] ?? '');
                     foreach ($historyRateStmt->fetchAll(PDO::FETCH_ASSOC) as $rate) {
@@ -1116,6 +1140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             $weekdayPrices[$code] = $price;
                             $weekendPrices[$code] = $price;
                         } elseif ($checkInDate !== '' && $checkOutDate !== '' && $rateDate >= $checkInDate && $rateDate < $checkOutDate) {
+                            $datePrices[$rateDate][$code] = $price;
                             $day = (int)(new DateTime($rateDate))->format('w');
                             if (in_array($day, [0, 6], true)) $weekendPrices[$code] = $price;
                             else $weekdayPrices[$code] = $price;
@@ -1124,6 +1149,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     if ($weekdayPrices || $weekendPrices) {
                         $historyHotel['weekday_prices'] = $weekdayPrices;
                         $historyHotel['weekend_prices'] = $weekendPrices;
+                    }
+                    if ($checkInDate !== '' && $checkOutDate !== '') {
+                        $nightlyPrices = [];
+                        $stayDate = new DateTime($checkInDate);
+                        $checkoutDate = new DateTime($checkOutDate);
+                        while ($stayDate < $checkoutDate) {
+                            $dateKey = $stayDate->format('Y-m-d');
+                            $nightlyPrices[$dateKey] = array_replace(
+                                $weekdayPrices,
+                                in_array((int)$stayDate->format('w'), [0, 6], true) ? $weekendPrices : [],
+                                $datePrices[$dateKey] ?? []
+                            );
+                            $stayDate->modify('+1 day');
+                        }
+                        $historyHotel['nightly_prices'] = $nightlyPrices;
                     }
                 }
                 unset($historyHotel);
@@ -5328,6 +5368,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             prices: room.prices || {},
             weekday_prices: room.weekday_prices || room.prices || {},
             weekend_prices: room.weekend_prices || room.prices || {},
+            nightly_prices: room.nightly_prices || {},
             location: hotel.location || hotel.city || '',
             address: hotel.address || '',
             phone: hotel.phone || '',

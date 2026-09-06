@@ -52,6 +52,36 @@
         return `*Room Price:(${label})* ${plans.join(', ') || 'Rates on request'}`;
     }
 
+    function formatRateValues(prices) {
+        const labels = { EP: 'EP', CP: 'CP', MAP: 'MAP', AP: 'AP', AI: 'AI' };
+        const plans = Object.entries(prices || {})
+            .filter(([, price]) => Number(price) > 0)
+            .map(([code, price]) => `${labels[code] || code} - ${formatPrice(price)}/- per room per night`);
+        return plans.join(', ') || 'Rates on request';
+    }
+
+    function formatNightlyRates(nightlyPrices, weekdayPrices, weekendPrices) {
+        const dates = Object.keys(nightlyPrices || {}).sort();
+        if (!dates.length) {
+            return {
+                weekday: formatRateLine('Weekdays', weekdayPrices, {}),
+                weekend: formatRateLine('Weekend', weekendPrices, weekdayPrices)
+            };
+        }
+        const weekday = [];
+        const weekend = [];
+        dates.forEach((date) => {
+            const parts = date.split('-').map(Number);
+            const day = new Date(parts[0], parts[1] - 1, parts[2]).getDay();
+            const line = `${formatDate(date)} - ${formatRateValues(nightlyPrices[date])}`;
+            (day === 0 || day === 6 ? weekend : weekday).push(line);
+        });
+        return {
+            weekday: weekday.length ? ['*Room Price:(Weekdays)*', ...weekday].join('\n') : '',
+            weekend: weekend.length ? ['*Room Price:(Weekend)*', ...weekend].join('\n') : ''
+        };
+    }
+
     function decodeHtml(value) {
         const text = String(value ?? '')
             .replace(/<br\s*\/?>/gi, '\n')
@@ -89,6 +119,7 @@
         const prices = selected.prices;
         const weekdayPrices = value(room, 'weekday_prices', value(hotel, 'weekday_prices', {}));
         const weekendPrices = value(room, 'weekend_prices', value(hotel, 'weekend_prices', {}));
+        const nightlyRates = formatNightlyRates(value(room, 'nightly_prices', value(hotel, 'nightly_prices', {})), weekdayPrices, weekendPrices);
         const hotelName = decodeHtml(value(input, 'hotelName', value(hotel, 'name', '-')));
         const location = decodeHtml(value(input, 'hotelLocation', value(hotel, 'location', value(hotel, 'city', '-'))));
         const roomCategory = decodeHtml(value(input, 'roomCategory', value(room, 'room_name', value(room, 'name', '-'))));
@@ -113,8 +144,8 @@
             roomCategory,
             mealPlan,
             roomPrice: formatPrice(roomPrice),
-            weekdayPriceLine: formatRateLine('Weekdays', weekdayPrices, prices),
-            weekendPriceLine: formatRateLine('Weekend', weekendPrices, prices),
+            weekdayPriceLine: nightlyRates.weekday,
+            weekendPriceLine: nightlyRates.weekend,
             extraBedAllowed,
             extraBedPrice: formatPrice(extraBedPrice),
             maxExtraBeds: Number(maxExtraBeds) || 0,
