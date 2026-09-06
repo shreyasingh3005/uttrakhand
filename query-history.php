@@ -225,8 +225,8 @@ try {
                     <select class="form-select form-select-sm" id="adminHistoryStatusFilter">
                         <option value="">All</option>
                         <option value="New">New</option>
-                        <option value="On Hold">On Hold</option>
-                        <option value="Won">Won</option>
+                        <option value="On Hold">Hold</option>
+                        <option value="Won">Win</option>
                         <option value="Lost">Lost</option>
                     </select>
                 </div>
@@ -245,7 +245,7 @@ try {
 
         <div class="table-responsive">
             <table class="table table-sm table-hover">
-                <thead class="table-light"><tr><th>Employee</th><th>Agent</th><th>Phone</th><th>Hotel</th><th>Room Category</th><th>Dates</th><th>Pax</th><th>Amount</th><th>Location</th><th>Generated At</th><th>Lock Status</th><th>Lock Until</th><th>Status</th><th>Countdown / Lock Timer</th><th>Actions</th></tr></thead>
+                <thead class="table-light"><tr><th>Employee</th><th>Agent</th><th>Phone</th><th>Hotel</th><th>Room Category</th><th>Dates</th><th>Status</th><th>Location</th><th>Generated At</th><th>Lock Status</th><th>Lock Until</th><th>Countdown / Lock Timer</th><th>Actions</th></tr></thead>
                 <tbody>
                     <?php foreach ($admin_history as $item): ?>
                     <?php
@@ -284,23 +284,22 @@ try {
                         <td><?php echo htmlspecialchars($item['hotel_name'] ?? ($item['hotel_category'] ?? '')); ?></td>
                         <td><?php echo htmlspecialchars($item['room_category'] ?? ($item['hotel_category'] ?? '')); ?></td>
                         <td><?php echo htmlspecialchars(($item['check_in'] ?? '') . (isset($item['check_out']) && $item['check_out'] ? ' - ' . $item['check_out'] : '')); ?></td>
-                           <td><?php echo 'A:' . ((int)($item['adults'] ?? 1)) . ' C:' . ((int)($item['children'] ?? 0)) . ' R:' . ((int)($item['rooms'] ?? 1)); ?></td>
-                        <td>₹<?php echo number_format((float)($item['total_amount'] ?? $item['budget'] ?? 0),0); ?></td>
+                        <td>
+                            <form method="post" class="d-inline-block m-0" style="min-width: 100px;">
+                                <input type="hidden" name="action" value="update_query_status">
+                                <input type="hidden" name="query_id" value="<?php echo (int)($item['id'] ?? 0); ?>">
+                                <select name="status" class="form-select form-select-sm status-select" onchange="this.form.submit()" aria-label="Query status">
+                                    <option value="New" <?php echo $statusValue === 'New' ? 'selected' : ''; ?>>New</option>
+                                    <option value="On Hold" <?php echo $statusValue === 'On Hold' ? 'selected' : ''; ?>>Hold</option>
+                                    <option value="Lost" <?php echo $statusValue === 'Lost' ? 'selected' : ''; ?>>Lost</option>
+                                    <option value="Won" <?php echo $statusValue === 'Won' ? 'selected' : ''; ?>>Win</option>
+                                </select>
+                            </form>
+                        </td>
                         <td><?php echo htmlspecialchars($item['location'] ?? ''); ?></td>
                         <td><?php echo format_ist_datetime((string)($item['generated_at'] ?? '')); ?></td>
                         <td><span class="lock-status-badge badge <?php echo $isLocked ? 'bg-danger' : 'bg-success'; ?>"><?php echo $isLocked ? 'Agent Locked' : 'Unlocked'; ?></span></td>
                         <td><?php echo $isLocked ? format_ist_datetime((string)($item['lock_until'] ?? '')) : 'Unlocked'; ?></td>
-                        <td>
-                            <form method="post" class="d-inline-block m-0" style="min-width: 140px;">
-                                <input type="hidden" name="action" value="update_query_status">
-                                <input type="hidden" name="query_id" value="<?php echo (int)($item['id'] ?? 0); ?>">
-                                <select name="status" class="form-select form-select-sm status-select" onchange="this.form.submit()" aria-label="Query status">
-                                    <?php foreach (['New', 'On Hold', 'Won', 'Lost'] as $option): ?>
-                                        <option value="<?php echo htmlspecialchars($option, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $statusValue === $option ? 'selected' : ''; ?>><?php echo htmlspecialchars($option, ENT_QUOTES, 'UTF-8'); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </form>
-                        </td>
                         <td class="lock-timer-cell" data-lock-until="<?php echo htmlspecialchars($lockUntilRaw, ENT_QUOTES, 'UTF-8'); ?>"><?php echo $countdownDisplay; ?></td>
                         <td>
                             <?php if (!empty($item['agent_phone'])): ?>
