@@ -17,6 +17,51 @@ function format_ist_datetime(?string $value): string {
     }
 }
 
+function refresh_history_quotation_rates(PDO $conn, array &$history): void {
+    $rateStmt = $conn->prepare('SELECT h.name, h.city, h.state, hrc.name AS room_name, mp.code, rp.rate_date,
+                                       COALESCE(NULLIF(rp.base_price, 0), rp.date_wise_price, 0) AS price
+                                FROM hotels h
+                                INNER JOIN hotel_room_categories hrc ON hrc.hotel_id = h.id AND hrc.status = "active"
+                                LEFT JOIN room_prices rp ON rp.room_category_id = hrc.id
+                                LEFT JOIN meal_plans mp ON mp.id = rp.meal_plan_id
+                                WHERE h.name = :hotel_name AND hrc.name = :room_name');
+    foreach ($history as &$item) {
+        $hotels = json_decode((string)($item['matched_hotels_json'] ?? '[]'), true);
+        if (!is_array($hotels)) $hotels = [];
+        $hotelName = (string)($item['hotel_name'] ?? '');
+        $roomName = (string)($item['room_category'] ?? '');
+        if (!$hotels && $hotelName !== '' && $roomName !== '') {
+            $hotels[] = ['name' => $hotelName, 'room_name' => $roomName, 'location' => (string)($item['location'] ?? '')];
+        }
+        foreach ($hotels as &$hotel) {
+            $rateStmt->execute([':hotel_name' => (string)($hotel['name'] ?? $hotelName), ':room_name' => (string)($hotel['room_name'] ?? $roomName)]);
+            $weekday = [];
+            $weekend = [];
+            foreach ($rateStmt->fetchAll(PDO::FETCH_ASSOC) as $rate) {
+                $code = (string)($rate['code'] ?? '');
+                if ($code === '') continue;
+                $price = (float)($rate['price'] ?? 0);
+                $date = (string)($rate['rate_date'] ?? '');
+                if ($date === '') {
+                    $weekday[$code] = $price;
+                    $weekend[$code] = $price;
+                } elseif ($date >= (string)($item['check_in'] ?? '') && $date < (string)($item['check_out'] ?? '')) {
+                    $day = (int)(new DateTime($date))->format('w');
+                    if (in_array($day, [0, 6], true)) $weekend[$code] = $price;
+                    else $weekday[$code] = $price;
+                }
+            }
+            if ($weekday || $weekend) {
+                $hotel['weekday_prices'] = $weekday;
+                $hotel['weekend_prices'] = $weekend;
+            }
+        }
+        unset($hotel);
+        $item['matched_hotels_json'] = json_encode($hotels, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+    unset($item);
+}
+
 $unlockMessage = '';
 $unlockMessageType = 'success';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_query_status') {
@@ -89,6 +134,7 @@ try {
         $legacyStmt->execute();
         $admin_history = $legacyStmt->fetchAll(PDO::FETCH_ASSOC);
     }
+    refresh_history_quotation_rates($conn, $admin_history);
 } catch (PDOException $e) {
     $admin_history = [];
 }
@@ -340,7 +386,7 @@ try {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="/assets/js/quotation-template.js?v=20260905-1"></script>
+<script src="/assets/js/quotation-template.js?v=20260907-1"></script>
 <script src="/assets/js/ui-common.js"></script>
 <script>
 function getAdminHistoryControls() {

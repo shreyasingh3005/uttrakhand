@@ -386,7 +386,7 @@ try {
 </div><!-- /.main-wrapper -->
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="/assets/js/quotation-template.js?v=20260905-1"></script>
+<script src="/assets/js/quotation-template.js?v=20260907-1"></script>
 <script src="/assets/js/ui-common.js"></script>
 <script>
 const listingPayload = <?php echo json_encode($listingDataForJs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
@@ -808,6 +808,8 @@ function sendSelectedAdminQueryQuotes() {
         bed_type: room.bed_type || '',
         room_size: room.room_size || '',
         prices: room.prices || {},
+        weekday_prices: room.weekday_prices || room.prices || {},
+        weekend_prices: room.weekend_prices || room.prices || {},
         location: hotel.location || hotel.city || '',
         address: hotel.address || '',
         phone: hotel.phone || '',

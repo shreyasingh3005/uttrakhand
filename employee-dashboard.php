@@ -706,18 +706,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         $rateDate = (string)($row['rate_date'] ?? '');
                         $code = (string)$row['meal_code'];
                         $price = (float)$row['base_price'];
+                        $hasSelectedDateRate = $filterCheckIn !== '' && $rateDate === $filterCheckIn;
                         $isBaseRate = $rateDate === '';
+                        if ($hasSelectedDateRate || ($isBaseRate && !array_key_exists($code, $roomsByHotel[$hid][$rid]['prices']))) {
+                            $roomsByHotel[$hid][$rid]['prices'][$code] = $price;
+                        }
                         if ($isBaseRate) {
                             $roomsByHotel[$hid][$rid]['weekday_prices'][$code] = $price;
                             $roomsByHotel[$hid][$rid]['weekend_prices'][$code] = $price;
-                        } else {
-                            $dayOfWeek = (int)date('w', strtotime($rateDate));
-                            $target = ($dayOfWeek === 0 || $dayOfWeek === 6) ? 'weekend_prices' : 'weekday_prices';
-                            $roomsByHotel[$hid][$rid][$target][$code] = $price;
-                        }
-                        $hasSelectedDateRate = $filterCheckIn !== '' && $rateDate === $filterCheckIn;
-                        if ($hasSelectedDateRate || ($isBaseRate && !array_key_exists($code, $roomsByHotel[$hid][$rid]['prices']))) {
-                            $roomsByHotel[$hid][$rid]['prices'][$code] = $price;
+                        } elseif ($rateDate !== '' && $filterCheckIn !== '' && $filterCheckOut !== '') {
+                            try {
+                                $rateDay = (int)(new DateTime($rateDate))->format('w');
+                                $targetMap = in_array($rateDay, [0, 6], true) ? 'weekend_prices' : 'weekday_prices';
+                                $roomsByHotel[$hid][$rid][$targetMap][$code] = $price;
+                            } catch (Exception $e) {
+                                // Ignore malformed rate dates and keep base listing prices.
+                            }
                         }
                     }
                 }
@@ -1073,6 +1077,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $historyStmt->execute($historyParams);
             $history = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
             $historyRoomStmt = $conn->prepare('SELECT hrc.extra_bed_allowed, hrc.extra_bed_price, hrc.max_extra_beds FROM hotel_room_categories hrc INNER JOIN hotels h ON h.id = hrc.hotel_id WHERE h.name = :hotel_name AND hrc.name = :room_name AND hrc.status = "active" LIMIT 1');
+            $historyRateStmt = $conn->prepare('SELECT mp.code, rp.rate_date, COALESCE(NULLIF(rp.base_price, 0), rp.date_wise_price, 0) AS price
+                                               FROM hotel_room_categories hrc
+                                               INNER JOIN hotels h ON h.id = hrc.hotel_id
+                                               LEFT JOIN room_prices rp ON rp.room_category_id = hrc.id
+                                               LEFT JOIN meal_plans mp ON mp.id = rp.meal_plan_id
+                                               WHERE h.name = :hotel_name AND hrc.name = :room_name AND hrc.status = "active"');
             foreach ($history as &$historyRow) {
                 if (in_array(strtolower(trim((string)($historyRow['hotel_category'] ?? ''))), ['all categories', 'all catgs'], true)) {
                     $historyRow['hotel_category'] = 'All Catgs';
@@ -1088,6 +1098,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         $historyHotel['extra_bed_allowed'] = (bool)$historyRoom['extra_bed_allowed'];
                         $historyHotel['extra_bed_price'] = (float)$historyRoom['extra_bed_price'];
                         $historyHotel['max_extra_beds'] = (int)$historyRoom['max_extra_beds'];
+                    }
+                    $historyRateStmt->execute([
+                        ':hotel_name' => (string)($historyHotel['name'] ?? ''),
+                        ':room_name' => (string)($historyHotel['room_name'] ?? ''),
+                    ]);
+                    $weekdayPrices = [];
+                    $weekendPrices = [];
+                    $checkInDate = (string)($historyRow['check_in'] ?? '');
+                    $checkOutDate = (string)($historyRow['check_out'] ?? '');
+                    foreach ($historyRateStmt->fetchAll(PDO::FETCH_ASSOC) as $rate) {
+                        $code = (string)($rate['code'] ?? '');
+                        if ($code === '') continue;
+                        $price = (float)($rate['price'] ?? 0);
+                        $rateDate = (string)($rate['rate_date'] ?? '');
+                        if ($rateDate === '') {
+                            $weekdayPrices[$code] = $price;
+                            $weekendPrices[$code] = $price;
+                        } elseif ($checkInDate !== '' && $checkOutDate !== '' && $rateDate >= $checkInDate && $rateDate < $checkOutDate) {
+                            $day = (int)(new DateTime($rateDate))->format('w');
+                            if (in_array($day, [0, 6], true)) $weekendPrices[$code] = $price;
+                            else $weekdayPrices[$code] = $price;
+                        }
+                    }
+                    if ($weekdayPrices || $weekendPrices) {
+                        $historyHotel['weekday_prices'] = $weekdayPrices;
+                        $historyHotel['weekend_prices'] = $weekendPrices;
                     }
                 }
                 unset($historyHotel);
@@ -5290,6 +5326,8 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             bed_type: room.bed_type || '',
             room_size: room.room_size || '',
             prices: room.prices || {},
+            weekday_prices: room.weekday_prices || room.prices || {},
+            weekend_prices: room.weekend_prices || room.prices || {},
             location: hotel.location || hotel.city || '',
             address: hotel.address || '',
             phone: hotel.phone || '',
@@ -6353,7 +6391,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
     };
     </script>
     <script>window.AirwaysQuotationContact = <?php echo json_encode($quotationContact, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
-    <script src="/assets/js/quotation-template.js?v=20260905-1"></script>
+    <script src="/assets/js/quotation-template.js?v=20260907-1"></script>
 <script src="/assets/js/ui-common.js"></script>
 </body>
 
