@@ -197,6 +197,7 @@ try {
         <li class="nav-item"><a class="nav-link" href="/agents-details.php"><i class="bi bi-person-badge"></i> Agents</a></li>
         <li class="nav-item"><a class="nav-link" href="/bookingquery.php"><i class="bi bi-chat-dots"></i> Booking Query</a></li>
         <li class="nav-item"><a class="nav-link active" href="/query-history.php"><i class="bi bi-clock-history"></i> Query History</a></li>
+        <li class="nav-item"><a class="nav-link" href="/hotel_calculator.php" target="_blank" rel="noopener noreferrer"><i class="bi bi-calculator"></i> Hotel Calculator</a></li>
         <li class="nav-item"><a class="nav-link" href="/listing.php"><i class="bi bi-building"></i> Hotel Listings</a></li>
         <li class="nav-item"><a class="nav-link" href="/employees-detail.php"><i class="bi bi-person-vcard"></i> Employees</a></li>
         <li class="nav-item"><a class="nav-link" href="/accounts-detail.php"><i class="bi bi-wallet2"></i> Accounts</a></li>
