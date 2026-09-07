@@ -6,6 +6,9 @@
 require_once __DIR__ . '/includes/auth_session.php';
 require_once __DIR__ . '/includes/db_connect.php';
 require_role('admin');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 $isAdminUser = true; // This page is admin-only
 
 /* ── PDO instance from existing connection ──────────────────────────────── */
@@ -1026,6 +1029,7 @@ async function api(url, data = null) {
   const endpoint = url.startsWith('http') ? url : `${API_ROOT}/${url.replace(/^\/+/, '')}`;
   const opts = {
     method: data ? 'POST' : 'GET',
+    cache: 'no-store',
     headers: {
       'X-Requested-With': 'XMLHttpRequest',
       'Accept': 'application/json'

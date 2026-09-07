@@ -32,7 +32,7 @@ try {
     $room_id = (int)$pdo->lastInsertId();
 
     if (!empty($prices)) {
-        $mp = $pdo->prepare("INSERT INTO room_prices (hotel_id,room_category_id,meal_plan_id,base_price,rate_date,date_wise_price) VALUES (?,?,?,NULL,NULL) ON DUPLICATE KEY UPDATE base_price=VALUES(base_price)");
+        $mp = $pdo->prepare("INSERT INTO room_prices (hotel_id,room_category_id,meal_plan_id,base_price,rate_date,date_wise_price) VALUES (?,?,?, ?,NULL,NULL) ON DUPLICATE KEY UPDATE base_price=VALUES(base_price)");
         foreach ($prices as $code => $price) {
             if (!in_array($code, MEAL_CODES) || (float)$price <= 0) continue;
             $plan_id = get_plan_id($pdo, $code);

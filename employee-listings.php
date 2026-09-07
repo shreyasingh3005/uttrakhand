@@ -10,6 +10,9 @@ require_once __DIR__ . '/includes/db_connect.php';
 if (!isset($_SESSION['user_id'])) {
     header('Location: index.php'); exit();
 }
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 $isAdmin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 $pdo     = $conn;
 

@@ -26,12 +26,18 @@ function hl_pdo(): PDO {
 
 /* ── Responses ──────────────────────────────────────────────────────────── */
 function hl_ok($data = null, string $msg = 'Success'): never {
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['status' => 'success', 'message' => $msg, 'data' => $data], JSON_UNESCAPED_UNICODE);
     exit();
 }
 function hl_err(string $msg, int $code = 400): never {
     http_response_code($code);
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['status' => 'error', 'message' => $msg], JSON_UNESCAPED_UNICODE);
     exit();
