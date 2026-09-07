@@ -178,8 +178,8 @@
             `*Check-In*: ${option.checkIn} | *Check-Out*: ${option.checkOut}`,
             `*No. of Person*: ${option.people} | *No. of Rooms*: ${option.rooms} Room | *Occupancy*: ${option.occupancy}`,
             `*Room Category*: ${option.roomCategory}`,
-            option.weekdayPriceLine,
             option.weekendPriceLine,
+            option.weekdayPriceLine,
             ...(option.extraBedAllowed ? [`*Extra Bed*: ${option.extraBedPrice}/- per extra bed${option.maxExtraBeds > 0 ? ` | Max ${option.maxExtraBeds}` : ''}`] : []),
             ...(index < options.length - 1 ? ['', '---', ''] : [])
         ]);
