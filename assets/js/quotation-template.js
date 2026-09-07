@@ -30,19 +30,6 @@
         return Number.isFinite(number) ? String(Math.round(number)) : '0';
     }
 
-    function formatMealPlans(input, prices) {
-        const availablePrices = prices && typeof prices === 'object' ? prices : {};
-        const labels = { EP: 'EP', CP: 'CP', MAP: 'MAP', AP: 'AP', AI: 'AI' };
-        const selectedPlan = decodeHtml(value(input, 'mealPlan', ''));
-        const plans = Object.entries(availablePrices)
-            .filter(([, price]) => Number(price) > 0)
-            .map(([code, price]) => `${labels[code] || code} - ${formatPrice(price)}/- per room per night`);
-        if (plans.length) return plans.join(', ');
-        const fallbackPlanCodes = ['EP', 'CP', 'MAP', 'AP', 'AI'];
-        const selectedCode = selectedPlan.split(/\s|\(/, 1)[0].toUpperCase();
-        return fallbackPlanCodes.map((plan) => plan === selectedCode && selectedPlan ? selectedPlan : plan).join(', ');
-    }
-
     function formatRateLine(label, prices, fallbackPrices) {
         const source = prices && Object.keys(prices).length ? prices : (fallbackPrices || {});
         const labels = { EP: 'EP', CP: 'CP', MAP: 'MAP', AP: 'AP', AI: 'AI' };
@@ -63,9 +50,14 @@
     function formatNightlyRates(nightlyPrices, weekdayPrices, weekendPrices) {
         const dates = Object.keys(nightlyPrices || {}).sort();
         if (!dates.length) {
+            const weekday = formatRateValues(weekdayPrices);
+            const weekend = formatRateValues(weekendPrices);
+            if (weekday === weekend) {
+                return { weekday: `*Room Price:* ${weekday}`, weekend: '' };
+            }
             return {
-                weekday: formatRateLine('Weekdays', weekdayPrices, {}),
-                weekend: formatRateLine('Weekend', weekendPrices, weekdayPrices)
+                weekday: `*Room Price:(Weekdays)* ${weekday}`,
+                weekend: `*Room Price:(Weekend)* ${weekend}`
             };
         }
         const weekday = [];
@@ -123,7 +115,6 @@
         const hotelName = decodeHtml(value(input, 'hotelName', value(hotel, 'name', '-')));
         const location = decodeHtml(value(input, 'hotelLocation', value(hotel, 'location', value(hotel, 'city', '-'))));
         const roomCategory = decodeHtml(value(input, 'roomCategory', value(room, 'room_name', value(room, 'name', '-'))));
-        const mealPlan = formatMealPlans(input, prices);
         const adults = Number(value(input, 'adults', 1));
         const children = Number(value(input, 'children', 0));
         const rooms = Number(value(input, 'rooms', 1));
@@ -142,7 +133,6 @@
             rooms,
             occupancy: decodeHtml(occupancy),
             roomCategory,
-            mealPlan,
             roomPrice: formatPrice(roomPrice),
             weekdayPriceLine: nightlyRates.weekday,
             weekendPriceLine: nightlyRates.weekend,
@@ -166,7 +156,7 @@
         const options = [];
         quotations.forEach((item) => {
             const option = getOption(item, options.length + 1);
-            const optionKey = `${option.hotelName}|${option.roomCategory}|${option.mealPlan}|${option.roomPrice}`;
+            const optionKey = `${option.hotelName}|${option.location}|${option.roomCategory}|${option.weekdayPriceLine}|${option.weekendPriceLine}`;
             if (seen.has(optionKey)) return;
             seen.add(optionKey);
             option.optionNumber = options.length + 1;
@@ -179,7 +169,6 @@
             `*Check-In*: ${option.checkIn} | *Check-Out*: ${option.checkOut}`,
             `*No. of Person*: ${option.people} | *No. of Rooms*: ${option.rooms} Room | *Occupancy*: ${option.occupancy}`,
             `*Room Category*: ${option.roomCategory}`,
-            `*Meal Plan*: ${option.mealPlan}`,
             option.weekdayPriceLine,
             option.weekendPriceLine,
             ...(option.extraBedAllowed ? [`*Extra Bed*: ${option.extraBedPrice}/- per extra bed${option.maxExtraBeds > 0 ? ` | Max ${option.maxExtraBeds}` : ''}`] : []),

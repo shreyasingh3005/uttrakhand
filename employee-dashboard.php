@@ -3569,7 +3569,6 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                                     <th style="width: 55px;">Select</th>
                                     <th>Property Name</th>
                                     <th>Room Category</th>
-                                    <th>Meal Plan</th>
                                     <th>Location</th>
                                     <th>Price / Night</th>
                                     <th>Check-In</th>
@@ -5139,11 +5138,6 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
     // ── Booking Query Details: Location + Category + Dates + Budget → DB-backed shortlist (admin uses the same backend) ──
     let bookingQueryLastResults = [];
 
-    function formatBookingMealPlans(prices) {
-        const labels = { EP: 'EP - Room Only', CP: 'CP - Breakfast Included', MAP: 'MAP - Breakfast + Dinner', AP: 'AP - All Meals' };
-        return Object.entries(prices || {}).map(([code, price]) => `${labels[code] || code} (₹${Number(price || 0).toLocaleString('en-IN')}/night)`).join(', ') || 'EP - Room Only';
-    }
-
     function calculateBookingNights(checkInId, checkOutId, nightsId) {
         const checkIn = document.getElementById(checkInId);
         const checkOut = document.getElementById(checkOutId);
@@ -5280,7 +5274,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         formData.append('budget', String(budget));
 
         resultWrap.style.display = 'block';
-        resultBody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Searching hotels...</td></tr>';
+        resultBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Searching hotels...</td></tr>';
 
         fetch('employee-dashboard.php', { method: 'POST', body: formData })
             .then((response) => response.json())
@@ -5299,7 +5293,6 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
 
                 resultBody.innerHTML = results.length
                     ? results.flatMap((hotel) => (hotel.rooms || []).map((room) => {
-                        const mealPlans = formatBookingMealPlans(room.prices);
                         const nightlyPrice = Number(room.prices?.EP || hotel.est_budget || hotel.min_price || 0);
                         const roomIndex = hotel.rooms.indexOf(room);
                         const selectionKey = `${hotel.id}::${roomIndex}`;
@@ -5308,7 +5301,6 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                             <td><input class="form-check-input hotel-checkbox" type="checkbox" value="${selectionKey}" id="hotel_${selectionKey}"></td>
                             <td><label for="hotel_${selectionKey}">${hotel.name}</label></td>
                             <td>${room.name || 'N/A'}</td>
-                            <td>${mealPlans}</td>
                             <td>${hotel.location || hotel.city || 'N/A'}</td>
                             <td>₹${nightlyPrice.toLocaleString('en-IN')}</td>
                             <td>${checkIn || 'N/A'}</td>
@@ -5316,7 +5308,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                         </tr>
                     `;
                     })).join('')
-                    : '<tr><td colspan="9" class="text-center text-muted py-4">No active hotels match this location/category/budget.</td></tr>';
+                    : '<tr><td colspan="8" class="text-center text-muted py-4">No active hotels match this location/category/budget.</td></tr>';
 
                 if (bookingQueryType === 'agent' && results.length) {
                     const queryLocation = document.getElementById('bookingQueryLocation')?.value.trim() || '';
@@ -5326,7 +5318,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                     }).then((lockResponse) => lockResponse.json()).then((lockData) => {
                         if (!lockData.success) {
                             bookingQueryLastResults = [];
-                            resultBody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">${lockData.message || 'Agent is currently unavailable.'}</td></tr>`;
+                            resultBody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">${lockData.message || 'Agent is currently unavailable.'}</td></tr>`;
                             showErrorToast(lockData.message || 'Agent is currently unavailable.');
                         }
                     }).catch(() => showErrorToast('Unable to verify the agent lock. Please try again.'));
@@ -5336,7 +5328,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             .catch((error) => {
                 console.error('Hotel filter error:', error);
                 bookingQueryLastResults = [];
-                resultBody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Unable to load hotels from database.</td></tr>';
+                resultBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Unable to load hotels from database.</td></tr>';
             });
     }
 
@@ -6193,7 +6185,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             return;
         }
 
-        let html = '<div class="table-responsive"><table class="table table-custom table-hover align-middle"><thead class="bg-light"><tr><th>Type</th><th>Agent Name</th><th>Agent Number</th><th>Location</th><th>Category</th><th>Hotel / Room</th><th>Meal</th><th>Dates</th><th>Status</th><th>Lock Status</th><th>Lock Until</th><th>Generated At</th><th>Actions</th></tr></thead><tbody>';
+        let html = '<div class="table-responsive"><table class="table table-custom table-hover align-middle"><thead class="bg-light"><tr><th>Type</th><th>Agent Name</th><th>Agent Number</th><th>Location</th><th>Category</th><th>Hotel / Room</th><th>Dates</th><th>Status</th><th>Lock Status</th><th>Lock Until</th><th>Generated At</th><th>Actions</th></tr></thead><tbody>';
         generated.forEach(item => {
             const generatedAt = formatQueryHistoryDate(item.generated_at);
             const isLocked = item.lock_until && new Date(item.lock_until).getTime() > Date.now();
@@ -6202,12 +6194,11 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             const dates = `${item.check_in || 'N/A'} - ${item.check_out || 'N/A'}`;
             const hotels = Array.isArray(item.matched_hotels) ? item.matched_hotels : [];
             const hotelSummary = hotels.map(h => `${h.name || 'Hotel'} / ${h.room_name || 'Room'}`).join('<br>') || 'No matches';
-            const mealSummary = hotels.map(h => formatBookingMealPlans(h.prices)).join('<br>') || 'N/A';
             const text = item.query_text || '';
             const currentStatus = ['New', 'On Hold', 'Won', 'Lost'].includes(item.status) ? item.status : 'New';
             html += `<tr class="query-history-row" data-history-date="${item.generated_at}" data-history-text="${(item.query_text || '').toLowerCase()}">
                                 <td>Booking Query</td><td>${escapeQueryHistoryHtml(item.agent_name || 'N/A')}</td><td>${escapeQueryHistoryHtml(item.agent_phone || 'N/A')}</td><td>${escapeQueryHistoryHtml(item.location || 'Any')}</td><td>${escapeQueryHistoryHtml(item.hotel_category || 'All Catgs')}</td>
-                <td>${hotelSummary}</td><td>${mealSummary}</td><td>${dates}</td>
+                <td>${hotelSummary}</td><td>${dates}</td>
                 <td><select class="form-select form-select-sm query-status-select" data-query-id="${item.id || ''}" data-current-status="${currentStatus}"><option value="New" ${currentStatus === 'New' ? 'selected' : ''}>New</option><option value="On Hold" ${currentStatus === 'On Hold' ? 'selected' : ''}>Hold</option><option value="Lost" ${currentStatus === 'Lost' ? 'selected' : ''}>Lost</option><option value="Won" ${currentStatus === 'Won' ? 'selected' : ''}>Win</option></select></td>
                 <td>${lockStatus}</td><td>${lockUntil}</td><td>${generatedAt}</td>
                 <td><button class="btn btn-sm btn-outline-primary me-1" data-query-text="${escapeQueryHistoryHtml(text)}" data-quotation="${escapeQueryHistoryHtml(JSON.stringify({ queryNumber: item.query_number, queryText: text, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, mealPlan: item.meal_plan, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: item.total_amount, agentName: item.agent_name, agentPhone: item.agent_phone, createdByName: item.created_by_name, createdByPhone: item.created_by_phone, createdByEmail: item.created_by_email, matchedHotels: hotels }))}" onclick="viewGeneratedQuery(this)">View</button><button class="btn btn-sm btn-outline-secondary" data-query-text="${escapeQueryHistoryHtml(text)}" data-quotation="${escapeQueryHistoryHtml(JSON.stringify({ queryNumber: item.query_number, queryText: text, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, mealPlan: item.meal_plan, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: item.total_amount, agentName: item.agent_name, agentPhone: item.agent_phone, createdByName: item.created_by_name, createdByPhone: item.created_by_phone, createdByEmail: item.created_by_email, matchedHotels: hotels }))}" onclick="copyQueryText(this.dataset.queryText, this)">Copy</button></td>
