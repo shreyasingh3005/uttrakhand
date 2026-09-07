@@ -650,6 +650,13 @@ function generateBookingResultsFromInputs(locationId, categoryId, checkInId, che
             })).join('')
             : '<tr><td colspan="9" class="text-center text-muted py-4">No active hotels match this location/category/budget.</td></tr>';
 
+        // Select the first five rows only after the asynchronous results exist.
+        if (resultBodyId === 'adminQueryResultsBody') {
+            selectAdminQueryRows(5);
+        } else {
+            selectBookingQueryRows(5);
+        }
+
         if (adminBookingQueryType === 'agent' && results.length) {
             const adminLockLocation = document.getElementById('adminBookingQueryLocation')?.value.trim() || '';
             fetch('employee-dashboard.php', {
@@ -764,7 +771,6 @@ function sendSelectedBookingQueryQuotes() {
 
 function generateAdminBookingQueryResults() {
     generateBookingResultsFromInputs('adminQueryLocation', 'adminQueryCategory', 'adminQueryCheckIn', 'adminQueryCheckOut', 'adminQueryNights', 'adminQueryAdults', 'adminQueryChildren', 'adminQueryRooms', 'adminQueryBudget', 'adminQueryResultsWrap', 'adminQueryResultsBody');
-    selectAdminQueryRows(5);
 }
 
 function selectAdminQueryRows(limit) {
@@ -851,7 +857,6 @@ function sendSelectedAdminQueryQuotes() {
 
 function generateBookingQueryResults() {
     generateBookingResultsFromInputs('bookingQueryLocation', 'bookingQueryHotelCategory', 'bookingQueryCheckIn', 'bookingQueryCheckOut', 'bookingQueryNights', 'bookingQueryAdults', 'bookingQueryChildren', 'bookingQueryRooms', 'bookingQueryBudget', 'bookingQueryResultsWrap', 'bookingQueryResultsBody');
-    selectBookingQueryRows(5);
 }
 
 const adminCheckIn = document.getElementById('adminQueryCheckIn');

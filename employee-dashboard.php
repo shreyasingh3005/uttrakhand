@@ -683,9 +683,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $roomStmt->execute($hotelIds);
 
                 $roomsByHotel = [];
+                $roomIds = [];
                 foreach ($roomStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
                     $hid = (int)$row['hotel_id'];
                     $rid = (int)$row['id'];
+                    $roomIds[$rid] = true;
                     if (!isset($roomsByHotel[$hid][$rid])) {
                         $roomsByHotel[$hid][$rid] = [
                             'id' => $rid,
@@ -701,6 +703,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             'weekday_prices' => [],
                             'weekend_prices' => [],
                             'date_prices' => [],
+                            'availability_by_date' => [],
                         ];
                     }
                     if (!empty($row['meal_code'])) {
@@ -725,6 +728,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                 // Ignore malformed rate dates and keep base listing prices.
                             }
                         }
+                    }
+                }
+
+                if ($roomIds && $filterCheckIn !== '' && $filterCheckOut !== '') {
+                    $availabilityPlaceholders = implode(',', array_fill(0, count($roomIds), '?'));
+                    $availabilityStmt = $conn->prepare(
+                        "SELECT room_category_id, availability_date, available_rooms
+                         FROM room_availability
+                         WHERE room_category_id IN ($availabilityPlaceholders)
+                           AND availability_date >= ? AND availability_date < ?"
+                    );
+                    $availabilityStmt->execute(array_merge(array_keys($roomIds), [$filterCheckIn, $filterCheckOut]));
+                    foreach ($availabilityStmt->fetchAll(PDO::FETCH_ASSOC) as $availability) {
+                        $hotelRoomId = (int)$availability['room_category_id'];
+                        foreach ($roomsByHotel as &$hotelRooms) {
+                            if (isset($hotelRooms[$hotelRoomId])) {
+                                $hotelRooms[$hotelRoomId]['availability_by_date'][(string)$availability['availability_date']] = (int)$availability['available_rooms'];
+                                break;
+                            }
+                        }
+                        unset($hotelRooms);
                     }
                 }
 
@@ -757,8 +781,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     }
                     unset($room);
                     // Only rooms that can actually cover the requested room count are eligible.
-                    $eligibleRooms = array_values(array_filter($allRooms, static function ($room) use ($filterRooms) {
-                        return (int)$room['available_rooms'] >= $filterRooms;
+                    $eligibleRooms = array_values(array_filter($allRooms, static function ($room) use ($filterRooms, $filterCheckIn, $filterCheckOut) {
+                        $defaultAvailable = (int)$room['available_rooms'];
+                        if ($filterCheckIn === '' || $filterCheckOut === '' || empty($room['availability_by_date'])) {
+                            return $defaultAvailable >= $filterRooms;
+                        }
+
+                        try {
+                            $stayDate = new DateTime($filterCheckIn);
+                            $checkoutDate = new DateTime($filterCheckOut);
+                            while ($stayDate < $checkoutDate) {
+                                $dateKey = $stayDate->format('Y-m-d');
+                                $available = array_key_exists($dateKey, $room['availability_by_date'])
+                                    ? (int)$room['availability_by_date'][$dateKey]
+                                    : $defaultAvailable;
+                                if ($available < $filterRooms) {
+                                    return false;
+                                }
+                                $stayDate->modify('+1 day');
+                            }
+                        } catch (Exception $e) {
+                            return $defaultAvailable >= $filterRooms;
+                        }
+                        return true;
                     }));
 
                     $availableRoomsTotal = 0;
