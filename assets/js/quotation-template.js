@@ -47,6 +47,11 @@
         return plans.join(', ') || 'Rates on request';
     }
 
+    function formatGroupedDates(dates, prices) {
+        const dateText = dates.map((date) => formatDate(date)).join(', ');
+        return `${dateText} - ${formatRateValues(prices)}`;
+    }
+
     function formatNightlyRates(nightlyPrices, weekdayPrices, weekendPrices) {
         const dates = Object.keys(nightlyPrices || {}).sort();
         if (!dates.length) {
@@ -60,14 +65,18 @@
                 weekend: `*Room Price:(Weekend)* ${weekend}`
             };
         }
-        const weekday = [];
-        const weekend = [];
+        const grouped = { weekday: new Map(), weekend: new Map() };
         dates.forEach((date) => {
             const parts = date.split('-').map(Number);
             const day = new Date(parts[0], parts[1] - 1, parts[2]).getDay();
-            const line = `${formatDate(date)} - ${formatRateValues(nightlyPrices[date])}`;
-            (day === 0 || day === 6 ? weekend : weekday).push(line);
+            const prices = nightlyPrices[date] || {};
+            const group = day === 0 || day === 6 ? grouped.weekend : grouped.weekday;
+            const signature = JSON.stringify(Object.entries(prices).sort(([a], [b]) => a.localeCompare(b)));
+            if (!group.has(signature)) group.set(signature, { dates: [], prices });
+            group.get(signature).dates.push(date);
         });
+        const weekday = [...grouped.weekday.values()].map((group) => formatGroupedDates(group.dates, group.prices));
+        const weekend = [...grouped.weekend.values()].map((group) => formatGroupedDates(group.dates, group.prices));
         return {
             weekday: weekday.length ? ['*Room Price:(Weekdays)*', ...weekday].join('\n') : '',
             weekend: weekend.length ? ['*Room Price:(Weekend)*', ...weekend].join('\n') : ''
