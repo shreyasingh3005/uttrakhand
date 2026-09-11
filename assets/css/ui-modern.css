@@ -143,6 +143,21 @@ body {
 
 /* Enterprise warm-orange theme shared by every CRM page. */
 :root {
+  --crm-bg: #f8fafc !important;
+  --crm-bg-alt: #f1f5f9 !important;
+  --crm-surface: #ffffff !important;
+  --crm-surface-hover: #fdf8f5 !important;
+  --crm-border: #cbd5e1 !important;
+  --crm-border-subtle: #e2e8f0 !important;
+  --crm-text: #0f172a !important;
+  --crm-text-secondary: #334155 !important;
+  --crm-text-muted: #64748b !important;
+  --crm-radius-sm: 8px !important;
+  --crm-radius-md: 10px !important;
+  --crm-radius-lg: 16px !important;
+  --crm-radius-pill: 9999px !important;
+  --crm-shadow: 0 4px 10px -2px rgba(15, 23, 42, .08) !important;
+  --crm-shadow-lg: 0 12px 24px -4px rgba(15, 23, 42, .10) !important;
   --primary: #ea580c !important;
   --primary-light: #f97316 !important;
   --primary-dark: #c2410c !important;
@@ -163,6 +178,120 @@ body {
   --bs-link-color: #c2410c !important;
   --bs-link-hover-color: #9a3412 !important;
 }
+
+[data-theme="dark"] {
+  --crm-bg: #0b0f19 !important;
+  --crm-bg-alt: #111827 !important;
+  --crm-surface: #161f30 !important;
+  --crm-surface-hover: #1e293b !important;
+  --crm-border: rgba(255, 255, 255, .14) !important;
+  --crm-border-subtle: rgba(255, 255, 255, .08) !important;
+  --crm-text: #f8fafc !important;
+  --crm-text-secondary: #cbd5e1 !important;
+  --crm-text-muted: #94a3b8 !important;
+  --primary: #fb923c !important;
+  --primary-50: rgba(251, 146, 60, .14) !important;
+  --primary-100: rgba(251, 146, 60, .22) !important;
+  --primary-200: rgba(251, 146, 60, .32) !important;
+}
+
+body {
+  background: var(--crm-bg) !important;
+  color: var(--crm-text) !important;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: -.02em;
+  font-weight: 700;
+}
+
+.panel, .summary-card, .summary-panel, .data-card, .manage-card,
+.form-card, .agent-card, .employee-card, .hotel-card, .hm-hcard, .card {
+  background: var(--crm-surface) !important;
+  border: 1px solid var(--crm-border) !important;
+  border-radius: var(--crm-radius-lg) !important;
+  box-shadow: var(--crm-shadow) !important;
+}
+
+.panel:hover, .summary-card:hover, .data-card:hover, .manage-card:hover,
+.agent-card:hover, .employee-card:hover, .hotel-card:hover, .hm-hcard:hover {
+  box-shadow: var(--crm-shadow-lg) !important;
+}
+
+.btn, button, .hm-btn {
+  border-radius: var(--crm-radius-md) !important;
+  font-weight: 600 !important;
+}
+
+.btn:not(.btn-primary):not(.btn-brand):not(.btn-success):not(.btn-danger),
+.btn-secondary, .btn-outline-primary, .btn-outline-secondary {
+  background: var(--crm-surface) !important;
+  border-color: var(--crm-border) !important;
+  color: var(--crm-text) !important;
+}
+
+.btn:not(.btn-primary):not(.btn-brand):not(.btn-success):not(.btn-danger):hover,
+.btn-secondary:hover, .btn-outline-primary:hover, .btn-outline-secondary:hover {
+  background: var(--crm-surface-hover) !important;
+  border-color: #ea580c !important;
+  color: #ea580c !important;
+}
+
+.form-control, .form-select, input, select, textarea {
+  min-height: 42px;
+  border: 1.5px solid var(--crm-border) !important;
+  border-radius: var(--crm-radius-md) !important;
+  background: var(--crm-surface) !important;
+  color: var(--crm-text) !important;
+}
+
+.table thead th, .hm-rtable th {
+  background: var(--crm-bg-alt) !important;
+  color: var(--crm-text-muted) !important;
+  padding: 13px 18px !important;
+  letter-spacing: .05em;
+}
+
+.table tbody td, .hm-rtable td {
+  color: var(--crm-text) !important;
+  border-bottom-color: var(--crm-border-subtle) !important;
+  vertical-align: middle;
+}
+
+.table tbody tr:hover, .hm-rtable tbody tr:hover {
+  background: var(--crm-surface-hover) !important;
+}
+
+.badge, .hm-badge, .el-badge, .status-badge {
+  border-radius: var(--crm-radius-pill) !important;
+  font-weight: 600 !important;
+}
+
+.badge-success { background: #ecfdf5 !important; color: #047857 !important; }
+.badge-warning { background: #fffbeb !important; color: #b45309 !important; }
+.badge-danger { background: #fef2f2 !important; color: #b91c1c !important; }
+
+[data-theme="dark"] body,
+[data-theme="dark"] .panel, [data-theme="dark"] .summary-card,
+[data-theme="dark"] .data-card, [data-theme="dark"] .card {
+  color: var(--crm-text) !important;
+}
+
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select,
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea,
+[data-theme="dark"] .btn:not(.btn-primary):not(.btn-brand):not(.btn-success):not(.btn-danger) {
+  background: var(--crm-surface) !important;
+  color: var(--crm-text) !important;
+}
+
+[data-theme="dark"] .badge-success { background: rgba(52, 211, 153, .18) !important; color: #34d399 !important; }
+[data-theme="dark"] .badge-warning { background: rgba(245, 158, 11, .18) !important; color: #fbbf24 !important; }
+[data-theme="dark"] .badge-danger { background: rgba(248, 113, 113, .18) !important; color: #f87171 !important; }
 
 .sidebar, .left-sidebar {
   background: #0f172a !important;
