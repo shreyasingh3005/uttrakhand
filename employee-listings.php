@@ -83,7 +83,7 @@ $extraCss = <<<'CSS'
 <style>
   .el-wrap {
     --el-teal:#2a9d8f; --el-navy:#1e3a5f; --el-coral:#e76f51; --el-amber:#e9c46a;
-    --el-brand:#4f46e5; --el-border:#e2e8f0; --el-muted:#6b7280; --el-slate:#f8fafc;
+    --el-brand:#ea580c; --el-border:#cbd5e1; --el-muted:#64748b; --el-slate:#f8fafc;
     font-family:'Inter','Segoe UI',sans-serif; color:#1e293b; padding:24px;
   }
   .el-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:22px; }
@@ -93,7 +93,7 @@ $extraCss = <<<'CSS'
   .el-toolbar { display:flex; align-items:center; gap:12px; margin-bottom:18px; flex-wrap:wrap; }
   .el-toolbar h2 { flex:1; font-size:1.3rem; font-weight:800; color:var(--el-navy); }
   .el-btn { display:inline-flex; align-items:center; gap:5px; padding:8px 16px; border-radius:9px; border:none; cursor:pointer; font-size:.8rem; font-weight:600; text-decoration:none; transition:.15s; }
-  .el-btn-teal  { background:var(--el-teal); color:#fff; } .el-btn-teal:hover { background:#21867a; }
+  .el-btn-teal  { background:linear-gradient(135deg,#ea580c,#f97316); color:#fff; } .el-btn-teal:hover { background:#c2410c; }
   .el-btn-ghost { background:#f1f5f9; color:var(--el-navy); border:1px solid var(--el-border); } .el-btn-ghost:hover { background:#e2e8f0; }
   .el-btn-sm { padding:6px 12px; font-size:.76rem; }
   .el-hcard { background:#fff; border-radius:16px; box-shadow:0 3px 15px rgba(0,0,0,.06); border:1px solid var(--el-border); margin-bottom:22px; }

@@ -37,3 +37,10 @@ return [
 'MAIL_FROM_ADDRESS'       => 'itnaukari2000@gmail.com',
 'MAIL_FROM_NAME'          => 'Uttarakhand Ventures CRM',
 ];
+
+
+
+
+// git add .
+// git commit -m "Updated project"
+// git push origin main
