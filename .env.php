@@ -41,6 +41,7 @@ return [
 
 
 
-// git add .
-// git commit -m "Updated project"
-// git push origin main
+
+//git add -A
+//git commit -m "Update website"
+//git push origin main

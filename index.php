@@ -26,11 +26,11 @@ $error = $_GET['error'] ?? '';
     <link href="<?php echo htmlspecialchars(site_url('assets/css/ui-modern.css'), ENT_QUOTES); ?>" rel="stylesheet">
     <style>
         :root {
-            --primary: #4f46e5;
-            --primary-light: #6366f1;
-            --primary-dark: #4338ca;
-            --accent: #06b6d4;
-            --accent-light: #22d3ee;
+            --primary: #ea580c;
+            --primary-light: #f97316;
+            --primary-dark: #c2410c;
+            --accent: #d97706;
+            --accent-light: #f59e0b;
             --surface: #ffffff;
             --text: #0f172a;
             --text-muted: #64748b;
@@ -50,9 +50,9 @@ $error = $_GET['error'] ?? '';
             position: fixed;
             inset: 0;
             background:
-                radial-gradient(ellipse 80% 60% at 10% 20%, rgba(79,70,229,0.25) 0%, transparent 60%),
-                radial-gradient(ellipse 60% 50% at 90% 80%, rgba(6,182,212,0.2) 0%, transparent 60%),
-                radial-gradient(ellipse 50% 40% at 50% 50%, rgba(99,102,241,0.1) 0%, transparent 50%);
+                radial-gradient(ellipse 80% 60% at 10% 20%, rgba(234,88,12,0.18) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 50% at 90% 80%, rgba(249,115,22,0.12) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 40% at 50% 50%, rgba(251,146,60,0.08) 0%, transparent 50%);
             pointer-events: none;
         }
         body::after {
@@ -98,7 +98,7 @@ $error = $_GET['error'] ?? '';
             width: 400px;
             height: 400px;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(79,70,229,0.15) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(234,88,12,0.15) 0%, transparent 70%);
             pointer-events: none;
         }
         .brand-badge {
@@ -195,7 +195,7 @@ $error = $_GET['error'] ?? '';
         }
         .form-control:focus, .form-select:focus {
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+            box-shadow: 0 0 0 3px rgba(234,88,12,0.25);
             outline: none;
         }
         .btn-login {
@@ -213,7 +213,7 @@ $error = $_GET['error'] ?? '';
             position: relative;
             overflow: hidden;
         }
-        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(79,70,229,0.35); }
+        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(234,88,12,0.4); }
         .btn-login:active { transform: translateY(0); }
         .alert { border-radius: 12px; border: 1px solid rgba(239,68,68,0.15); background: #fef2f2; color: #991b1b; padding: 12px 16px; font-size: 0.86rem; display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
