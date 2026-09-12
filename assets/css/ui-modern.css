@@ -513,3 +513,112 @@ h1, h2, h3, h4 { color: var(--crm-text); font-weight: 700; letter-spacing: -.02e
   .dashboard-header-title strong { font-size: .88rem; }
   .dashboard-header-title .dashboard-breadcrumb { display: none; }
 }
+
+  /* Reference sidebar: 260px pitch-slate rail with an orange active item. */
+  .sidebar, .left-sidebar {
+    width: 260px !important;
+    min-height: 100vh !important;
+    height: 100vh;
+    background: #0b1120 !important;
+    border-right: 1px solid rgba(255, 255, 255, .08) !important;
+    box-shadow: none !important;
+  }
+  .sidebar-brand, .left-sidebar .sidebar-brand {
+    height: 66px !important;
+    min-height: 66px !important;
+    padding: 12px 20px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, .08) !important;
+    color: #fff !important;
+  }
+  .sidebar-brand > span:first-child {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 11px !important;
+    color: #fff !important;
+    font-size: .86rem !important;
+    line-height: 1.1 !important;
+    letter-spacing: .01em !important;
+  }
+  .sidebar-brand > span:first-child > i,
+  .sidebar-brand .brand-icon,
+  .left-sidebar .sidebar-brand-text .brand-icon {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 10px !important;
+    background: linear-gradient(135deg, #ea580c, #f97316) !important;
+    color: #fff !important;
+    font-size: 17px !important;
+    margin: 0 !important;
+    box-shadow: 0 5px 14px rgba(234, 88, 12, .28) !important;
+  }
+  .sidebar-brand > span:first-child::after {
+    content: 'VENTURES CRM';
+    position: absolute;
+    margin: 29px 0 0 49px;
+    color: #94a3b8;
+    font-size: .52rem;
+    font-weight: 500;
+    letter-spacing: .08em;
+  }
+  .left-sidebar .sidebar-brand-text { font-size: .84rem !important; }
+  .sidebar > .nav, .left-sidebar .sidebar-nav {
+    padding: 25px 12px !important;
+    gap: 6px !important;
+    flex: 1 !important;
+  }
+  .sidebar > .nav .nav-link, .left-sidebar .sidebar-nav .nav-link {
+    min-height: 40px !important;
+    padding: 10px 14px !important;
+    border-radius: 10px !important;
+    border-left: 3px solid transparent !important;
+    color: #9aa9c1 !important;
+    font-size: .79rem !important;
+    font-weight: 500 !important;
+    gap: 12px !important;
+    transform: none !important;
+  }
+  .sidebar > .nav .nav-link i, .left-sidebar .sidebar-nav .nav-link i {
+    width: 18px !important;
+    color: #8fa1ba !important;
+    font-size: 15px !important;
+    text-align: center;
+  }
+  .sidebar > .nav .nav-link:hover, .left-sidebar .sidebar-nav .nav-link:hover {
+    background: rgba(255, 255, 255, .06) !important;
+    color: #fff !important;
+  }
+  .sidebar > .nav .nav-link.active, .left-sidebar .sidebar-nav .nav-link.active {
+    background: rgba(234, 88, 12, .18) !important;
+    border-left-color: #ea580c !important;
+    color: #fff !important;
+    font-weight: 700 !important;
+  }
+  .sidebar > .nav .nav-link.active i, .left-sidebar .sidebar-nav .nav-link.active i { color: #f97316 !important; }
+  .left-sidebar .nav-section-label {
+    color: #7185a5 !important;
+    font-size: .58rem !important;
+    letter-spacing: .12em !important;
+    padding: 12px 14px 4px !important;
+  }
+  .sidebar-footer, .left-sidebar .sidebar-footer {
+    padding: 14px 16px !important;
+    border-top: 1px solid rgba(255, 255, 255, .08) !important;
+    background: rgba(8, 15, 31, .45) !important;
+  }
+  .sidebar-user, .left-sidebar .sidebar-user { color: #fff !important; }
+  .sidebar-avatar, .left-sidebar .sidebar-avatar {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    background: #f97316 !important;
+    color: #fff !important;
+  }
+  .sidebar-user-name, .left-sidebar .sidebar-user-name { color: #fff !important; font-size: .76rem !important; font-weight: 700 !important; }
+  .sidebar-user-role, .left-sidebar .sidebar-user-role { color: #94a3b8 !important; font-size: .62rem !important; }
+  @media (max-width: 992px) {
+    .sidebar, .left-sidebar { width: min(82vw, 260px) !important; }
+  }
