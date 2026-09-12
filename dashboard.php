@@ -1141,29 +1141,6 @@ if ($selectedEmployeeUsername !== '') {
                 </ul>
             </div>
         </div>
-        <script>
-        (() => {
-            const root = document.documentElement;
-            const toggle = document.querySelector('.theme-toggle');
-            const savedTheme = localStorage.getItem('crm-theme');
-            if (savedTheme === 'dark') root.setAttribute('data-theme', 'dark');
-            if (!toggle) return;
-            const icon = toggle.querySelector('i');
-            const syncThemeIcon = () => {
-                const dark = root.getAttribute('data-theme') === 'dark';
-                icon.className = dark ? 'bi bi-sun' : 'bi bi-lightbulb';
-                toggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
-            };
-            syncThemeIcon();
-            toggle.addEventListener('click', () => {
-                const dark = root.getAttribute('data-theme') !== 'dark';
-                root.toggleAttribute('data-theme', dark);
-                if (dark) localStorage.setItem('crm-theme', 'dark');
-                else localStorage.removeItem('crm-theme');
-                syncThemeIcon();
-            });
-        })();
-        </script>
     </header>
     <div class="section-wrap">
         <h2 class="overview-title">Overview</h2>

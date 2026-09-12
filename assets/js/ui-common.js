@@ -146,10 +146,65 @@
     }
   }
 
+  function ensureThemeControls() {
+    var headers = document.querySelectorAll('.top-header');
+    if (!headers.length) return;
+
+    headers.forEach(function (header) {
+      var actions = header.querySelector('.header-actions, .user-menu-corner, .dropdown');
+      var notification = header.querySelector('[aria-label="Notifications"]');
+      var toggle = header.querySelector('.theme-toggle');
+
+      function makeButton(className, label, iconClass) {
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'header-action-icon ' + className;
+        button.setAttribute('aria-label', label);
+        button.setAttribute('title', label);
+        button.innerHTML = '<i class="bi ' + iconClass + '"></i>';
+        return button;
+      }
+
+      if (!notification) {
+        notification = makeButton('notification-toggle', 'Notifications', 'bi-bell');
+        if (actions && actions.parentNode === header) header.insertBefore(notification, actions);
+        else header.appendChild(notification);
+      }
+      if (!toggle) {
+        toggle = makeButton('theme-toggle', 'Toggle dark mode', 'bi-lightbulb');
+        if (actions && actions.parentNode === header) header.insertBefore(toggle, actions);
+        else header.appendChild(toggle);
+      }
+
+      var icon = toggle.querySelector('i');
+      var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      icon.className = dark ? 'bi bi-sun' : 'bi bi-lightbulb';
+      toggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
+      if (toggle.dataset.themeBound === '1') return;
+      toggle.dataset.themeBound = '1';
+      toggle.addEventListener('click', function () {
+        var isDark = document.documentElement.getAttribute('data-theme') !== 'dark';
+        if (isDark) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('crm-theme', 'dark');
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+          localStorage.removeItem('crm-theme');
+        }
+        icon.className = isDark ? 'bi bi-sun' : 'bi bi-lightbulb';
+        toggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+      });
+    });
+  }
+
   function run() {
+    if (localStorage.getItem('crm-theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
     normalizeSidebarLabels();
     ensureCalculatorLink();
     ensureProfileMenuOption();
+    ensureThemeControls();
   }
 
   if (document.readyState === 'loading') {
