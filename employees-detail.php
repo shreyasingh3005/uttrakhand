@@ -397,7 +397,7 @@ function time_ago_label($dateTime) {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="/assets/js/admin-sidebar.js"></script>
-<script src="/assets/js/ui-common.js"></script>
+<script src="/assets/js/ui-common.js?v=20260912"></script>
 <script>
 
 function liveSearchEmployees(q) {

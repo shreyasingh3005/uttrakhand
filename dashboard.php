@@ -2312,6 +2312,6 @@ function showToastMsg(message) {
 	setTimeout(() => { toast.style.opacity='0'; toast.style.transform='translateY(20px)'; setTimeout(() => toast.remove(), 300); }, 3000);
 }
 </script>
-<script src="/assets/js/ui-common.js"></script>
+<script src="/assets/js/ui-common.js?v=20260912"></script>
 </body>
 </html>

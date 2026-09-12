@@ -14,7 +14,7 @@ $currentYear = date('Y');
   </div>
 </div>
 
-<script src="/assets/js/ui-common.js"></script>
+<script src="/assets/js/ui-common.js?v=20260912"></script>
 <script>
 (function () {
   const sidebar   = document.getElementById('leftSidebar');

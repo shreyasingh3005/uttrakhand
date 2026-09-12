@@ -186,10 +186,7 @@
   function bindThemeToggle() {
     if (document.documentElement.dataset.themeClickBound === '1') return;
     document.documentElement.dataset.themeClickBound = '1';
-    document.addEventListener('click', function (event) {
-      var toggle = event.target.closest ? event.target.closest('.theme-toggle') : null;
-      if (!toggle) return;
-      event.preventDefault();
+    window.toggleCrmTheme = function () {
       var isDark = document.documentElement.getAttribute('data-theme') !== 'dark';
       document.documentElement.toggleAttribute('data-theme', isDark);
       document.documentElement.classList.toggle('dark-theme', isDark);
@@ -201,6 +198,12 @@
         if (icon) icon.className = isDark ? 'bi bi-sun' : 'bi bi-lightbulb';
         button.setAttribute('aria-pressed', isDark ? 'true' : 'false');
       });
+    };
+    document.addEventListener('click', function (event) {
+      var toggle = event.target.closest ? event.target.closest('.theme-toggle') : null;
+      if (!toggle) return;
+      event.preventDefault();
+      window.toggleCrmTheme();
     });
   }
 

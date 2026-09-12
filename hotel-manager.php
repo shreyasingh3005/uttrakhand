@@ -1389,6 +1389,6 @@ function finishHotel(){
   });
 })();
 </script>
-<script src="/assets/js/ui-common.js"></script>
+<script src="/assets/js/ui-common.js?v=20260912"></script>
 </body>
 </html>

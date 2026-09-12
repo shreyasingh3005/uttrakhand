@@ -6539,7 +6539,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
     </script>
     <script>window.AirwaysQuotationContact = <?php echo json_encode($quotationContact, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
     <script src="/assets/js/quotation-template.js?v=20260907-3"></script>
-<script src="/assets/js/ui-common.js"></script>
+<script src="/assets/js/ui-common.js?v=20260912"></script>
 </body>
 
 </html>

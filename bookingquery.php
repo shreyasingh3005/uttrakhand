@@ -387,7 +387,7 @@ try {
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/assets/js/quotation-template.js?v=20260907-3"></script>
-<script src="/assets/js/ui-common.js"></script>
+<script src="/assets/js/ui-common.js?v=20260912"></script>
 <script>
 const listingPayload = <?php echo json_encode($listingDataForJs, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 let listingSearchDebounceTimer = null;
