@@ -2483,6 +2483,65 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             line-height: 1.55 !important;
         }
     }
+
+    /* Keep the employee workspace visually identical to the admin shell. */
+    .sidebar {
+        width: 260px !important;
+        height: 100vh !important;
+        min-height: 100vh !important;
+        background: #0b1120 !important;
+        border-right: 1px solid rgba(255,255,255,.08) !important;
+        box-shadow: none !important;
+    }
+    .sidebar-brand {
+        height: 66px !important;
+        min-height: 66px !important;
+        padding: 12px 20px !important;
+        border-bottom: 1px solid rgba(255,255,255,.08) !important;
+        font-size: .86rem !important;
+    }
+    .sidebar-brand .brand-icon {
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        border-radius: 10px !important;
+        background: linear-gradient(135deg,#ea580c,#f97316) !important;
+        box-shadow: 0 5px 14px rgba(234,88,12,.28) !important;
+    }
+    .sidebar .nav {
+        padding: 25px 12px !important;
+        gap: 6px !important;
+    }
+    .sidebar .nav-link {
+        min-height: 40px !important;
+        padding: 10px 14px !important;
+        border: 0 !important;
+        border-left: 3px solid transparent !important;
+        border-radius: 10px !important;
+        color: #9aa9c1 !important;
+        font-size: .79rem !important;
+        font-weight: 500 !important;
+        gap: 12px !important;
+        transform: none !important;
+    }
+    .sidebar .nav-link i { width: 18px !important; color: #8fa1ba !important; font-size: 15px !important; text-align: center; }
+    .sidebar .nav-link:hover { background: rgba(255,255,255,.06) !important; color: #fff !important; }
+    .sidebar .nav-link.active { background: rgba(234,88,12,.18) !important; border-left-color: #ea580c !important; color: #fff !important; font-weight: 700 !important; }
+    .sidebar .nav-link.active i { color: #f97316 !important; }
+    .main-wrapper { margin-left: 260px !important; background: #f8fafc !important; }
+    .top-header { height: 64px !important; min-height: 64px !important; padding: 0 18px !important; background: rgba(255,255,255,.94) !important; border-bottom: 1px solid #cbd5e1 !important; box-shadow: 0 1px 3px rgba(15,23,42,.08) !important; }
+    .profile-btn { background: #ea580c !important; border-color: #ea580c !important; }
+    .profile-btn:hover, .profile-btn[aria-expanded="true"] { background: #c2410c !important; border-color: #c2410c !important; }
+    .profile-img { background: #f97316 !important; }
+    .welcome-section, .form-card, .analytics-card, .property-finder-card, .action-card { border-color: #cbd5e1 !important; border-radius: 12px !important; box-shadow: 0 1px 3px rgba(15,23,42,.08) !important; }
+    .welcome-section, .form-card, .analytics-card, .property-finder-card { background: #fff !important; }
+    .welcome-title { color: #0f172a !important; letter-spacing: -.02em !important; }
+    .action-card:hover { border-color: #fed7aa !important; box-shadow: 0 12px 24px -4px rgba(15,23,42,.10) !important; }
+    @media (max-width: 992px) {
+        .sidebar { width: min(82vw,260px) !important; }
+        .main-wrapper { margin-left: 0 !important; }
+        .top-header { min-height: 58px !important; height: auto !important; padding: 10px 14px !important; }
+    }
     </style>
 </head>
 
