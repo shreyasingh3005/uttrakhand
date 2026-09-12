@@ -1127,6 +1127,7 @@ if ($selectedEmployeeUsername !== '') {
         <input type="text" class="search-bar" placeholder="Search properties, leads..." id="dashboardSearch" onkeydown="if(event.key==='Enter'){dashboardSearchNav(this.value);this.value='';}" />
         <div class="d-flex align-items-center gap-2">
             <button class="header-action-icon" type="button" aria-label="Notifications"><i class="bi bi-bell"></i></button>
+            <button class="header-action-icon theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle dark mode"><i class="bi bi-lightbulb"></i></button>
             <div class="dropdown user-menu-corner">
                 <button class="btn btn-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="bi bi-person-circle me-1"></i> <?php echo htmlspecialchars($_SESSION['username'], ENT_QUOTES, 'UTF-8'); ?>
@@ -1140,6 +1141,29 @@ if ($selectedEmployeeUsername !== '') {
                 </ul>
             </div>
         </div>
+        <script>
+        (() => {
+            const root = document.documentElement;
+            const toggle = document.querySelector('.theme-toggle');
+            const savedTheme = localStorage.getItem('crm-theme');
+            if (savedTheme === 'dark') root.setAttribute('data-theme', 'dark');
+            if (!toggle) return;
+            const icon = toggle.querySelector('i');
+            const syncThemeIcon = () => {
+                const dark = root.getAttribute('data-theme') === 'dark';
+                icon.className = dark ? 'bi bi-sun' : 'bi bi-lightbulb';
+                toggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
+            };
+            syncThemeIcon();
+            toggle.addEventListener('click', () => {
+                const dark = root.getAttribute('data-theme') !== 'dark';
+                root.toggleAttribute('data-theme', dark);
+                if (dark) localStorage.setItem('crm-theme', 'dark');
+                else localStorage.removeItem('crm-theme');
+                syncThemeIcon();
+            });
+        })();
+        </script>
     </header>
     <div class="section-wrap">
         <h2 class="overview-title">Overview</h2>

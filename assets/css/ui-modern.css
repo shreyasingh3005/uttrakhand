@@ -490,6 +490,10 @@ h1, h2, h3, h4 { color: var(--crm-text); font-weight: 700; letter-spacing: -.02e
 .dashboard-breadcrumb i { font-size: .52rem; }
 .header-action-icon { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--crm-border); border-radius: 9px; background: var(--crm-surface); color: var(--crm-text-secondary); }
 .header-action-icon:hover { color: var(--crm-primary); border-color: var(--crm-primary); background: var(--crm-surface-hover); }
+.theme-toggle { cursor: pointer; color: var(--crm-primary) !important; }
+.theme-toggle i { font-size: 15px; }
+[data-theme="dark"] .top-header, .dark-theme .top-header { background: var(--crm-header-bg) !important; border-color: var(--crm-header-border) !important; }
+[data-theme="dark"] .dashboard-toolbar, .dark-theme .dashboard-toolbar { background: var(--crm-surface) !important; border-color: var(--crm-border) !important; }
 .live-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: var(--crm-radius-pill); background: var(--crm-success-50); color: var(--crm-success-text); font-size: .64rem; font-weight: 600; }
 .live-pill i { font-size: .42rem; }
 .dashboard-toolbar-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }

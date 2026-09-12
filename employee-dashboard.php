@@ -2537,6 +2537,14 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
     .welcome-section, .form-card, .analytics-card, .property-finder-card { background: #fff !important; }
     .welcome-title { color: #0f172a !important; letter-spacing: -.02em !important; }
     .action-card:hover { border-color: #fed7aa !important; box-shadow: 0 12px 24px -4px rgba(15,23,42,.10) !important; }
+    [data-theme="dark"] body { background: #0b0f19 !important; color: #f8fafc !important; }
+    [data-theme="dark"] .main-wrapper { background: #0b0f19 !important; }
+    [data-theme="dark"] .top-header { background: rgba(17,24,39,.94) !important; border-color: rgba(255,255,255,.12) !important; }
+    [data-theme="dark"] .welcome-section, [data-theme="dark"] .form-card, [data-theme="dark"] .analytics-card, [data-theme="dark"] .property-finder-card, [data-theme="dark"] .action-card { background: #161f30 !important; border-color: rgba(255,255,255,.14) !important; color: #f8fafc !important; }
+    [data-theme="dark"] .welcome-title, [data-theme="dark"] .card-title, [data-theme="dark"] .analytics-title { color: #f8fafc !important; }
+    [data-theme="dark"] .form-control, [data-theme="dark"] .form-select, [data-theme="dark"] input, [data-theme="dark"] textarea { background: #161f30 !important; border-color: rgba(255,255,255,.14) !important; color: #f8fafc !important; }
+    [data-theme="dark"] .dropdown-menu-custom { background: #161f30 !important; border-color: rgba(255,255,255,.14) !important; }
+    [data-theme="dark"] .dropdown-menu-custom .dropdown-item { color: #cbd5e1 !important; }
     @media (max-width: 992px) {
         .sidebar { width: min(82vw,260px) !important; }
         .main-wrapper { margin-left: 0 !important; }
@@ -2601,6 +2609,8 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                     class="bi bi-list fs-4"></i></button>
             <div class="text-muted fw-semibold"><i class="bi bi-person-badge me-2"></i>Employee Workspace</div>
             <div class="d-flex align-items-center">
+                <button class="header-action-icon theme-toggle me-2" type="button" aria-label="Toggle dark mode" title="Toggle dark mode"><i class="bi bi-lightbulb"></i></button>
+                <button class="header-action-icon me-2" type="button" aria-label="Notifications"><i class="bi bi-bell"></i></button>
                 <div class="dropdown">
                     <a class="d-flex align-items-center text-decoration-none dropdown-toggle profile-btn" href="#"
                         role="button" data-bs-toggle="dropdown" aria-expanded="false" style="color: inherit;">
@@ -3702,6 +3712,29 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
 
         </main>
     </div>
+    <script>
+    (() => {
+        const root = document.documentElement;
+        const toggle = document.querySelector('.theme-toggle');
+        const savedTheme = localStorage.getItem('crm-theme');
+        if (savedTheme === 'dark') root.setAttribute('data-theme', 'dark');
+        if (!toggle) return;
+        const icon = toggle.querySelector('i');
+        const syncThemeIcon = () => {
+            const dark = root.getAttribute('data-theme') === 'dark';
+            icon.className = dark ? 'bi bi-sun' : 'bi bi-lightbulb';
+            toggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
+        };
+        syncThemeIcon();
+        toggle.addEventListener('click', () => {
+            const dark = root.getAttribute('data-theme') !== 'dark';
+            root.toggleAttribute('data-theme', dark);
+            if (dark) localStorage.setItem('crm-theme', 'dark');
+            else localStorage.removeItem('crm-theme');
+            syncThemeIcon();
+        });
+    })();
+    </script>
 
     </main>
     </div>
