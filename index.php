@@ -182,6 +182,40 @@ $error = $_GET['error'] ?? '';
         .login-sub { color: var(--text-muted); margin-top: 8px; margin-bottom: 28px; font-size: 0.95rem; }
         .form-label { font-weight: 600; font-size: 0.8rem; color: #f8fafc; margin-bottom: 7px; letter-spacing: 0; display: block; }
         .form-group { margin-bottom: 18px; }
+        .role-switch {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+            padding: 4px;
+            margin-bottom: 28px;
+            border: 1px solid rgba(255,255,255,.12);
+            border-radius: 12px;
+            background: rgba(11,15,25,.42);
+        }
+        .role-option {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            min-height: 39px;
+            border-radius: 9px;
+            color: #cbd5e1;
+            font-size: .82rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background .2s ease, color .2s ease, box-shadow .2s ease;
+        }
+        .role-option input { position: absolute; opacity: 0; pointer-events: none; }
+        .role-option:has(input:checked) { background: #1e293b; color: #fff; box-shadow: 0 3px 8px rgba(0,0,0,.2); }
+        .role-option:has(input:checked) i { color: #fb923c; }
+        .field-shell { position: relative; }
+        .field-shell > i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #94a3b8; z-index: 1; pointer-events: none; }
+        .field-shell .form-control { padding-left: 44px; }
+        .field-shell .form-control:focus + i { color: #fb923c; }
+        .password-shell > i { left: 16px; }
+        .password-shell .form-control { padding-right: 42px; }
+        .password-shell .password-eye { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
         .form-control, .form-select {
             width: 100%;
             border-radius: 12px;
@@ -207,7 +241,7 @@ $error = $_GET['error'] ?? '';
             color: #fff;
             font-weight: 700;
             width: 100%;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             cursor: pointer;
             transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
             font-family: inherit;
@@ -219,6 +253,8 @@ $error = $_GET['error'] ?? '';
         .alert { border-radius: 12px; border: 1px solid rgba(248,113,113,.25); background: rgba(127,29,29,.24); color: #fca5a5; padding: 12px 16px; font-size: 0.86rem; display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
         .login-card { animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        .security-note { margin-top: 52px; text-align: center; color: #94a3b8; font-size: .72rem; }
+        .security-note i { color: #10b981; margin-right: 5px; }
         @media (max-width: 980px) {
             .login-shell { grid-template-columns: 1fr; min-height: unset; margin: 20px auto; }
             .promo-pane { padding: 36px 28px; }
@@ -241,12 +277,12 @@ $error = $_GET['error'] ?? '';
                     <span class="brand-icon"><i class="bi bi-buildings"></i></span>
                     UTTARAKHAND VENTURES CRM
                 </div>
-                <h1 class="promo-title">Manage bookings faster with a cleaner control hub.</h1>
-                <p class="promo-copy">One place for agents, hotel inventory, and payment tracking so your team can close bookings without jumping across screens.</p>
+                <h1 class="promo-title">Smarter Bookings, <span style="color:#fed7aa;">Seamless Quotations</span></h1>
+                <p class="promo-copy">Comprehensive CRM engineered for Uttarakhand hotel properties, automated rate matrices, agent inquiry locks, and instant WhatsApp deals.</p>
                 <ul class="promo-list">
-                    <li><i class="bi bi-check2-circle"></i> Live booking workflow with payment tracking</li>
-                    <li><i class="bi bi-check2-circle"></i> Agent and company level record management</li>
-                    <li><i class="bi bi-check2-circle"></i> Share-ready booking copy for WhatsApp</li>
+                    <li><i class="bi bi-check2-circle"></i> Multi-room query matching with meal plans (EP, CP, MAP, AP)</li>
+                    <li><i class="bi bi-check2-circle"></i> WhatsApp-ready quotation generator with UV-#### tracking</li>
+                    <li><i class="bi bi-check2-circle"></i> Agent inquiry protection &amp; automated expiration timers</li>
                 </ul>
             </div>
             <div class="promo-foot">Professional dashboard environment for Admin and Employee access.</div>
@@ -254,8 +290,8 @@ $error = $_GET['error'] ?? '';
 
         <section class="auth-pane">
             <div class="login-card">
-                <h2 class="login-title">Sign In</h2>
-                <p class="login-sub">Enter your credentials to continue.</p>
+                <h2 class="login-title">Welcome Back</h2>
+                <p class="login-sub">Please enter your credentials to access your portal.</p>
 
                 <?php if ($error): ?>
                     <div class="alert">
@@ -268,25 +304,32 @@ $error = $_GET['error'] ?? '';
                     <?php echo csrf_field(); ?>
                     <div class="form-group">
                         <label class="form-label">Login Type</label>
-                        <select class="form-select" name="login_type" required>
-                            <option value="admin">Admin Login</option>
-                            <option value="employee">Employee Login</option>
-                        </select>
+                        <div class="role-switch">
+                            <label class="role-option"><input type="radio" name="login_type" value="admin" checked required><i class="bi bi-shield-fill-check"></i> Administrator</label>
+                            <label class="role-option"><input type="radio" name="login_type" value="employee" required><i class="bi bi-person-badge-fill"></i> Employee</label>
+                        </div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Username</label>
-                        <input type="text" class="form-control" name="username" required placeholder="Enter username" autocomplete="username" maxlength="100">
+                        <label class="form-label">Username or ID <span style="color:#ef4444;">*</span></label>
+                        <div class="field-shell">
+                            <input type="text" class="form-control" name="username" required placeholder="Enter your username" autocomplete="username" maxlength="100">
+                            <i class="bi bi-person"></i>
+                        </div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Password</label>
-                        <input type="password" class="form-control" name="password" required placeholder="Enter password" autocomplete="current-password" maxlength="128">
+                        <label class="form-label">Password <span style="color:#ef4444;">*</span><a href="<?php echo htmlspecialchars(site_url('forgot-password.php'), ENT_QUOTES); ?>" style="float:right;color:#fb923c;text-decoration:none;font-size:.76rem;">Forgot Password?</a></label>
+                        <div class="field-shell password-shell">
+                            <input type="password" class="form-control" name="password" required placeholder="Enter your account password" autocomplete="current-password" maxlength="128">
+                            <i class="bi bi-lock"></i>
+                            <i class="bi bi-eye password-eye"></i>
+                        </div>
                     </div>
                     <button class="btn-login" type="submit">
                         <i class="bi bi-box-arrow-in-right me-1"></i>
-                        Sign In
+                        Sign In to Dashboard
                     </button>
                 </form>
-                <p style="margin-top:18px;text-align:center;font-size:.86rem;"><a href="<?php echo htmlspecialchars(site_url('forgot-password.php'), ENT_QUOTES); ?>" style="color:var(--primary);font-weight:600;text-decoration:none;">Forgot admin password?</a></p>
+                <div class="security-note"><i class="bi bi-shield-check"></i>2026 Uttarakhand Ventures CRM &bull; Enterprise Secure Sign-In</div>
             </div>
         </section>
     </div>
