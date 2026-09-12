@@ -1139,6 +1139,16 @@ if ($selectedEmployeeUsername !== '') {
     <div class="section-wrap">
         <h2 class="overview-title">Overview</h2>
 
+        <div class="dashboard-toolbar">
+            <div class="dashboard-toolbar-title"><i class="bi bi-speedometer2"></i> Operations Overview <span class="live-pill"><i class="bi bi-circle-fill"></i> Live Metrics</span></div>
+            <div class="dashboard-toolbar-actions">
+                <button class="btn btn-light btn-sm" type="button" onclick="refreshLiveDashboard()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+                <a class="btn btn-light btn-sm" href="/agents-details.php"><i class="bi bi-person-plus"></i> New Agent</a>
+                <a class="btn btn-light btn-sm" href="/employees-detail.php"><i class="bi bi-person-vcard"></i> New Employee</a>
+                <a class="btn btn-primary btn-sm" href="/bookingquery.php"><i class="bi bi-plus-lg"></i> Quick Booking</a>
+            </div>
+        </div>
+
         <?php if ($flashSuccess !== ''): ?>
             <div class="flash-note success"><i class="bi bi-check-circle me-2"></i><?php echo htmlspecialchars($flashSuccess, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
@@ -1159,13 +1169,14 @@ if ($selectedEmployeeUsername !== '') {
                 </form>
             </div>
 
-            <div class="row g-3">
+            <div class="row g-3 dashboard-kpi-row">
                 <div class="col-lg-3 col-sm-6">
                     <div class="mini-stat">
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
                                 <h6>Total Bookings</h6>
                                 <div class="value" id="totalBookingsValue"><?php echo number_format($totalBookings); ?></div>
+                                <small class="kpi-subtext success-text"><i class="bi bi-arrow-up-right"></i> ₹<?php echo number_format($totalRevenue, 0); ?> Revenue</small>
                             </div>
                             <i class="bi bi-journal-check icon"></i>
                         </div>
@@ -1177,6 +1188,7 @@ if ($selectedEmployeeUsername !== '') {
                             <div>
                                 <h6>Total Agents</h6>
                                 <div class="value" id="totalAgentsValue"><?php echo number_format($totalAgents); ?></div>
+                                <small class="kpi-subtext"><i class="bi bi-people"></i> Partner Network</small>
                             </div>
                             <i class="bi bi-person-vcard icon"></i>
                         </div>
@@ -1188,6 +1200,7 @@ if ($selectedEmployeeUsername !== '') {
                             <div>
                                 <h6>Today's Bookings</h6>
                                 <div class="value" id="todayBookingsValue" style="color:var(--green);"><?php echo number_format($todayBookings); ?></div>
+                                <small class="kpi-subtext success-text"><i class="bi bi-lightning-charge"></i> +<?php echo number_format($todayNewAgents); ?> New Agents Today</small>
                             </div>
                             <i class="bi bi-calendar-plus icon" style="color:var(--green);"></i>
                         </div>
@@ -1197,32 +1210,12 @@ if ($selectedEmployeeUsername !== '') {
                     <div class="mini-stat soft-purple">
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
-                                <h6>Today's New Agents</h6>
-                                <div class="value" id="todayAgentsValue" style="color:#8a61f8;"><?php echo number_format($todayNewAgents); ?></div>
+                                <h6>Collected Payments</h6>
+                                <div class="value payment-value">₹<?php echo number_format((float) ($paymentSummary['total_paid'] ?? 0), 0); ?></div>
+                                <small class="kpi-subtext danger-text"><i class="bi bi-clock"></i> ₹<?php echo number_format((float) ($paymentSummary['total_due'] ?? 0), 0); ?> Due</small>
                             </div>
-                            <i class="bi bi-person-plus icon" style="color:#8a61f8;"></i>
+                            <i class="bi bi-wallet2 icon payment-icon"></i>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row g-3 mt-1">
-                <div class="col-lg-4 col-sm-6">
-                    <div class="mini-stat">
-                        <h6>Total Payment Received</h6>
-                        <div class="value text-success">₹<?php echo number_format((float) ($paymentSummary['total_paid'] ?? 0), 0); ?></div>
-                    </div>
-                </div>
-                <div class="col-lg-4 col-sm-6">
-                    <div class="mini-stat">
-                        <h6>Total Payment Due</h6>
-                        <div class="value text-danger">₹<?php echo number_format((float) ($paymentSummary['total_due'] ?? 0), 0); ?></div>
-                    </div>
-                </div>
-                <div class="col-lg-4 col-sm-12">
-                    <div class="mini-stat">
-                        <h6>Payment Pending / Partial</h6>
-                        <div class="value" style="color:#d99100;"><?php echo number_format((int) (($paymentSummary['pending_payment_count'] ?? 0) + ($paymentSummary['partial_payment_count'] ?? 0))); ?></div>
                     </div>
                 </div>
             </div>
