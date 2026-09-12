@@ -31,17 +31,17 @@ $error = $_GET['error'] ?? '';
             --primary-dark: #c2410c;
             --accent: #d97706;
             --accent-light: #f59e0b;
-            --surface: #ffffff;
-            --text: #0f172a;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
+            --surface: #161f30;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: rgba(255,255,255,.12);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             min-height: 100vh;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
             color: var(--text);
-            background: #0f172a;
+            background: #0b0f19;
             overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
         }
@@ -67,24 +67,24 @@ $error = $_GET['error'] ?? '';
             pointer-events: none;
         }
         .login-shell {
-            width: min(1100px, 94vw);
-            margin: 40px auto;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 28px;
+            width: min(1128px, 94vw);
+            min-height: 664px;
+            margin: 56px auto;
+            border: 1px solid rgba(255,255,255,.14);
+            border-radius: 22px;
             overflow: hidden;
             backdrop-filter: blur(20px);
             box-shadow: 0 32px 80px rgba(0,0,0,0.4);
             display: grid;
-            grid-template-columns: 1.1fr 0.9fr;
-            min-height: 640px;
+            grid-template-columns: 1.35fr 1fr;
             position: relative;
             z-index: 1;
         }
         .promo-pane {
             position: relative;
-            padding: 48px;
+            padding: 54px 48px 46px;
             color: #e2e8f0;
-            background: linear-gradient(160deg, rgba(15,23,42,0.95) 0%, rgba(30,41,59,0.9) 100%);
+            background: linear-gradient(160deg, #0f172a 0%, #111827 100%);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -125,7 +125,7 @@ $error = $_GET['error'] ?? '';
             font-size: 18px;
         }
         .promo-title {
-            font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+            font-size: clamp(1.8rem, 3.1vw, 2.45rem);
             line-height: 1.15;
             margin: 32px 0 16px;
             font-weight: 800;
@@ -171,38 +171,39 @@ $error = $_GET['error'] ?? '';
         .promo-list i { color: var(--accent-light); font-size: 1.1rem; }
         .promo-foot { color: #64748b; font-size: 0.84rem; position: relative; z-index: 1; }
         .auth-pane {
-            background: var(--surface);
-            padding: 48px 40px;
+            background: #161f30;
+            padding: 48px 44px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
         .login-card { width: 100%; max-width: 400px; }
-        .login-title { font-size: 1.6rem; color: var(--text); font-weight: 800; letter-spacing: -0.03em; }
+        .login-title { font-size: 1.65rem; color: #f8fafc; font-weight: 800; letter-spacing: -0.03em; }
         .login-sub { color: var(--text-muted); margin-top: 8px; margin-bottom: 28px; font-size: 0.95rem; }
-        .form-label { font-weight: 600; font-size: 0.8rem; color: var(--text); margin-bottom: 7px; text-transform: uppercase; letter-spacing: 0.04em; display: block; }
+        .form-label { font-weight: 600; font-size: 0.8rem; color: #f8fafc; margin-bottom: 7px; letter-spacing: 0; display: block; }
         .form-group { margin-bottom: 18px; }
         .form-control, .form-select {
             width: 100%;
             border-radius: 12px;
-            border: 1px solid var(--border);
+            border: 1px solid rgba(255,255,255,.14);
             padding: 12px 16px;
             font-size: 0.92rem;
             transition: all 0.2s ease;
             font-family: inherit;
-            background: #fff;
-            color: var(--text);
+            background: #1e293b;
+            color: #f8fafc;
         }
         .form-control:focus, .form-select:focus {
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(234,88,12,0.25);
             outline: none;
+            background: #1e293b;
         }
         .btn-login {
             background: linear-gradient(135deg, var(--primary), var(--primary-light));
             border: 0;
-            border-radius: 14px;
-            padding: 14px;
+            border-radius: 12px;
+            padding: 13px;
             color: #fff;
             font-weight: 700;
             width: 100%;
@@ -215,7 +216,7 @@ $error = $_GET['error'] ?? '';
         }
         .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(234,88,12,0.4); }
         .btn-login:active { transform: translateY(0); }
-        .alert { border-radius: 12px; border: 1px solid rgba(239,68,68,0.15); background: #fef2f2; color: #991b1b; padding: 12px 16px; font-size: 0.86rem; display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
+        .alert { border-radius: 12px; border: 1px solid rgba(248,113,113,.25); background: rgba(127,29,29,.24); color: #fca5a5; padding: 12px 16px; font-size: 0.86rem; display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
         .login-card { animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
         @media (max-width: 980px) {
