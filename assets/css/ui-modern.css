@@ -484,6 +484,12 @@ h1, h2, h3, h4 { color: var(--crm-text); font-weight: 700; letter-spacing: -.02e
 }
 .dashboard-toolbar-title { display: flex; align-items: center; gap: 8px; color: var(--crm-text); font-size: .82rem; font-weight: 700; }
 .dashboard-toolbar-title > i { color: var(--crm-primary); }
+.dashboard-header-title { display: flex; flex: 1; min-width: 210px; flex-direction: column; gap: 2px; line-height: 1.1; }
+.dashboard-header-title strong { color: var(--crm-text); font-size: 1rem; letter-spacing: -.02em; }
+.dashboard-breadcrumb { display: flex; align-items: center; gap: 6px; color: var(--crm-text-muted); font-size: .62rem; }
+.dashboard-breadcrumb i { font-size: .52rem; }
+.header-action-icon { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--crm-border); border-radius: 9px; background: var(--crm-surface); color: var(--crm-text-secondary); }
+.header-action-icon:hover { color: var(--crm-primary); border-color: var(--crm-primary); background: var(--crm-surface-hover); }
 .live-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: var(--crm-radius-pill); background: var(--crm-success-50); color: var(--crm-success-text); font-size: .64rem; font-weight: 600; }
 .live-pill i { font-size: .42rem; }
 .dashboard-toolbar-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
@@ -495,7 +501,15 @@ h1, h2, h3, h4 { color: var(--crm-text); font-weight: 700; letter-spacing: -.02e
 .danger-text { color: var(--crm-danger-text) !important; }
 .payment-value { color: var(--crm-primary) !important; }
 .payment-icon { color: var(--crm-primary) !important; }
+.dashboard-kpi-row + .row { margin-top: 12px !important; }
+.chart-card { min-height: 330px; overflow: hidden; }
+.chart-card canvas { display: block !important; width: 100% !important; height: 250px !important; max-height: 250px; }
+.data-card canvas { display: block !important; width: 100% !important; height: 230px !important; max-height: 230px; }
+.chart-card .manage-title { display: flex; align-items: center; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--crm-border-subtle); }
 @media (max-width: 720px) {
   .dashboard-toolbar { align-items: flex-start; flex-direction: column; }
   .dashboard-toolbar-actions { width: 100%; }
+  .dashboard-header-title { min-width: 0; }
+  .dashboard-header-title strong { font-size: .88rem; }
+  .dashboard-header-title .dashboard-breadcrumb { display: none; }
 }

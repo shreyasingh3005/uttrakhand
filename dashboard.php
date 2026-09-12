@@ -1120,8 +1120,13 @@ if ($selectedEmployeeUsername !== '') {
 <div class="main-wrapper">
     <header class="top-header">
         <button class="btn btn-light mobile-menu-btn" type="button" id="mobileMenuBtn" aria-label="Open menu"><i class="bi bi-list fs-4"></i></button>
+        <div class="dashboard-header-title">
+            <div class="dashboard-breadcrumb"><span>CRM</span><i class="bi bi-chevron-right"></i><span>Dashboard Overview</span></div>
+            <strong>Executive Dashboard</strong>
+        </div>
         <input type="text" class="search-bar" placeholder="Search properties, leads..." id="dashboardSearch" onkeydown="if(event.key==='Enter'){dashboardSearchNav(this.value);this.value='';}" />
         <div class="d-flex align-items-center gap-2">
+            <button class="header-action-icon" type="button" aria-label="Notifications"><i class="bi bi-bell"></i></button>
             <div class="dropdown user-menu-corner">
                 <button class="btn btn-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="bi bi-person-circle me-1"></i> <?php echo htmlspecialchars($_SESSION['username'], ENT_QUOTES, 'UTF-8'); ?>
@@ -2111,7 +2116,7 @@ if (document.getElementById('employeeStatusChart')) {
             datasets: [{
                 label: 'Bookings',
                 data: weeklyCounts,
-                backgroundColor: '#4f46e5',
+                backgroundColor: '#ea580c',
                 borderRadius: 8,
                 borderSkipped: false
             }]
@@ -2162,9 +2167,9 @@ if (document.getElementById('revenueTrendChart')) {
             datasets: [{
                 label: 'Bookings per Month',
                 data: monthCounts,
-                borderColor: '#4f46e5',
-                backgroundColor: 'rgba(79, 70, 229, 0.12)',
-                pointBackgroundColor: '#4f46e5',
+                borderColor: '#ea580c',
+                backgroundColor: 'rgba(234, 88, 12, 0.12)',
+                pointBackgroundColor: '#ea580c',
                 fill: true,
                 tension: 0.35
             }]
@@ -2192,8 +2197,8 @@ if (document.getElementById('employeePerformanceChart')) {
                 {
                     label: 'Bookings',
                     data: employeeBookingTrend,
-                    borderColor: '#4f46e5',
-                    backgroundColor: 'rgba(79, 70, 229, 0.12)',
+                    borderColor: '#ea580c',
+                    backgroundColor: 'rgba(234, 88, 12, 0.12)',
                     pointRadius: 3,
                     tension: 0.32,
                     fill: true,
