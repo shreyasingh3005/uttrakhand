@@ -315,3 +315,113 @@ h1, h2, h3, h4, h5, h6 { letter-spacing: -.02em; font-weight: 700; }
 .form-control:focus, .form-select:focus { box-shadow: 0 0 0 3.5px rgba(234, 88, 12, .25) !important; }
 .btn-login { background: linear-gradient(135deg, #ea580c, #f97316) !important; box-shadow: 0 2px 8px rgba(234, 88, 12, .28) !important; }
 .btn-login:hover { box-shadow: 0 4px 14px rgba(234, 88, 12, .4) !important; }
+
+/* Canonical Enterprise Warm Orange / Pitch Slate contract. */
+:root {
+  --crm-primary: #ea580c !important;
+  --crm-primary-hover: #c2410c !important;
+  --crm-primary-active: #9a3412 !important;
+  --crm-primary-50: #fff7ed !important;
+  --crm-primary-100: #ffedd5 !important;
+  --crm-primary-200: #fed7aa !important;
+  --crm-primary-500: #f97316 !important;
+  --crm-primary-600: #ea580c !important;
+  --crm-primary-700: #c2410c !important;
+  --crm-primary-glow: rgba(234, 88, 12, .28) !important;
+  --crm-accent: #d97706 !important;
+  --crm-accent-hover: #b45309 !important;
+  --crm-accent-50: #fffbeb !important;
+  --crm-accent-100: #fef3c7 !important;
+  --crm-accent-glow: rgba(217, 119, 6, .25) !important;
+  --crm-success: #10b981 !important;
+  --crm-success-hover: #059669 !important;
+  --crm-success-50: #ecfdf5 !important;
+  --crm-success-text: #047857 !important;
+  --crm-warning: #f59e0b !important;
+  --crm-warning-hover: #d97706 !important;
+  --crm-warning-50: #fffbeb !important;
+  --crm-warning-text: #b45309 !important;
+  --crm-danger: #ef4444 !important;
+  --crm-danger-hover: #dc2626 !important;
+  --crm-danger-50: #fef2f2 !important;
+  --crm-danger-text: #b91c1c !important;
+  --crm-info: #0284c7 !important;
+  --crm-info-hover: #0369a1 !important;
+  --crm-info-50: #f0f9ff !important;
+  --crm-info-text: #075985 !important;
+  --crm-surface-elevated: #ffffff !important;
+  --crm-border-focus: #ea580c !important;
+  --crm-text-inverse: #ffffff !important;
+  --crm-sidebar-bg: #0f172a !important;
+  --crm-sidebar-surface: #1e293b !important;
+  --crm-sidebar-border: rgba(255, 255, 255, .08) !important;
+  --crm-sidebar-text: #94a3b8 !important;
+  --crm-sidebar-text-active: #ffffff !important;
+  --crm-sidebar-active-bg: rgba(234, 88, 12, .16) !important;
+  --crm-sidebar-active-border: #ea580c !important;
+  --crm-sidebar-hover-bg: rgba(255, 255, 255, .06) !important;
+  --crm-sidebar-width: 260px !important;
+  --crm-header-height: 64px !important;
+  --crm-header-bg: rgba(255, 255, 255, .94) !important;
+  --crm-header-border: #cbd5e1 !important;
+  --crm-shadow-sm: 0 1px 3px rgba(15, 23, 42, .08) !important;
+  --crm-shadow-md: 0 4px 8px -2px rgba(15, 23, 42, .08) !important;
+  --crm-shadow-xl: 0 20px 30px -6px rgba(15, 23, 42, .14) !important;
+  --crm-transition: 200ms cubic-bezier(.16, 1, .3, 1) !important;
+}
+
+[data-theme="dark"], .dark-theme {
+  --crm-primary: #fb923c !important;
+  --crm-primary-hover: #f97316 !important;
+  --crm-primary-active: #ea580c !important;
+  --crm-primary-glow: rgba(251, 146, 60, .35) !important;
+  --crm-accent: #f59e0b !important;
+  --crm-accent-hover: #d97706 !important;
+  --crm-success: #34d399 !important;
+  --crm-warning: #fbbf24 !important;
+  --crm-danger: #f87171 !important;
+  --crm-info: #38bdf8 !important;
+  --crm-bg: #0b0f19 !important;
+  --crm-bg-alt: #111827 !important;
+  --crm-surface: #161f30 !important;
+  --crm-surface-hover: #1e293b !important;
+  --crm-surface-elevated: #1f2a3f !important;
+  --crm-border: rgba(255, 255, 255, .14) !important;
+  --crm-border-subtle: rgba(255, 255, 255, .08) !important;
+  --crm-border-focus: #fb923c !important;
+  --crm-text: #f8fafc !important;
+  --crm-text-secondary: #cbd5e1 !important;
+  --crm-text-muted: #94a3b8 !important;
+  --crm-header-bg: rgba(17, 24, 39, .94) !important;
+  --crm-header-border: rgba(255, 255, 255, .12) !important;
+}
+
+body, .main-wrapper, .layout-body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+h1, h2, h3, h4 { color: var(--crm-text); font-weight: 700; letter-spacing: -.02em; }
+.top-header { min-height: var(--crm-header-height) !important; background: var(--crm-header-bg) !important; border-bottom-color: var(--crm-header-border) !important; }
+.sidebar, .left-sidebar { width: var(--crm-sidebar-width); background: var(--crm-sidebar-bg) !important; border-right-color: var(--crm-sidebar-border) !important; }
+.sidebar .nav-link, .left-sidebar .nav-link { color: var(--crm-sidebar-text) !important; }
+.sidebar .nav-link:hover, .left-sidebar .nav-link:hover { background: var(--crm-sidebar-hover-bg) !important; color: var(--crm-sidebar-text-active) !important; }
+.sidebar .nav-link.active, .left-sidebar .nav-link.active { background: var(--crm-sidebar-active-bg) !important; box-shadow: inset 3px 0 0 var(--crm-sidebar-active-border) !important; color: var(--crm-sidebar-text-active) !important; }
+.panel, .summary-card, .summary-panel, .data-card, .manage-card, .form-card, .agent-card, .employee-card, .hotel-card, .hm-hcard, .hm-stat, .card { background: var(--crm-surface) !important; border-color: var(--crm-border) !important; border-radius: var(--crm-radius-md) !important; box-shadow: var(--crm-shadow-sm) !important; }
+.btn-primary, .btn-brand, .hm-btn-brand, .el-btn-teal, .btn-light.dropdown-toggle { background: var(--crm-primary) !important; border-color: var(--crm-primary) !important; color: #fff !important; box-shadow: 0 2px 8px var(--crm-primary-glow) !important; }
+.btn-primary:hover, .btn-brand:hover, .hm-btn-brand:hover, .el-btn-teal:hover, .btn-light.dropdown-toggle:hover { background: var(--crm-primary-hover) !important; border-color: var(--crm-primary-hover) !important; }
+.btn:not(.btn-primary):not(.btn-brand):not(.btn-success):not(.btn-danger), .btn-secondary, .btn-outline-primary, .btn-outline-secondary { background: var(--crm-surface) !important; border: 1.5px solid var(--crm-border) !important; color: var(--crm-text) !important; }
+.btn:not(.btn-primary):not(.btn-brand):not(.btn-success):not(.btn-danger):hover, .btn-secondary:hover, .btn-outline-primary:hover, .btn-outline-secondary:hover { background: var(--crm-surface-hover) !important; border-color: var(--crm-primary) !important; color: var(--crm-primary) !important; }
+.form-control, .form-select, input, select, textarea { min-height: 42px; background: var(--crm-surface) !important; border: 1.5px solid var(--crm-border) !important; color: var(--crm-text) !important; border-radius: var(--crm-radius-sm) !important; }
+.form-control::placeholder, input::placeholder, textarea::placeholder { color: var(--crm-text-muted) !important; }
+.form-control:focus, .form-select:focus, input:focus, select:focus, textarea:focus { border-color: var(--crm-border-focus) !important; box-shadow: 0 0 0 3px var(--crm-primary-glow) !important; }
+.table-responsive, .table-container { border: 1px solid var(--crm-border); border-radius: var(--crm-radius-md); overflow: hidden; }
+.table thead th, .hm-rtable th { background: var(--crm-bg-alt) !important; color: var(--crm-text-muted) !important; border-bottom: 1.5px solid var(--crm-border) !important; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.table tbody td, .hm-rtable td { background: var(--crm-surface) !important; border-bottom: 1px solid var(--crm-border-subtle) !important; color: var(--crm-text) !important; padding: 12px 16px; }
+.table tbody tr:hover, .hm-rtable tbody tr:hover { background: var(--crm-surface-hover) !important; }
+.badge, .hm-badge, .el-badge, .status-badge { border-radius: var(--crm-radius-pill) !important; padding: 4px 10px; font-size: .75rem; font-weight: 600 !important; }
+.modal-content, .hm-modal { background: var(--crm-surface) !important; border: 1.5px solid var(--crm-border) !important; border-radius: var(--crm-radius-lg) !important; box-shadow: var(--crm-shadow-xl) !important; }
+.modal-backdrop.show { background: rgba(15, 23, 42, .65); backdrop-filter: blur(4px); opacity: 1; }
+
+[data-theme="dark"] body, .dark-theme body { background: var(--crm-bg) !important; color: var(--crm-text) !important; }
+[data-theme="dark"] .badge-success, .dark-theme .badge-success { background: rgba(52, 211, 153, .18) !important; color: #34d399 !important; }
+[data-theme="dark"] .badge-warning, .dark-theme .badge-warning { background: rgba(245, 158, 11, .18) !important; color: #fbbf24 !important; }
+[data-theme="dark"] .badge-danger, .dark-theme .badge-danger { background: rgba(248, 113, 113, .18) !important; color: #f87171 !important; }
