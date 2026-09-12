@@ -425,3 +425,47 @@ h1, h2, h3, h4 { color: var(--crm-text); font-weight: 700; letter-spacing: -.02e
 [data-theme="dark"] .badge-success, .dark-theme .badge-success { background: rgba(52, 211, 153, .18) !important; color: #34d399 !important; }
 [data-theme="dark"] .badge-warning, .dark-theme .badge-warning { background: rgba(245, 158, 11, .18) !important; color: #fbbf24 !important; }
 [data-theme="dark"] .badge-danger, .dark-theme .badge-danger { background: rgba(248, 113, 113, .18) !important; color: #f87171 !important; }
+
+/* Legacy page surfaces: keep every dashboard family on the same compact CRM grid. */
+.main-wrapper { margin-left: var(--crm-sidebar-width) !important; min-height: 100vh; background: var(--crm-bg) !important; }
+.container-fluid, .section-wrap { background: transparent !important; }
+.top-header { height: var(--crm-header-height) !important; min-height: var(--crm-header-height) !important; padding: 0 18px !important; background: var(--crm-header-bg) !important; border-bottom: 1px solid var(--crm-header-border) !important; box-shadow: var(--crm-shadow-sm) !important; }
+.sidebar-brand, .left-sidebar .sidebar-brand { min-height: 64px !important; padding: 14px 16px !important; font-size: .86rem !important; }
+.sidebar-brand .brand-icon, .sidebar-brand-text .brand-icon { width: 30px !important; height: 30px !important; border-radius: 8px !important; }
+.sidebar .nav, .left-sidebar .sidebar-nav { padding: 14px 10px !important; gap: 3px !important; }
+.sidebar .nav-link, .left-sidebar .nav-link { min-height: 38px !important; padding: 9px 12px !important; border-radius: 8px !important; font-size: .76rem !important; }
+.sidebar .nav-link.active, .left-sidebar .nav-link.active { border-left: 3px solid #ea580c !important; }
+.search-bar { height: 36px !important; border: 1px solid var(--crm-border) !important; border-radius: var(--crm-radius-pill) !important; background: var(--crm-surface) !important; color: var(--crm-text) !important; }
+.overview-title, .container-fluid h4, .container-fluid h5, .container-fluid h6 { color: var(--crm-text) !important; }
+.summary-panel, .data-card, .manage-card, .chart-card, .panel { background: var(--crm-surface) !important; border: 1px solid var(--crm-border) !important; border-radius: var(--crm-radius-md) !important; box-shadow: var(--crm-shadow-sm) !important; }
+.summary-panel, .data-card, .manage-card, .chart-card { padding: 14px !important; }
+.summary-card, .mini-stat, .kpi-chip { background: var(--crm-surface) !important; border: 1px solid var(--crm-border) !important; border-radius: var(--crm-radius-md) !important; box-shadow: none !important; }
+.summary-card { padding: 16px !important; position: relative; overflow: hidden; }
+.summary-card::before { content: ''; position: absolute; inset: 0 0 auto; height: 3px; background: linear-gradient(90deg, #ea580c, transparent); opacity: 0; transition: opacity .2s ease; }
+.summary-card:hover { transform: translateY(-2px); box-shadow: var(--crm-shadow-lg) !important; }
+.summary-card:hover::before { opacity: 1; }
+.summary-label, .mini-stat h6, .kpi-chip .label { color: var(--crm-text-muted) !important; text-transform: uppercase; font-size: .68rem !important; font-weight: 700 !important; letter-spacing: .05em; }
+.summary-value, .mini-stat .value, .kpi-chip .num { color: var(--crm-text) !important; font-size: clamp(1.25rem, 1.8vw, 1.85rem) !important; font-weight: 800 !important; font-variant-numeric: tabular-nums; }
+.mini-stat.soft-green { background: var(--crm-success-50) !important; }
+.mini-stat.soft-purple { background: var(--crm-primary-50) !important; }
+.filter-form, .filter-grid { gap: 10px !important; }
+.filter-form input, .date-input, .filter-grid .form-control, .filter-grid .form-select { height: 40px !important; min-height: 40px !important; background: var(--crm-surface) !important; border: 1.5px solid var(--crm-border) !important; border-radius: var(--crm-radius-sm) !important; color: var(--crm-text) !important; }
+.btn-apply { background: var(--crm-primary) !important; border-radius: var(--crm-radius-sm) !important; box-shadow: 0 2px 8px var(--crm-primary-glow) !important; }
+.panel-title, .manage-title, .data-card h4 { color: var(--crm-text) !important; }
+.progress-thin { background: var(--crm-bg-alt) !important; height: 6px !important; }
+.progress-thin .bar { background: linear-gradient(90deg, #ea580c, #d97706) !important; }
+.search-result-box { background: var(--crm-bg-alt) !important; border-color: var(--crm-border) !important; }
+.property-item, .archived-card { border-bottom: 1px solid var(--crm-border-subtle); }
+.agent-card, .employee-card { border-radius: var(--crm-radius-md) !important; padding: 16px !important; background: var(--crm-surface) !important; border-color: var(--crm-border) !important; box-shadow: var(--crm-shadow-sm) !important; }
+.agent-card:hover, .employee-card:hover { transform: translateY(-2px) !important; border-color: var(--crm-primary-200) !important; box-shadow: var(--crm-shadow-lg) !important; }
+.agent-actions, .employee-actions { border-top: 1px solid var(--crm-border-subtle); padding-top: 10px; }
+.modal-header, .modal-footer { border-color: var(--crm-border-subtle) !important; }
+.modal-title, .modal-body, .modal-footer { color: var(--crm-text) !important; }
+.dropdown-menu { background: var(--crm-surface) !important; border: 1px solid var(--crm-border) !important; box-shadow: var(--crm-shadow-lg) !important; }
+.dropdown-item { color: var(--crm-text) !important; border-radius: 8px; }
+.dropdown-item:hover { background: var(--crm-surface-hover) !important; }
+
+@media (max-width: 992px) {
+  .main-wrapper { margin-left: 0 !important; }
+  .top-header { height: auto !important; min-height: 58px !important; padding: 10px 14px !important; }
+}
