@@ -180,31 +180,42 @@
       var dark = document.documentElement.getAttribute('data-theme') === 'dark';
       icon.className = dark ? 'bi bi-sun' : 'bi bi-lightbulb';
       toggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
-      if (toggle.dataset.themeBound === '1') return;
-      toggle.dataset.themeBound = '1';
-      toggle.addEventListener('click', function () {
-        var isDark = document.documentElement.getAttribute('data-theme') !== 'dark';
-        if (isDark) {
-          document.documentElement.setAttribute('data-theme', 'dark');
-          localStorage.setItem('crm-theme', 'dark');
-        } else {
-          document.documentElement.removeAttribute('data-theme');
-          localStorage.removeItem('crm-theme');
-        }
-        icon.className = isDark ? 'bi bi-sun' : 'bi bi-lightbulb';
-        toggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+    });
+  }
+
+  function bindThemeToggle() {
+    if (document.documentElement.dataset.themeClickBound === '1') return;
+    document.documentElement.dataset.themeClickBound = '1';
+    document.addEventListener('click', function (event) {
+      var toggle = event.target.closest ? event.target.closest('.theme-toggle') : null;
+      if (!toggle) return;
+      event.preventDefault();
+      var isDark = document.documentElement.getAttribute('data-theme') !== 'dark';
+      document.documentElement.toggleAttribute('data-theme', isDark);
+      document.documentElement.classList.toggle('dark-theme', isDark);
+      document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+      if (isDark) localStorage.setItem('crm-theme', 'dark');
+      else localStorage.removeItem('crm-theme');
+      document.querySelectorAll('.theme-toggle').forEach(function (button) {
+        var icon = button.querySelector('i');
+        if (icon) icon.className = isDark ? 'bi bi-sun' : 'bi bi-lightbulb';
+        button.setAttribute('aria-pressed', isDark ? 'true' : 'false');
       });
     });
   }
 
   function run() {
-    if (localStorage.getItem('crm-theme') === 'dark') {
+    var savedTheme = localStorage.getItem('crm-theme') === 'dark';
+    if (savedTheme) {
       document.documentElement.setAttribute('data-theme', 'dark');
+      document.documentElement.classList.add('dark-theme');
+      document.documentElement.style.colorScheme = 'dark';
     }
     normalizeSidebarLabels();
     ensureCalculatorLink();
     ensureProfileMenuOption();
     ensureThemeControls();
+    bindThemeToggle();
   }
 
   if (document.readyState === 'loading') {
