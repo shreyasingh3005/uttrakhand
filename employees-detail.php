@@ -257,7 +257,6 @@ function time_ago_label($dateTime) {
 			<ul class="dropdown-menu dropdown-menu-end">
 				<li><a class="dropdown-item" href="/dashboard.php"><i class="bi bi-person-circle me-2"></i> Profile</a></li>
 				<li><a class="dropdown-item" href="/booking-details.php"><i class="bi bi-clock-history me-2"></i> Booking History</a></li>
-				<li><a class="dropdown-item" href="/export-bookings-excel.php"><i class="bi bi-file-earmark-spreadsheet me-2 text-success"></i> Download Excel</a></li>
 				<li><hr class="dropdown-divider"></li>
 				<li><a class="dropdown-item text-danger" href="/logout.php"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
 			</ul>
@@ -324,9 +323,6 @@ function time_ago_label($dateTime) {
 									<p class="mb-1 small"><strong>Salary:</strong> <?php echo '₹' . number_format((float) $employee['monthly_salary'], 0); ?></p>
 									<p class="mb-0 small"><strong>Bookings:</strong> <?php echo (int) $employee['booking_count']; ?> | <strong>Amount:</strong> <?php echo '₹' . number_format((float) $employee['booking_amount'], 0); ?></p>
 									<div class="employee-actions">
-										<a class="btn btn-sm btn-outline-success" href="/export-employee-excel.php?employee_id=<?php echo (int) $employee['id']; ?>">
-											<i class="bi bi-file-earmark-spreadsheet me-1"></i>Download Full Data
-										</a>
 										<?php if (!empty($employee['login_user_id'])): ?>
 											<button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#resetEmployeePasswordModal" data-employee-id="<?php echo (int) $employee['id']; ?>" data-employee-name="<?php echo htmlspecialchars($employee['name'], ENT_QUOTES, 'UTF-8'); ?>">
 												<i class="bi bi-key me-1"></i>Reset Password
@@ -343,7 +339,7 @@ function time_ago_label($dateTime) {
 					<div class="panel mt-4">
 						<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
 							<h6 class="fw-bold mb-0">Archived / Deleted Employee Booking Records</h6>
-							<span class="text-muted small">Booking history for removed employee accounts is still available for export</span>
+							<span class="text-muted small">Booking history for removed employee accounts</span>
 						</div>
 						<div class="row g-3">
 							<?php foreach ($archivedEmployeeRecords as $archived): ?>
@@ -351,10 +347,7 @@ function time_ago_label($dateTime) {
 									<div class="archived-card p-3 h-100">
 										<div class="fw-semibold mb-1"><?php echo htmlspecialchars((string)$archived['username'], ENT_QUOTES, 'UTF-8'); ?></div>
 										<div class="text-muted small mb-2"><?php echo htmlspecialchars((string)($archived['email'] ?: 'Email not available'), ENT_QUOTES, 'UTF-8'); ?></div>
-										<div class="small mb-2"><strong>Bookings:</strong> <?php echo (int)$archived['booking_count']; ?> | <strong>Amount:</strong> ₹<?php echo number_format((float)$archived['booking_amount'], 0); ?></div>
-										<a class="btn btn-sm btn-outline-success" href="/export-employee-excel.php?username=<?php echo urlencode((string)$archived['username']); ?>">
-											<i class="bi bi-download me-1"></i>Download Archived Data
-										</a>
+										<div class="small"><strong>Bookings:</strong> <?php echo (int)$archived['booking_count']; ?> | <strong>Amount:</strong> ₹<?php echo number_format((float)$archived['booking_amount'], 0); ?></div>
 									</div>
 								</div>
 							<?php endforeach; ?>

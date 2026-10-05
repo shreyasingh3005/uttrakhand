@@ -661,40 +661,7 @@ function expire_agent_query_locks(PDO $conn): void {
 }
 
 function get_active_agent_location_lock(PDO $conn, int $agentId, ?string $location, ?int $employeeId = null, ?string $employeeUsername = null): ?array {
-    expire_agent_query_locks($conn);
-    $locationKey = normalize_agent_lock_location($location);
-    $sql = 'SELECT id, agent_id, employee_id, employee_username, lock_until, location, status
-            FROM agent_query_locks
-            WHERE agent_id = :agent_id
-              AND status = "Locked"
-              AND lock_until > NOW()';
-    $params = [':agent_id' => $agentId];
-
-    if ($locationKey !== null) {
-        $sql .= ' AND LOWER(TRIM(COALESCE(location, ""))) = :location';
-        $params[':location'] = $locationKey;
-    } else {
-        $sql .= ' AND (location IS NULL OR TRIM(location) = "")';
-    }
-
-    $sql .= ' ORDER BY lock_until DESC LIMIT 1';
-    $stmt = $conn->prepare($sql);
-    $stmt->execute($params);
-    $lock = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$lock) {
-        return null;
-    }
-
-    $sameEmployee = false;
-    if ($employeeId !== null && ((int)($lock['employee_id'] ?? 0) === (int)$employeeId)) {
-        $sameEmployee = true;
-    }
-    if (!$sameEmployee && $employeeUsername !== null && trim((string)($lock['employee_username'] ?? '')) === trim((string)$employeeUsername)) {
-        $sameEmployee = true;
-    }
-
-    return $sameEmployee ? $lock : $lock;
+    return null;
 }
 
 function ensure_activity_logs_table(PDO $conn) {

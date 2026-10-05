@@ -93,41 +93,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
         $unlockMessageType = 'success';
     }
 }
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array(($_POST['action'] ?? ''), ['unlock_query', 'lock_query'], true)) {
-    $queryId = (int)($_POST['query_id'] ?? 0);
-    if ($queryId <= 0) {
-        $unlockMessage = 'Invalid query selected for unlock.';
-        $unlockMessageType = 'danger';
-    } else {
-        try {
-            $historyStmt = $conn->prepare('SELECT agent_id FROM booking_query_history WHERE id = :id LIMIT 1');
-            $historyStmt->execute([':id' => $queryId]);
-            $agentId = (int)($historyStmt->fetchColumn() ?: 0);
-
-            if ($agentId > 0 && ($_POST['action'] ?? '') === 'lock_query') {
-                $lockUntil = date('Y-m-d H:i:s', strtotime('+1 hour'));
-                $lockStmt = $conn->prepare('UPDATE agent_query_locks SET lock_until = :lock_until, status = "Locked" WHERE agent_id = :agent_id ORDER BY id DESC LIMIT 1');
-                $lockStmt->execute([':agent_id' => $agentId, ':lock_until' => $lockUntil]);
-                $historyLockStmt = $conn->prepare('UPDATE booking_query_history SET lock_until = :lock_until WHERE id = :id');
-                $historyLockStmt->execute([':lock_until' => $lockUntil, ':id' => $queryId]);
-                $unlockMessage = 'Agent locked again for 1 hour.';
-            } elseif ($agentId > 0) {
-                $unlockStmt = $conn->prepare('UPDATE agent_query_locks SET lock_until = NOW(), status = "Open" WHERE agent_id = :agent_id AND status = "Locked"');
-                $unlockStmt->execute([':agent_id' => $agentId]);
-                $historyUnlockStmt = $conn->prepare('UPDATE booking_query_history SET lock_until = NOW() WHERE id = :id');
-                $historyUnlockStmt->execute([':id' => $queryId]);
-                $unlockMessage = 'Agent unlocked successfully.';
-            } else {
-                $unlockStmt = $conn->prepare('UPDATE agent_query_locks SET lock_until = NOW(), status = "Open" WHERE id = :id');
-                $unlockStmt->execute([':id' => $queryId]);
-                $unlockMessage = $unlockStmt->rowCount() > 0 ? 'Agent unlocked successfully.' : 'Agent lock was already unlocked.';
-            }
-        } catch (PDOException $e) {
-            $unlockMessage = 'Unable to unlock the agent. Please try again.';
-            $unlockMessageType = 'danger';
-        }
-    }
-}
 
 try {
     $historyStmt = $conn->prepare("SELECT bqh.id, bqh.created_by_user_id, bqh.created_by_username, bqh.created_by_role, bqh.generated_at, bqh.query_text,
@@ -222,7 +187,6 @@ try {
             <ul class="dropdown-menu dropdown-menu-end">
                 <li><a class="dropdown-item" href="/dashboard.php"><i class="bi bi-person-circle me-2"></i> Profile</a></li>
                 <li><a class="dropdown-item" href="/booking-details.php"><i class="bi bi-clock-history me-2"></i> Booking History</a></li>
-                <li><a class="dropdown-item" href="/export-bookings-excel.php"><i class="bi bi-file-earmark-spreadsheet me-2 text-success"></i> Download Excel</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item text-danger" href="/logout.php"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
             </ul>
@@ -311,20 +275,14 @@ try {
 
         <div class="table-responsive">
             <table class="table table-sm table-hover">
-                <thead class="table-light"><tr><th>Employee</th><th>Agent</th><th>Phone</th><th>Hotel</th><th>Room Category</th><th>Dates</th><th>Status</th><th>Location</th><th>Generated At</th><th>Lock Status</th><th>Lock Until</th><th>Countdown / Lock Timer</th><th>Actions</th></tr></thead>
+                <thead class="table-light"><tr><th>Employee</th><th>Agent</th><th>Phone</th><th>Hotel</th><th>Room Category</th><th>Dates</th><th>Status</th><th>Location</th><th>Generated At</th><th>Actions</th></tr></thead>
                 <tbody>
                     <?php foreach ($admin_history as $item): ?>
                     <?php
-                        $lockUntilRaw = (string)($item['lock_until'] ?? '');
-                        $isLocked = $lockUntilRaw !== '' && strtotime($lockUntilRaw) > time();
-                        $countdownSeconds = $isLocked ? max(0, (int) (strtotime($lockUntilRaw) - time())) : 0;
-                        $countdownDisplay = $isLocked ? gmdate('H:i:s', $countdownSeconds) : 'Unlocked';
                         $statusValue = in_array((string)($item['status'] ?? 'New'), ['New', 'On Hold', 'Won', 'Lost'], true) ? (string)$item['status'] : 'New';
                         $statusBadgeClass = $statusValue === 'Won' ? 'bg-success' : ($statusValue === 'Lost' ? 'bg-danger' : ($statusValue === 'On Hold' ? 'bg-warning text-dark' : 'bg-primary'));
                     ?>
                     <tr class="admin-history-row" data-query-id="<?php echo (int)($item['id'] ?? 0); ?>"
-                        data-lock-until="<?php echo htmlspecialchars($lockUntilRaw, ENT_QUOTES, 'UTF-8'); ?>"
-                        data-lock-active="<?php echo $isLocked ? '1' : '0'; ?>"
                         data-status="<?php echo htmlspecialchars($statusValue, ENT_QUOTES, 'UTF-8'); ?>"
                         data-employee="<?php echo htmlspecialchars(strtolower((string)($item['created_by_username'] ?? $item['employee_name'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>"
                         data-hotel="<?php echo htmlspecialchars(strtolower((string)($item['hotel_name'] ?? ($item['hotel_category'] ?? ''))), ENT_QUOTES, 'UTF-8'); ?>"
@@ -364,21 +322,11 @@ try {
                         </td>
                         <td><?php echo htmlspecialchars($item['location'] ?? ''); ?></td>
                         <td><?php echo format_ist_datetime((string)($item['generated_at'] ?? '')); ?></td>
-                        <td><span class="lock-status-badge badge <?php echo $isLocked ? 'bg-danger' : 'bg-success'; ?>"><?php echo $isLocked ? 'Agent Locked' : 'Unlocked'; ?></span></td>
-                        <td><?php echo $isLocked ? format_ist_datetime((string)($item['lock_until'] ?? '')) : 'Unlocked'; ?></td>
-                        <td class="lock-timer-cell" data-lock-until="<?php echo htmlspecialchars($lockUntilRaw, ENT_QUOTES, 'UTF-8'); ?>"><?php echo $countdownDisplay; ?></td>
                         <td>
                             <?php if (!empty($item['agent_phone'])): ?>
                                 <button class="btn btn-sm btn-outline-primary" onclick="viewAdminQuery(this)">View</button>
-                                <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('', this)">Copy</button>
-                                <form method="post" style="display:inline-block; margin:0;">
-                                    <input type="hidden" name="action" value="<?php echo $isLocked ? 'unlock_query' : 'lock_query'; ?>">
-                                    <input type="hidden" name="query_id" value="<?php echo (int) $item['id']; ?>">
-                                    <button type="submit" class="btn btn-sm <?php echo $isLocked ? 'btn-success' : 'btn-warning'; ?>"><i class="bi bi-<?php echo $isLocked ? 'unlock' : 'lock'; ?> me-1"></i><?php echo $isLocked ? 'Unlock Agent' : 'Lock Agent'; ?></button>
-                                </form>
-                            <?php else: ?>
-                                <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('', this)">Copy</button>
                             <?php endif; ?>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="copyQueryText('', this)">Copy</button>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -488,11 +436,7 @@ function copyQueryText(queryText, buttonElement) {
         // Fallback: just copy the query text if provided
         queryText = AirwaysQuotation.plainText(queryText || '');
         if (queryText) {
-            navigator.clipboard.writeText(queryText).then(() => {
-                alert('Query copied to clipboard!');
-            }).catch(() => {
-                alert('Failed to copy: ' + queryText.substring(0, 100));
-            });
+            navigator.clipboard.writeText(queryText).catch(() => {});
         }
         return;
     }
@@ -513,14 +457,13 @@ function copyQueryText(queryText, buttonElement) {
         createdByName: row.dataset.creatorName, createdByPhone: row.dataset.creatorPhone, createdByEmail: row.dataset.creatorEmail,
         matchedHotels
     });
-    navigator.clipboard.writeText(quotationText).then(() => alert('Query copied to clipboard!')).catch(() => {
+    navigator.clipboard.writeText(quotationText).catch(() => {
         const textarea = document.createElement('textarea');
         textarea.value = quotationText;
         document.body.appendChild(textarea);
         textarea.select();
         document.execCommand('copy');
         document.body.removeChild(textarea);
-        alert('Query copied to clipboard!');
     });
 }
 
@@ -553,48 +496,6 @@ function viewAdminQuery(buttonElement) {
     bootstrap.Modal.getOrCreateInstance(modalElement).show();
 }
 
-function formatCountdownTimer(totalSeconds) {
-    const total = Math.max(0, Math.floor(totalSeconds));
-    const hours = String(Math.floor(total / 3600)).padStart(2, '0');
-    const minutes = String(Math.floor((total % 3600) / 60)).padStart(2, '0');
-    const seconds = String(total % 60).padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}`;
-}
-
-function refreshAdminLockCountdowns() {
-    document.querySelectorAll('.admin-history-row').forEach((row) => {
-        const lockUntil = row.dataset.lockUntil || '';
-        const timerCell = row.querySelector('.lock-timer-cell');
-        const statusBadge = row.querySelector('.lock-status-badge');
-
-        if (!lockUntil) {
-            if (timerCell) timerCell.textContent = 'Unlocked';
-            return;
-        }
-
-        const normalizedLock = lockUntil.trim();
-        const expiresAt = new Date(normalizedLock.replace(' ', 'T') + '+05:30').getTime();
-        const remainingMs = expiresAt - Date.now();
-
-        if (remainingMs <= 0) {
-            if (timerCell) timerCell.textContent = '00:00:00';
-            if (statusBadge) {
-                statusBadge.textContent = 'Unlocked';
-                statusBadge.className = 'lock-status-badge badge bg-success';
-            }
-            row.dataset.lockUntil = '';
-            row.dataset.lockActive = '0';
-            return;
-        }
-
-        if (timerCell) timerCell.textContent = formatCountdownTimer(remainingMs / 1000);
-        if (statusBadge) {
-            statusBadge.textContent = 'Agent Locked';
-            statusBadge.className = 'lock-status-badge badge bg-danger';
-        }
-    });
-}
-
 function toggleSidebarMenu(open) {
     const sidebar = document.getElementById('adminSidebar');
     const backdrop = document.getElementById('sidebarBackdrop');
@@ -602,9 +503,6 @@ function toggleSidebarMenu(open) {
     sidebar.classList.toggle('open', !!open);
     backdrop.classList.toggle('show', !!open);
 }
-
-refreshAdminLockCountdowns();
-setInterval(refreshAdminLockCountdowns, 1000);
 
 (() => {
     const btn = document.getElementById('mobileMenuBtn');

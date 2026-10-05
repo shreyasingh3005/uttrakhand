@@ -74,10 +74,6 @@ $rsActivity = $rsActivity ?? [];
         <i class="bi bi-wallet2" style="color:#f59e0b;font-size:16px;width:20px;text-align:center;"></i>
         Accounts Ledger
       </a>
-      <a href="<?php echo htmlspecialchars(function_exists('site_url') ? site_url('export-bookings-excel.php') : '/export-bookings-excel.php', ENT_QUOTES, 'UTF-8'); ?>" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;font-size:.82rem;color:var(--text);transition:all .15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'">
-        <i class="bi bi-file-earmark-spreadsheet" style="color:#059669;font-size:16px;width:20px;text-align:center;"></i>
-        Export to Excel
-      </a>
     </div>
   </div>
 

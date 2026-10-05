@@ -5,38 +5,6 @@ require_role('admin');
 
 $flashMessage = '';
 $flashType = 'success';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unlock_query') {
-    $queryId = (int) ($_POST['query_id'] ?? 0);
-    if ($queryId > 0) {
-        try {
-            $historyStmt = $conn->prepare('SELECT agent_id FROM booking_query_history WHERE id = :id LIMIT 1');
-            $historyStmt->execute([':id' => $queryId]);
-            $historyAgentId = (int) ($historyStmt->fetchColumn() ?: 0);
-            if ($historyAgentId > 0) {
-                $unlockStmt = $conn->prepare('UPDATE agent_query_locks SET lock_until = NOW(), status = "Open" WHERE agent_id = :agent_id AND status = "Locked"');
-                $unlockStmt->execute([':agent_id' => $historyAgentId]);
-                $historyUnlockStmt = $conn->prepare('UPDATE booking_query_history SET lock_until = NOW() WHERE id = :id');
-                $historyUnlockStmt->execute([':id' => $queryId]);
-            } else {
-                $unlockStmt = $conn->prepare('UPDATE agent_query_locks SET lock_until = NOW(), status = "Open" WHERE id = :id');
-                $unlockStmt->execute([':id' => $queryId]);
-            }
-            $flashMessage = 'Query lock unlocked successfully.';
-            $flashType = 'success';
-        } catch (PDOException $e) {
-            $flashMessage = 'Unable to unlock the query. Please try again.';
-            $flashType = 'danger';
-        }
-    } else {
-        $flashMessage = 'Invalid query selected for unlock.';
-        $flashType = 'danger';
-    }
-}
-
-if (isset($_GET['unlocked'])) {
-    $flashMessage = 'Query unlocked successfully.';
-    $flashType = 'success';
-}
 
 $listingsStmt = $conn->prepare("SELECT id, hotel_code, name AS hotel_name, city AS location, state, status, star_rating, property_category FROM hotels WHERE status = 'active' ORDER BY name ASC, created_at DESC");
 $listingsStmt->execute();
@@ -245,7 +213,6 @@ try {
             <ul class="dropdown-menu dropdown-menu-end">
                 <li><a class="dropdown-item" href="/dashboard.php"><i class="bi bi-person-circle me-2"></i> Profile</a></li>
                 <li><a class="dropdown-item" href="/booking-details.php"><i class="bi bi-clock-history me-2"></i> Booking History</a></li>
-                <li><a class="dropdown-item" href="/export-bookings-excel.php"><i class="bi bi-file-earmark-spreadsheet me-2 text-success"></i> Download Excel</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item text-danger" href="/logout.php"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
             </ul>
@@ -426,7 +393,7 @@ function lookupAdminBookingQueryAgent() {
                 adminBookingQueryAgent = null;
                 if (form) form.disabled = true;
                 if (status) status.textContent = data.message || 'Agent mobile number is not registered.';
-                if (status) status.className = data.locked ? 'small text-danger mt-2' : 'small text-muted mt-2';
+                if (status) status.className = 'small text-muted mt-2';
                 return;
             }
             adminBookingQueryAgent = data.agent;
@@ -477,7 +444,7 @@ function loadAdminGeneratedQueryHistory() {
         const container = document.getElementById('adminGeneratedQueryHistory');
         if (!container) return;
         container.innerHTML = records.length ? `<div class="table-responsive"><table class="table table-sm table-hover align-middle admin-generated-history-table">
-            <thead class="table-light"><tr><th>Created By</th><th>Agent</th><th>Agent Phone</th><th>Location</th><th>Category</th><th>Hotel / Room</th><th>Dates</th><th>Budget</th><th>Lock Status</th><th>Lock Until</th><th>Generated At</th><th>Action</th></tr></thead><tbody>
+            <thead class="table-light"><tr><th>Created By</th><th>Agent</th><th>Agent Phone</th><th>Location</th><th>Category</th><th>Hotel / Room</th><th>Dates</th><th>Budget</th><th>Generated At</th><th>Action</th></tr></thead><tbody>
             ${records.map((item) => {
                 const hotels = Array.isArray(item.matched_hotels) ? item.matched_hotels : [];
                 const hotelNames = hotels.map((hotel) => `${escapeAdminHistoryHtml(hotel.name)} / ${escapeAdminHistoryHtml(hotel.room_name)}`).join('<br>') || 'No matches';
@@ -485,7 +452,7 @@ function loadAdminGeneratedQueryHistory() {
                     <td>${escapeAdminHistoryHtml(item.created_by_username)}</td><td>${escapeAdminHistoryHtml(item.agent_name || 'Admin')}</td><td>${escapeAdminHistoryHtml(item.agent_phone || '')}</td><td>${escapeAdminHistoryHtml(item.location || 'Any')}</td>
                     <td>${escapeAdminHistoryHtml(item.hotel_category || 'All Catgs')}</td><td>${hotelNames}</td>
                     <td>${escapeAdminHistoryHtml(item.check_in || 'N/A')} - ${escapeAdminHistoryHtml(item.check_out || 'N/A')}</td>
-                    <td>₹${Number(item.budget || 0).toLocaleString('en-IN')}/night</td><td>${item.lock_until && new Date(item.lock_until).getTime() > Date.now() ? '<span class="badge bg-danger">Agent Locked</span>' : '<span class="badge bg-success">Unlocked</span>'}</td><td>${escapeAdminHistoryHtml(item.lock_until && new Date(item.lock_until).getTime() > Date.now() ? formatAdminHistoryDate(item.lock_until) : 'Unlocked')}</td><td>${escapeAdminHistoryHtml(formatAdminHistoryDate(item.generated_at))}</td>
+                    <td>₹${Number(item.budget || 0).toLocaleString('en-IN')}/night</td><td>${escapeAdminHistoryHtml(formatAdminHistoryDate(item.generated_at))}</td>
                     <td><button type="button" class="btn btn-sm btn-outline-secondary" data-query-text="${escapeAdminHistoryHtml(item.query_text)}" data-quotation="${escapeAdminHistoryHtml(JSON.stringify({ queryNumber: item.query_number, queryText: item.query_text, hotelName: item.hotel_name, hotelLocation: item.location, roomCategory: item.room_category, checkIn: item.check_in, checkOut: item.check_out, adults: item.adults, children: item.children, rooms: item.rooms, roomPrice: null, agentName: item.agent_name, agentPhone: item.agent_phone, createdByName: item.created_by_name, createdByPhone: item.created_by_phone, createdByEmail: item.created_by_email, matchedHotels: hotels }))}" onclick="copyAdminHistoryQuotation(this)">Copy</button></td>
                 </tr>`;
             }).join('')}</tbody></table></div>` : '<div class="text-center py-3 text-muted">No generated Booking Query history found.</div>';
@@ -647,21 +614,6 @@ function generateBookingResultsFromInputs(locationId, categoryId, checkInId, che
         } else {
             selectBookingQueryRows(5);
         }
-
-        if (adminBookingQueryType === 'agent' && results.length) {
-            const adminLockLocation = document.getElementById('adminBookingQueryLocation')?.value.trim() || '';
-            fetch('employee-dashboard.php', {
-                method: 'POST',
-                body: new URLSearchParams({ action: 'acquire_booking_query_agent_lock', agent_phone: adminBookingQueryAgent.phone, location: adminLockLocation })
-            }).then((lockResponse) => lockResponse.json()).then((lockData) => {
-                if (!lockData.success) {
-                    resultsDataStore[resultBodyId] = [];
-                    resultBody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">${lockData.message || 'Agent is currently unavailable.'}</td></tr>`;
-                    alert(lockData.message || 'Agent is currently unavailable.');
-                }
-            }).catch(() => alert('Unable to verify the agent lock. Please try again.'));
-        }
-
     })
     .catch((error) => {
         console.error('Hotel filter error:', error);
@@ -730,16 +682,13 @@ function copyAndShareHotelQuotes(prefixIds, resultBodyId) {
         return;
     }
     if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(() => {
-            alert(`${count} hotel(s) quotation copied successfully. WhatsApp will not open automatically.`);
-        }).catch(() => {
+        navigator.clipboard.writeText(text).catch(() => {
             const textarea = document.createElement('textarea');
             textarea.value = text;
             document.body.appendChild(textarea);
             textarea.select();
             document.execCommand('copy');
             document.body.removeChild(textarea);
-            alert(`${count} hotel(s) quotation copied successfully. WhatsApp will not open automatically.`);
         });
     } else {
         const textarea = document.createElement('textarea');
@@ -748,7 +697,6 @@ function copyAndShareHotelQuotes(prefixIds, resultBodyId) {
         textarea.select();
         document.execCommand('copy');
         document.body.removeChild(textarea);
-        alert(`${count} hotel(s) quotation copied successfully. WhatsApp will not open automatically.`);
     }
 }
 
@@ -1134,7 +1082,6 @@ function generateAdminQueryFromForm() {
         `https://wa.me/${agentPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(queryText)}`;
     document.getElementById('adminGeneratedQueryDisplay').style.display = 'block';
     navigator.clipboard.writeText(queryText).catch(() => {});
-    alert('Admin booking query generated and copied to clipboard.');
 
     fetch('employee-dashboard.php', {
         method: 'POST',
@@ -1179,14 +1126,14 @@ function generateAdminQueryFromForm() {
 function copyAdminGeneratedQuery() {
     const text = document.getElementById('adminGeneratedQueryText')?.value;
     if (!text) return;
-    navigator.clipboard.writeText(text).then(() => alert('Query copied to clipboard.'));
+    navigator.clipboard.writeText(text);
 }
 
 function copyQueryText(text) {
     text = AirwaysQuotation.plainText(text || '');
-    if (!text) return alert('No query text');
-    try { navigator.clipboard.writeText(text); alert('Copied to clipboard'); }
-    catch (e) { const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); alert('Copied to clipboard'); }
+    if (!text) return;
+    try { navigator.clipboard.writeText(text); }
+    catch (e) { const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); }
 }
 
 function viewAdminQuery(id) {

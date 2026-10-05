@@ -212,7 +212,6 @@ function status_badge_class($status) {
 			<ul class="dropdown-menu dropdown-menu-end">
 				<li><a class="dropdown-item" href="/dashboard.php"><i class="bi bi-person-circle me-2"></i> Profile</a></li>
 				<li><a class="dropdown-item" href="/booking-details.php"><i class="bi bi-clock-history me-2"></i> Booking History</a></li>
-				<li><a class="dropdown-item" href="/export-bookings-excel.php"><i class="bi bi-file-earmark-spreadsheet me-2 text-success"></i> Download Excel</a></li>
 				<li><hr class="dropdown-divider"></li>
 				<li><a class="dropdown-item text-danger" href="/logout.php"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
 			</ul>
@@ -277,9 +276,6 @@ function status_badge_class($status) {
 									</div>
 									<p class="mb-0 text-muted small text-center"><?php echo htmlspecialchars($agent['email'], ENT_QUOTES, 'UTF-8'); ?></p>
 									<div class="agent-actions">
-										<a class="btn btn-sm btn-outline-success rounded-pill px-3" href="/export-agent-excel.php?agent_id=<?php echo (int) $agent['id']; ?>">
-											<i class="bi bi-file-earmark-spreadsheet me-1"></i> Download Full Data
-										</a>
 										<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" data-agent="<?php echo htmlspecialchars(json_encode([
 											'id' => $agent['id'], 'name' => $agent['name'], 'company_name' => $agent['company_name'] ?? '',
 											'gst_number' => $agent['gst_number'] ?? '', 'email' => $agent['email'], 'phone' => $agent['phone'],

@@ -114,10 +114,6 @@
       }
     });
 
-    document.querySelectorAll('.user-menu-corner .dropdown-menu').forEach(function (menu) {
-      addBootstrapAction(menu, '/export-bookings-excel.php', 'Download Excel', 'bi-file-earmark-spreadsheet', 'text-success');
-    });
-
     var legacyMenu = document.getElementById('userDropdown');
     if (legacyMenu && !legacyMenu.querySelector('[data-uv-profile-link="1"]')) {
       var profileLink = document.createElement('a');
@@ -139,10 +135,6 @@
       } else {
         legacyMenu.appendChild(profileLink);
       }
-    }
-
-    if (legacyMenu) {
-      addLegacyAction(legacyMenu, '/export-bookings-excel.php', 'Download Excel', 'bi-file-earmark-spreadsheet', '#059669');
     }
   }
 

@@ -155,16 +155,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 exit;
             }
             
-            // Check if agent is locked (admin can override, so just show the lock info)
-            $lockStmt = $conn->prepare("SELECT * FROM agent_query_locks WHERE agent_id = :agent_id AND lock_until > NOW() ORDER BY lock_until DESC LIMIT 1");
-            $lockStmt->execute([':agent_id' => $agent['id']]);
-            $lock = $lockStmt->fetch(PDO::FETCH_ASSOC);
-            
             $response = [
                 'success' => true,
                 'found' => true,
                 'agent' => $agent,
-                'lock_info' => $lock
+                'lock_info' => null
             ];
             
             echo json_encode($response);
@@ -1135,7 +1130,6 @@ if ($selectedEmployeeUsername !== '') {
                 <ul class="dropdown-menu dropdown-menu-end">
 					<li><a class="dropdown-item" href="/dashboard.php"><i class="bi bi-person-circle me-2"></i> Profile</a></li>
                     <li><a class="dropdown-item" href="/booking-details.php"><i class="bi bi-clock-history me-2"></i> Booking History</a></li>
-                    <li><a class="dropdown-item" href="/export-bookings-excel.php"><i class="bi bi-file-earmark-spreadsheet me-2 text-success"></i> Download Excel</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item text-danger" href="/logout.php"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
                 </ul>
@@ -1523,7 +1517,7 @@ if ($selectedEmployeeUsername !== '') {
             <div class="col-12">
                 <div class="data-card">
                     <h4><i class="bi bi-chat-dots me-2"></i>Booking Query Management</h4>
-                    <p class="text-muted mb-4">Generate booking queries and manage agent locks (Admin has override access)</p>
+                    <p class="text-muted mb-4">Generate booking queries</p>
                     
                     <!-- Agent Search Section -->
                     <div class="row g-3 mb-4">
@@ -1662,18 +1656,6 @@ if ($selectedEmployeeUsername !== '') {
             </div>
         </div>
 
-        <!-- Agent Locks Management -->
-        <div class="row g-4 mt-1">
-            <div class="col-12">
-                <div class="data-card">
-                    <h4><i class="bi bi-lock me-2"></i>Agent Query Locks Management</h4>
-                    <p class="text-muted mb-3">View and manage agent locks (Admin can override any lock)</p>
-                    <div id="adminAgentLocksTable">
-                        <!-- Agent locks will be loaded here -->
-                    </div>
-                </div>
-            </div>
-        </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="/assets/js/quotation-template.js?v=20260907-3"></script>
@@ -1735,22 +1717,6 @@ function adminSearchAgent() {
                 </div>
                 <span class="badge bg-success">Active</span>
             </div>`;
-            
-            // Check if agent is locked
-            if (data.lock_info) {
-                const lockTime = new Date(data.lock_info.lock_until);
-                const now = new Date();
-                if (lockTime > now) {
-                    statusHtml = `<div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <strong>${agent.name}</strong><br>
-                            <small class="text-muted">${agent.email} • ${agent.location}</small><br>
-                            <small class="text-warning">Locked until ${lockTime.toLocaleString()}</small>
-                        </div>
-                        <span class="badge bg-warning">Locked</span>
-                    </div>`;
-                }
-            }
             
             document.getElementById('adminAgentStatus').innerHTML = statusHtml;
             document.getElementById('adminAgentStatus').className = 'alert alert-success py-2 mb-0';
@@ -1944,9 +1910,7 @@ function adminGenerateQueryFromForm() {
     });
 
     // Copy to clipboard
-    navigator.clipboard.writeText(queryText).then(() => {
-        showToastMsg('Query copied to clipboard');
-    }).catch(() => {
+    navigator.clipboard.writeText(queryText).catch(() => {
         // Fallback for older browsers
         const textArea = document.createElement('textarea');
         textArea.value = queryText;
@@ -1954,24 +1918,19 @@ function adminGenerateQueryFromForm() {
         textArea.select();
         document.execCommand('copy');
         document.body.removeChild(textArea);
-        showToastMsg('Query copied to clipboard');
     });
 
-    // For admin, we don't lock agents - admin has override access
     document.getElementById('adminGeneratedQueryText').value = queryText;
     document.getElementById('adminGeneratedQueryDisplay').style.display = 'block';
     
     const whatsappUrl = `https://wa.me/${agentPhone.replace(/\D/g, '')}?text=${encodeURIComponent(queryText)}`;
     document.getElementById('adminGeneratedQueryWhatsappLink').href = whatsappUrl;
-    
-    showToastMsg('Query generated successfully (Admin override - no lock applied)');
 }
 
 function copyAdminGeneratedQuery() {
     const queryText = document.getElementById('adminGeneratedQueryText');
     queryText.select();
     document.execCommand('copy');
-    showToastMsg('Query copied to clipboard');
 }
 
 function adminCreateBookingFromQuery() {

@@ -945,7 +945,6 @@ if (isset($_GET['success'])) {
                         textArea.select();
                         try {
                             document.execCommand('copy');
-                            showCustomToast("Calculated & Format Auto-Copied!");
                         } catch (err) {
                             console.log("Auto-copy blocked by browser. User must click manually.");
                         }
@@ -1044,9 +1043,7 @@ if (isset($_GET['success'])) {
         const finalRate = document.getElementById("finalRateValue").innerText;
         const textToCopy = finalRate; 
         
-        navigator.clipboard.writeText(textToCopy).then(function() {
-            showCustomToast("Final Rate Copied!");
-        }).catch(function(err) {
+        navigator.clipboard.writeText(textToCopy).catch(function(err) {
             alert("Failed to copy text: " + err);
         });
     }
@@ -1076,9 +1073,7 @@ if (isset($_GET['success'])) {
 
         const textToCopy = `*🏨 Hotel :* ${hotelName}\n*Check In :* ${checkIn}\n*Check Out :* ${checkOut}\n*Rooms Category :* ${category}\n*Adults :* ${adults} , *Children:* ${children}\n\n*🥗 Meal Plan:* ${mealPlan}\n*🛏️ Room:* ${room}\n*💰 Price :* ${finalRate} ( Per room per night )\n\nRooms are subject to availability at a time of booking.\nRates are Dynamic.`;
 
-        navigator.clipboard.writeText(textToCopy).then(function() {
-            showCustomToast("Booking Format Copied!");
-        }).catch(function(err) {
+        navigator.clipboard.writeText(textToCopy).catch(function(err) {
             alert("Failed to copy text: " + err);
         });
     }

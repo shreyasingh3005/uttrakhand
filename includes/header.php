@@ -84,9 +84,6 @@ require_once __DIR__ . '/config.php';
             <a href="/booking-details.php" style="display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:.84rem;border-radius:10px;color:#0f172a;margin-top:2px;transition:all .15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'">
               <i class="bi bi-clock-history" style="color:#06b6d4;"></i> Booking History
             </a>
-            <a href="/export-bookings-excel.php" style="display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:.84rem;border-radius:10px;color:#0f172a;margin-top:2px;transition:all .15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'">
-              <i class="bi bi-file-earmark-spreadsheet" style="color:#059669;"></i> Download Excel
-            </a>
             <div style="border-top:1px solid #e2e8f0;margin:6px 0;"></div>
             <a href="/logout.php" style="display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:.84rem;border-radius:10px;color:#ef4444;margin-top:2px;transition:all .15s;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='none'">
               <i class="bi bi-box-arrow-right"></i> Logout
