@@ -412,8 +412,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
         
         try {
-            $stmt = $conn->prepare("SELECT id, name, company_name, gst_number, email, phone, location, status, created_by, created_at FROM agents_details WHERE phone = :phone LIMIT 1");
-            $stmt->execute([':phone' => $mobile]);
+            $digitsOnly = preg_replace('/\D+/', '', $mobile);
+            $last10 = strlen($digitsOnly) >= 10 ? substr($digitsOnly, -10) : $digitsOnly;
+            $stmt = $conn->prepare(
+                "SELECT id, name, company_name, gst_number, email, phone, location, status, created_by, created_at 
+                 FROM agents_details 
+                 WHERE phone = :exact 
+                    OR phone LIKE :like 
+                    OR (LENGTH(:last10) = 10 AND RIGHT(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '+', ''), 10) = :last10)
+                 ORDER BY id DESC LIMIT 1"
+            );
+            $stmt->execute([
+                ':exact' => $mobile,
+                ':like' => '%' . $last10 . '%',
+                ':last10' => $last10,
+            ]);
             $agent = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($agent) {

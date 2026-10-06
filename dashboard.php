@@ -146,12 +146,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
         
         try {
-            $agentStmt = $conn->prepare("SELECT id, name, email, phone, location, gst_number FROM agents_details WHERE phone = :phone");
-            $agentStmt->execute([':phone' => $mobileNumber]);
+            $digitsOnly = preg_replace('/\D+/', '', $mobileNumber);
+            $last10 = strlen($digitsOnly) >= 10 ? substr($digitsOnly, -10) : $digitsOnly;
+
+            $agentStmt = $conn->prepare(
+                "SELECT id, name, company_name, email, phone, location, gst_number, status, created_by, created_at 
+                 FROM agents_details 
+                 WHERE phone = :exact 
+                    OR phone LIKE :like 
+                    OR (LENGTH(:last10) = 10 AND RIGHT(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '+', ''), 10) = :last10)
+                 ORDER BY id DESC LIMIT 1"
+            );
+            $agentStmt->execute([
+                ':exact' => $mobileNumber,
+                ':like' => '%' . $last10 . '%',
+                ':last10' => $last10,
+            ]);
             $agent = $agentStmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$agent) {
-                echo json_encode(['success' => false, 'found' => false]);
+                echo json_encode(['success' => false, 'found' => false, 'message' => 'Record not found']);
                 exit;
             }
             
@@ -197,13 +211,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         
         try {
             $bookingCode = 'BK-' . date('YmdHis') . '-' . rand(1000, 9999);
+            $dueAmount = max($amount - $paidAmount, 0);
+            $paymentStatus = $paidAmount <= 0 ? 'Pending' : (($paidAmount >= $amount) ? 'Paid' : 'Partial');
+
             $insertStmt = $conn->prepare(
                 'INSERT INTO bookings_details (booking_code, client_name, client_phone, client_email, hotel_listing_id, agent_id, 
-                 check_in, check_out, booking_date, amount, advance_payment, guest_count, room_count, special_request, 
-                 booking_source, hotel_name_snapshot, room_type_snapshot, created_by, booking_status, created_at)
+                 check_in, check_out, booking_date, amount, paid_amount, due_amount, payment_status, guest_count, room_count, special_request, 
+                 booking_source, hotel_name_snapshot, room_type_snapshot, created_by, booking_status, status, created_at)
                  VALUES (:booking_code, :client_name, :client_phone, :client_email, :hotel_id, :agent_id,
-                 :check_in, :check_out, :booking_date, :amount, :advance_payment, :guest_count, :room_count, :special_request,
-                 :booking_source, :hotel_snapshot, :room_type, :created_by, "Pending", NOW())'
+                 :check_in, :check_out, :booking_date, :amount, :paid_amount, :due_amount, :payment_status, :guest_count, :room_count, :special_request,
+                 :booking_source, :hotel_snapshot, :room_type, :created_by, "Pending", "Pending Payment", NOW())'
             );
             
             $insertStmt->execute([
@@ -217,14 +234,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 ':check_out' => $checkOut,
                 ':booking_date' => $bookingDate,
                 ':amount' => $amount,
-                ':advance_payment' => $paidAmount,
+                ':paid_amount' => $paidAmount,
+                ':due_amount' => $dueAmount,
+                ':payment_status' => $paymentStatus,
                 ':guest_count' => $guestCount,
                 ':room_count' => $roomCount,
                 ':special_request' => $specialRequest,
                 ':booking_source' => $bookingSource,
                 ':hotel_snapshot' => $hotelSnapshot,
                 ':room_type' => $roomType,
-                ':created_by' => $_SESSION['username']
+                ':created_by' => $_SESSION['username'] ?? 'admin'
             ]);
             
             echo json_encode(['success' => true, 'message' => $bookingCode]);
@@ -435,29 +454,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'search_agent_mobile') {
         $mobile = sanitize_input($_POST['search_mobile'] ?? '');
+        $searchedMobile = $mobile;
         if ($mobile !== '') {
+            $digitsOnly = preg_replace('/\D+/', '', $mobile);
+            $last10 = strlen($digitsOnly) >= 10 ? substr($digitsOnly, -10) : $digitsOnly;
+
             $agentSearchStmt = $conn->prepare(
-                'SELECT * FROM agents_details WHERE phone = :phone ORDER BY id DESC LIMIT 1'
+                'SELECT * FROM agents_details 
+                 WHERE phone = :exact 
+                    OR phone LIKE :like 
+                    OR (LENGTH(:last10) = 10 AND RIGHT(REPLACE(REPLACE(REPLACE(phone, " ", ""), "-", ""), "+", ""), 10) = :last10)
+                 ORDER BY id DESC LIMIT 1'
             );
-            $agentSearchStmt->execute([':phone' => $mobile]);
-            $searchedAgent = $agentSearchStmt->fetch();
+            $agentSearchStmt->execute([
+                ':exact' => $mobile,
+                ':like' => '%' . $last10 . '%',
+                ':last10' => $last10,
+            ]);
+            $searchedAgent = $agentSearchStmt->fetch(PDO::FETCH_ASSOC);
 
             if ($searchedAgent) {
-                $bookingsSearchStmt = $conn->prepare(
-                    'SELECT b.booking_code, b.client_name, b.check_in, b.check_out, b.amount, b.status, h.hotel_name
-                     FROM bookings_details b
-                     LEFT JOIN hotels h ON h.id = b.hotel_listing_id
-                     WHERE b.agent_id = :agent_id
-                     ORDER BY b.created_at DESC
-                     LIMIT 10'
-                );
-                $bookingsSearchStmt->execute([':agent_id' => $searchedAgent['id']]);
-                $searchedAgentBookings = $bookingsSearchStmt->fetchAll();
+                try {
+                    $bookingsSearchStmt = $conn->prepare(
+                        'SELECT b.booking_code, b.client_name, b.check_in, b.check_out, b.amount, 
+                                COALESCE(b.booking_status, b.status, "Pending") AS status, 
+                                COALESCE(h.name, b.hotel_name_snapshot, "N/A") AS hotel_name
+                         FROM bookings_details b
+                         LEFT JOIN hotels h ON h.id = b.hotel_listing_id
+                         WHERE b.agent_id = :agent_id
+                         ORDER BY b.created_at DESC
+                         LIMIT 10'
+                    );
+                    $bookingsSearchStmt->execute([':agent_id' => $searchedAgent['id']]);
+                    $searchedAgentBookings = $bookingsSearchStmt->fetchAll(PDO::FETCH_ASSOC);
+                } catch (PDOException $e) {
+                    $searchedAgentBookings = [];
+                }
             } else {
-                $flashError = 'Agent not found with this mobile number. Please register this agent.';
+                $agentNotFound = true;
             }
         } else {
-            $flashError = 'Please enter mobile number for search.';
+            $agentSearchError = 'Please enter mobile number for search.';
         }
     }
 }
@@ -1337,37 +1374,59 @@ if ($selectedEmployeeUsername !== '') {
                         <input type="hidden" name="selected_date" value="<?php echo htmlspecialchars($selectedDate, ENT_QUOTES, 'UTF-8'); ?>">
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-telephone"></i></span>
-                            <input class="form-control" type="text" name="search_mobile" placeholder="Enter agent mobile" required>
-                            <button class="btn btn-outline-primary" type="submit">Search</button>
+                            <input class="form-control" type="text" name="search_mobile" value="<?php echo htmlspecialchars($searchedMobile ?? '', ENT_QUOTES, 'UTF-8'); ?>" placeholder="Enter agent mobile" required>
+                            <button class="btn btn-primary" type="submit"><i class="bi bi-search me-1"></i>Search</button>
                         </div>
                     </form>
 
                     <?php if ($searchedAgent): ?>
-                        <div class="search-result-box mb-3">
-                            <p><strong>Name:</strong> <?php echo htmlspecialchars($searchedAgent['name'], ENT_QUOTES, 'UTF-8'); ?></p>
-                            <p><strong>Email:</strong> <?php echo htmlspecialchars($searchedAgent['email'], ENT_QUOTES, 'UTF-8'); ?></p>
-                            <p><strong>Phone:</strong> <?php echo htmlspecialchars($searchedAgent['phone'], ENT_QUOTES, 'UTF-8'); ?></p>
-                            <p><strong>GST Number:</strong> <?php echo htmlspecialchars($searchedAgent['gst_number'] ?? 'N/A', ENT_QUOTES, 'UTF-8'); ?></p>
-                            <p class="mb-0"><strong>Location:</strong> <?php echo htmlspecialchars($searchedAgent['location'], ENT_QUOTES, 'UTF-8'); ?></p>
+                        <div class="search-result-box mb-3 p-3 bg-light rounded border">
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-person-check-fill me-1"></i> <?php echo htmlspecialchars($searchedAgent['name'], ENT_QUOTES, 'UTF-8'); ?></h6>
+                                <span class="badge bg-<?php echo ($searchedAgent['status'] ?? 'Active') === 'Active' ? 'success' : 'secondary'; ?>"><?php echo htmlspecialchars($searchedAgent['status'] ?? 'Active', ENT_QUOTES, 'UTF-8'); ?></span>
+                            </div>
+                            <p class="mb-1 small"><strong>Company:</strong> <?php echo htmlspecialchars($searchedAgent['company_name'] ?? 'N/A', ENT_QUOTES, 'UTF-8'); ?></p>
+                            <p class="mb-1 small"><strong>Phone:</strong> <?php echo htmlspecialchars($searchedAgent['phone'], ENT_QUOTES, 'UTF-8'); ?></p>
+                            <p class="mb-1 small"><strong>Email:</strong> <?php echo htmlspecialchars($searchedAgent['email'], ENT_QUOTES, 'UTF-8'); ?></p>
+                            <p class="mb-1 small"><strong>Location:</strong> <?php echo htmlspecialchars($searchedAgent['location'], ENT_QUOTES, 'UTF-8'); ?></p>
+                            <p class="mb-1 small"><strong>GST Number:</strong> <?php echo htmlspecialchars($searchedAgent['gst_number'] ?? 'N/A', ENT_QUOTES, 'UTF-8'); ?></p>
+                            <?php if (!empty($searchedAgent['created_by'])): ?>
+                                <p class="mb-1 small"><strong>Registered By:</strong> <?php echo htmlspecialchars($searchedAgent['created_by'], ENT_QUOTES, 'UTF-8'); ?></p>
+                            <?php endif; ?>
+                            <?php if (!empty($searchedAgent['created_at'])): ?>
+                                <p class="mb-0 text-muted small"><strong>Registered On:</strong> <?php echo date('d M Y, h:i A', strtotime($searchedAgent['created_at'])); ?></p>
+                            <?php endif; ?>
                         </div>
+                        <h6 class="fw-semibold small text-muted mb-2"><i class="bi bi-clock-history me-1"></i>Recent Bookings</h6>
                         <div class="table-responsive">
                             <table class="table table-sm align-middle mb-0">
                                 <thead><tr><th>Booking</th><th>Hotel</th><th>Amount</th><th>Status</th></tr></thead>
                                 <tbody>
-                                <?php if (count($searchedAgentBookings) === 0): ?>
-                                    <tr><td colspan="4" class="text-muted">No bookings found for this agent.</td></tr>
+                                <?php if (empty($searchedAgentBookings)): ?>
+                                    <tr><td colspan="4" class="text-muted text-center py-2">No bookings found for this agent.</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($searchedAgentBookings as $bk): ?>
                                         <tr>
-                                            <td><?php echo htmlspecialchars($bk['booking_code'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                            <td><?php echo htmlspecialchars($bk['hotel_name'] ?: 'N/A', ENT_QUOTES, 'UTF-8'); ?></td>
-                                            <td><?php echo '₹' . number_format((float) $bk['amount'], 0); ?></td>
-                                            <td><?php echo htmlspecialchars($bk['status'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><small class="fw-semibold"><?php echo htmlspecialchars($bk['booking_code'], ENT_QUOTES, 'UTF-8'); ?></small></td>
+                                            <td><small><?php echo htmlspecialchars($bk['hotel_name'] ?: 'N/A', ENT_QUOTES, 'UTF-8'); ?></small></td>
+                                            <td><small>₹<?php echo number_format((float) $bk['amount'], 0); ?></small></td>
+                                            <td><span class="badge bg-secondary" style="font-size:0.7rem;"><?php echo htmlspecialchars($bk['status'], ENT_QUOTES, 'UTF-8'); ?></span></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
                                 </tbody>
                             </table>
+                        </div>
+                    <?php elseif (!empty($agentNotFound)): ?>
+                        <div class="alert alert-warning py-3 text-center mb-0">
+                            <i class="bi bi-exclamation-circle text-warning fs-3 d-block mb-1"></i>
+                            <strong>Record Not Found</strong><br>
+                            <small class="text-muted">Agent mobile number <strong><?php echo htmlspecialchars($searchedMobile ?? '', ENT_QUOTES, 'UTF-8'); ?></strong> is not registered.</small>
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#newAgentModal" onclick="document.querySelector('#newAgentModal input[name=\'agent_phone\']').value='<?php echo htmlspecialchars($searchedMobile ?? '', ENT_QUOTES, 'UTF-8'); ?>'">
+                                    <i class="bi bi-person-plus me-1"></i>Register This Agent
+                                </button>
+                            </div>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -1811,12 +1870,13 @@ function adminSearchAgent() {
     .then(data => {
         if (data.success && data.found) {
             const agent = data.agent;
-            let statusHtml = `<div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <strong>${agent.name}</strong><br>
-                    <small class="text-muted">${agent.email} • ${agent.location}</small>
+            let statusHtml = `<div>
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <strong class="text-dark">${agent.name}</strong>
+                    <span class="badge bg-${(agent.status || 'Active') === 'Active' ? 'success' : 'secondary'}">${agent.status || 'Active'}</span>
                 </div>
-                <span class="badge bg-success">Active</span>
+                <small class="text-muted d-block">${agent.company_name ? agent.company_name + ' • ' : ''}${agent.phone}</small>
+                <small class="text-muted d-block">${agent.email} • ${agent.location}</small>
             </div>`;
             
             document.getElementById('adminAgentStatus').innerHTML = statusHtml;
@@ -1825,20 +1885,18 @@ function adminSearchAgent() {
             document.getElementById('adminQueryAgentName').textContent = agent.name;
             currentAdminQueryAgent = agent.name;
             
-            // Populate hotel dropdown
-            // Show the booking query form
             document.getElementById('adminQueryResult').style.display = 'block';
             document.getElementById('adminGeneratedQueryDisplay').style.display = 'none';
         } else {
-            document.getElementById('adminAgentStatus').innerHTML = '<small class="text-danger">Agent not found</small>';
-            document.getElementById('adminAgentStatus').className = 'alert alert-danger py-2 mb-0';
+            document.getElementById('adminAgentStatus').innerHTML = '<div class="text-danger py-1"><i class="bi bi-x-circle me-1"></i><strong>Record Not Found</strong><br><small>Agent mobile number is not registered.</small></div>';
+            document.getElementById('adminAgentStatus').className = 'alert alert-warning py-2 mb-0';
             document.getElementById('adminQueryResult').style.display = 'none';
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        document.getElementById('adminAgentStatus').innerHTML = '<small class="text-danger">Error searching agent</small>';
-        document.getElementById('adminAgentStatus').className = 'alert alert-danger py-2 mb-0';
+        document.getElementById('adminAgentStatus').innerHTML = '<small class="text-danger">Record not found or error searching agent</small>';
+        document.getElementById('adminAgentStatus').className = 'alert alert-warning py-2 mb-0';
     });
 }
 
