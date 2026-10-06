@@ -71,74 +71,20 @@
   }
 
   function ensureProfileMenuOption() {
-    var profileHref = isEmployeeContext() ? '/employee-dashboard.php' : '/dashboard.php';
-
-    function hasProfileLink(menu) {
-      return Array.prototype.some.call(menu.querySelectorAll('a'), function (link) {
-        var text = (link.textContent || '').trim().toLowerCase();
-        var href = toPath(link.getAttribute('href') || '');
-        return text.indexOf('profile') !== -1 || href === '/dashboard.php' || href === '/employee-dashboard.php';
-      });
-    }
-
-    document.querySelectorAll('.user-menu-corner .dropdown-menu').forEach(function (menu) {
+    document.querySelectorAll('.dropdown-menu, #userDropdown').forEach(function (menu) {
       var profileLinks = Array.prototype.filter.call(menu.querySelectorAll('a'), function (link) {
-        return (link.textContent || '').trim().toLowerCase().indexOf('profile') !== -1;
+        var text = (link.textContent || '').trim().toLowerCase();
+        return text.indexOf('profile') !== -1;
       });
       if (profileLinks.length > 1) {
         for (var i = 1; i < profileLinks.length; i++) {
           var item = profileLinks[i].closest('li') || profileLinks[i];
-          if (item && item.parentNode) item.parentNode.removeChild(item);
+          if (item && item.parentNode) {
+            item.parentNode.removeChild(item);
+          }
         }
-        return;
-      }
-      if (hasProfileLink(menu)) return;
-
-      var li = document.createElement('li');
-      li.innerHTML =
-        '<a class="dropdown-item" data-uv-profile-link="1" href="' + profileHref + '">' +
-        '<i class="bi bi-person-circle me-2"></i> Profile</a>';
-
-      if (menu.firstChild) {
-        menu.insertBefore(li, menu.firstChild);
-      } else {
-        menu.appendChild(li);
       }
     });
-
-    var legacyMenu = document.getElementById('userDropdown');
-    if (legacyMenu) {
-      var legProfileLinks = Array.prototype.filter.call(legacyMenu.querySelectorAll('a'), function (link) {
-        return (link.textContent || '').trim().toLowerCase().indexOf('profile') !== -1;
-      });
-      if (legProfileLinks.length > 1) {
-        for (var j = 1; j < legProfileLinks.length; j++) {
-          if (legProfileLinks[j].parentNode) legProfileLinks[j].parentNode.removeChild(legProfileLinks[j]);
-        }
-        return;
-      }
-      if (hasProfileLink(legacyMenu)) return;
-
-      var profileLink = document.createElement('a');
-      profileLink.setAttribute('data-uv-profile-link', '1');
-      profileLink.href = profileHref;
-      profileLink.style.display = 'flex';
-      profileLink.style.alignItems = 'center';
-      profileLink.style.gap = '10px';
-      profileLink.style.padding = '9px 14px';
-      profileLink.style.fontSize = '.84rem';
-      profileLink.style.borderRadius = '10px';
-      profileLink.style.color = '#0f172a';
-      profileLink.style.marginTop = '4px';
-      profileLink.innerHTML = '<i class="bi bi-person-circle" style="color:#4f46e5;"></i> Profile';
-
-      var firstAction = legacyMenu.querySelector('a');
-      if (firstAction) {
-        legacyMenu.insertBefore(profileLink, firstAction);
-      } else {
-        legacyMenu.appendChild(profileLink);
-      }
-    }
   }
 
   function ensureThemeControls() {

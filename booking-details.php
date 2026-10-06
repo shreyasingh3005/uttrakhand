@@ -672,6 +672,6 @@ function toggleSidebarMenu(open) {
 	document.addEventListener('keydown', e => { if (e.key==='Escape') close(); });
 })();
 </script>
-<script src="/assets/js/ui-common.js?v=20260912"></script>
+<script src="/assets/js/ui-common.js?v=20261006"></script>
 </body>
 </html>

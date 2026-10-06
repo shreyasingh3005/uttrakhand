@@ -1142,10 +1142,10 @@ if ($selectedEmployeeUsername !== '') {
         <div class="dashboard-toolbar">
             <div class="dashboard-toolbar-title"><i class="bi bi-speedometer2"></i> Operations Overview <span class="live-pill"><i class="bi bi-circle-fill"></i> Live Metrics</span></div>
             <div class="dashboard-toolbar-actions">
-                <button class="btn btn-light btn-sm" type="button" onclick="window.location.reload()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
-                <button class="btn btn-light btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#newAgentModal"><i class="bi bi-person-plus"></i> New Agent</button>
-                <button class="btn btn-light btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#newEmployeeModal"><i class="bi bi-person-vcard"></i> New Employee</button>
-                <a class="btn btn-primary btn-sm" href="/bookingquery.php" onclick="if(document.getElementById('quickBookingSection')){document.getElementById('quickBookingSection').scrollIntoView({behavior:'smooth'});document.getElementById('adminAgentPhone')?.focus();return false;}"><i class="bi bi-plus-lg"></i> Quick Booking</a>
+                <button class="btn btn-light btn-sm" id="dashboardRefreshBtn" type="button" onclick="window.location.reload()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+                <button class="btn btn-light btn-sm" id="openNewAgentBtn" type="button" data-bs-toggle="modal" data-bs-target="#newAgentModal"><i class="bi bi-person-plus"></i> New Agent</button>
+                <button class="btn btn-light btn-sm" id="openNewEmployeeBtn" type="button" data-bs-toggle="modal" data-bs-target="#newEmployeeModal"><i class="bi bi-person-vcard"></i> New Employee</button>
+                <a class="btn btn-primary btn-sm" id="dashboardQuickBookingBtn" href="/bookingquery.php" onclick="openDashboardQuickBooking(event)"><i class="bi bi-plus-lg"></i> Quick Booking</a>
             </div>
         </div>
 
@@ -1655,9 +1655,11 @@ if ($selectedEmployeeUsername !== '') {
                 </div>
             </div>
         </div>
+    </div>
+</div>
 
-        <!-- Modal: Register New Agent -->
-        <div class="modal fade" id="newAgentModal" tabindex="-1" aria-labelledby="newAgentModalTitle" aria-hidden="true">
+<!-- Modal: Register New Agent -->
+<div class="modal fade" id="newAgentModal" tabindex="-1" aria-labelledby="newAgentModalTitle" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow">
                     <form method="POST" action="/dashboard.php?date=<?php echo urlencode($selectedDate); ?>">
@@ -1732,8 +1734,47 @@ if ($selectedEmployeeUsername !== '') {
     if (closeBtn) closeBtn.addEventListener('click', close);
     backdrop.addEventListener('click', close);
     document.querySelectorAll('.sidebar .nav-link').forEach(l => l.addEventListener('click', close));
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
 })();
+
+function openDashboardQuickBooking(event) {
+    const section = document.getElementById('quickBookingSection');
+    if (!section) return;
+    if (event) event.preventDefault();
+    section.scrollIntoView({ behavior: 'smooth' });
+    const resultBox = document.getElementById('adminQueryResult');
+    if (resultBox) {
+        resultBox.style.display = 'block';
+    }
+    const phoneInput = document.getElementById('adminAgentPhone');
+    if (phoneInput) {
+        phoneInput.focus();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const agentModalEl = document.getElementById('newAgentModal');
+    const employeeModalEl = document.getElementById('newEmployeeModal');
+    const agentBtn = document.getElementById('openNewAgentBtn');
+    const employeeBtn = document.getElementById('openNewEmployeeBtn');
+
+    if (agentBtn && agentModalEl) {
+        agentBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (window.bootstrap && window.bootstrap.Modal) {
+                bootstrap.Modal.getOrCreateInstance(agentModalEl).show();
+            }
+        });
+    }
+
+    if (employeeBtn && employeeModalEl) {
+        employeeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (window.bootstrap && window.bootstrap.Modal) {
+                bootstrap.Modal.getOrCreateInstance(employeeModalEl).show();
+            }
+        });
+    }
+});
 
 
 const weeklyLabels = <?php echo json_encode($weeklyLabels); ?>;
@@ -2331,6 +2372,6 @@ function showToastMsg(message) {
 	setTimeout(() => { toast.style.opacity='0'; toast.style.transform='translateY(20px)'; setTimeout(() => toast.remove(), 300); }, 3000);
 }
 </script>
-<script src="/assets/js/ui-common.js?v=20260912"></script>
+<script src="/assets/js/ui-common.js?v=20261006"></script>
 </body>
 </html>
