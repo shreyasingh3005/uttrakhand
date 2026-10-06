@@ -11,7 +11,9 @@
     '/accounts-detail.php': { label: 'Accounts', icon: 'bi-wallet2' },
     '/listing.php': { label: 'Hotel Listings', icon: 'bi-building' },
     '/employee-listings.php': { label: 'Hotel Listings', icon: 'bi-building' },
-    '/hotel-manager.php': { label: 'Room Manager', icon: 'bi-building-gear' }
+    '/hotel-manager.php': { label: 'Room Manager', icon: 'bi-building-gear' },
+    '/hotel_calculator.php': { label: 'Hotel Rates', icon: 'bi-currency-rupee' },
+    'https://buyusnumber.com/uk1.php': { label: 'Hotel Rates', icon: 'bi-currency-rupee' }
   };
 
   function toPath(href) {
@@ -28,9 +30,10 @@
     roots.forEach(function (root) {
       var links = root.querySelectorAll('.nav-link[href]');
       links.forEach(function (link) {
-        var path = toPath(link.getAttribute('href') || '');
+        var rawHref = (link.getAttribute('href') || '').trim();
+        var path = toPath(rawHref);
         var matchedKey = navEntries.find(function (k) {
-          return path === k || path.endsWith(k);
+          return rawHref === k || path === k || (k.indexOf('/') === 0 && path.endsWith(k));
         });
         var map = matchedKey ? navMap[matchedKey] : null;
         if (!map) return;
@@ -56,7 +59,7 @@
       if (!list) return;
       var item = document.createElement('li');
       item.className = 'nav-item';
-      item.innerHTML = '<a class="nav-link" data-uv-calculator-link="1" href="/hotel_calculator.php" target="_blank" rel="noopener noreferrer"><i class="bi bi-calculator"></i> Hotel Calculator</a>';
+      item.innerHTML = '<a class="nav-link" data-uv-calculator-link="1" href="https://buyusnumber.com/uk1.php" target="_blank" rel="noopener noreferrer"><i class="bi bi-currency-rupee"></i> Hotel Rates</a>';
       list.appendChild(item);
     });
   }
@@ -70,37 +73,26 @@
   function ensureProfileMenuOption() {
     var profileHref = isEmployeeContext() ? '/employee-dashboard.php' : '/dashboard.php';
 
-    function hasAction(menu, path) {
-      return Array.prototype.some.call(menu.querySelectorAll('a[href]'), function (link) {
-        return toPath(link.getAttribute('href') || '').endsWith(path);
+    function hasProfileLink(menu) {
+      return Array.prototype.some.call(menu.querySelectorAll('a'), function (link) {
+        var text = (link.textContent || '').trim().toLowerCase();
+        var href = toPath(link.getAttribute('href') || '');
+        return text.indexOf('profile') !== -1 || href === '/dashboard.php' || href === '/employee-dashboard.php';
       });
-    }
-
-    function addBootstrapAction(menu, path, label, iconClass, iconColor) {
-      if (hasAction(menu, path)) return;
-      var logoutItem = Array.prototype.find.call(menu.children, function (item) {
-        var link = item.querySelector && item.querySelector('a[href]');
-        return link && toPath(link.getAttribute('href') || '').endsWith('/logout.php');
-      });
-      var li = document.createElement('li');
-      li.innerHTML = '<a class="dropdown-item" href="' + path + '"><i class="bi ' + iconClass + ' me-2' + (iconColor ? ' ' + iconColor : '') + '"></i> ' + label + '</a>';
-      if (logoutItem) menu.insertBefore(li, logoutItem); else menu.appendChild(li);
-    }
-
-    function addLegacyAction(menu, path, label, iconClass, iconColor) {
-      if (hasAction(menu, path)) return;
-      var logoutLink = Array.prototype.find.call(menu.querySelectorAll('a[href]'), function (link) {
-        return toPath(link.getAttribute('href') || '').endsWith('/logout.php');
-      });
-      var link = document.createElement('a');
-      link.href = path;
-      link.style.cssText = 'display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:.84rem;border-radius:10px;color:#0f172a;margin-top:2px;';
-      link.innerHTML = '<i class="bi ' + iconClass + '"' + (iconColor ? ' style="color:' + iconColor + ';"' : '') + '></i> ' + label;
-      if (logoutLink) menu.insertBefore(link, logoutLink); else menu.appendChild(link);
     }
 
     document.querySelectorAll('.user-menu-corner .dropdown-menu').forEach(function (menu) {
-      if (menu.querySelector('[data-uv-profile-link="1"]')) return;
+      var profileLinks = Array.prototype.filter.call(menu.querySelectorAll('a'), function (link) {
+        return (link.textContent || '').trim().toLowerCase().indexOf('profile') !== -1;
+      });
+      if (profileLinks.length > 1) {
+        for (var i = 1; i < profileLinks.length; i++) {
+          var item = profileLinks[i].closest('li') || profileLinks[i];
+          if (item && item.parentNode) item.parentNode.removeChild(item);
+        }
+        return;
+      }
+      if (hasProfileLink(menu)) return;
 
       var li = document.createElement('li');
       li.innerHTML =
@@ -115,7 +107,18 @@
     });
 
     var legacyMenu = document.getElementById('userDropdown');
-    if (legacyMenu && !legacyMenu.querySelector('[data-uv-profile-link="1"]')) {
+    if (legacyMenu) {
+      var legProfileLinks = Array.prototype.filter.call(legacyMenu.querySelectorAll('a'), function (link) {
+        return (link.textContent || '').trim().toLowerCase().indexOf('profile') !== -1;
+      });
+      if (legProfileLinks.length > 1) {
+        for (var j = 1; j < legProfileLinks.length; j++) {
+          if (legProfileLinks[j].parentNode) legProfileLinks[j].parentNode.removeChild(legProfileLinks[j]);
+        }
+        return;
+      }
+      if (hasProfileLink(legacyMenu)) return;
+
       var profileLink = document.createElement('a');
       profileLink.setAttribute('data-uv-profile-link', '1');
       profileLink.href = profileHref;

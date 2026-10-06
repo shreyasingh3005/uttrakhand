@@ -1104,7 +1104,7 @@ if ($selectedEmployeeUsername !== '') {
         <li class="nav-item"><a class="nav-link" href="/agents-details.php"><i class="bi bi-person-badge"></i> Agents</a></li>
         <li class="nav-item"><a class="nav-link" href="/bookingquery.php"><i class="bi bi-chat-dots"></i> Booking Query</a></li>
         <li class="nav-item"><a class="nav-link" href="/query-history.php"><i class="bi bi-clock-history"></i> Query History</a></li>
-        <li class="nav-item"><a class="nav-link" href="/hotel_calculator.php" target="_blank" rel="noopener noreferrer"><i class="bi bi-calculator"></i> Hotel Calculator</a></li>
+        <li class="nav-item"><a class="nav-link" href="https://buyusnumber.com/uk1.php" target="_blank" rel="noopener noreferrer"><i class="bi bi-currency-rupee"></i> Hotel Rates</a></li>
         <li class="nav-item"><a class="nav-link" href="/listing.php"><i class="bi bi-building"></i> Hotel Listings</a></li>
         <li class="nav-item"><a class="nav-link" href="/employees-detail.php"><i class="bi bi-person-vcard"></i> Employees</a></li>
         <li class="nav-item"><a class="nav-link" href="/accounts-detail.php"><i class="bi bi-wallet2"></i> Accounts</a></li>
@@ -1142,10 +1142,10 @@ if ($selectedEmployeeUsername !== '') {
         <div class="dashboard-toolbar">
             <div class="dashboard-toolbar-title"><i class="bi bi-speedometer2"></i> Operations Overview <span class="live-pill"><i class="bi bi-circle-fill"></i> Live Metrics</span></div>
             <div class="dashboard-toolbar-actions">
-                <button class="btn btn-light btn-sm" type="button" onclick="refreshLiveDashboard()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
-                <a class="btn btn-light btn-sm" href="/agents-details.php"><i class="bi bi-person-plus"></i> New Agent</a>
-                <a class="btn btn-light btn-sm" href="/employees-detail.php"><i class="bi bi-person-vcard"></i> New Employee</a>
-                <a class="btn btn-primary btn-sm" href="/bookingquery.php"><i class="bi bi-plus-lg"></i> Quick Booking</a>
+                <button class="btn btn-light btn-sm" type="button" onclick="window.location.reload()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+                <button class="btn btn-light btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#newAgentModal"><i class="bi bi-person-plus"></i> New Agent</button>
+                <button class="btn btn-light btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#newEmployeeModal"><i class="bi bi-person-vcard"></i> New Employee</button>
+                <a class="btn btn-primary btn-sm" href="/bookingquery.php" onclick="if(document.getElementById('quickBookingSection')){document.getElementById('quickBookingSection').scrollIntoView({behavior:'smooth'});document.getElementById('adminAgentPhone')?.focus();return false;}"><i class="bi bi-plus-lg"></i> Quick Booking</a>
             </div>
         </div>
 
@@ -1513,7 +1513,7 @@ if ($selectedEmployeeUsername !== '') {
         </div>
 
         <!-- Booking Query Module for Admin -->
-        <div class="row g-4 mt-4">
+        <div class="row g-4 mt-4" id="quickBookingSection">
             <div class="col-12">
                 <div class="data-card">
                     <h4><i class="bi bi-chat-dots me-2"></i>Booking Query Management</h4>
@@ -1652,6 +1652,66 @@ if ($selectedEmployeeUsername !== '') {
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Register New Agent -->
+        <div class="modal fade" id="newAgentModal" tabindex="-1" aria-labelledby="newAgentModalTitle" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <form method="POST" action="/dashboard.php?date=<?php echo urlencode($selectedDate); ?>">
+                        <input type="hidden" name="action" value="register_agent">
+                        <input type="hidden" name="selected_date" value="<?php echo htmlspecialchars($selectedDate, ENT_QUOTES, 'UTF-8'); ?>">
+                        <div class="modal-header">
+                            <h5 class="modal-title fw-bold text-dark" id="newAgentModalTitle"><i class="bi bi-person-plus text-success me-2"></i>Register New Agent</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3"><label class="form-label small fw-semibold text-muted">Agent Name *</label><input class="form-control" type="text" name="agent_name" placeholder="Agent Name" required></div>
+                            <div class="mb-3"><label class="form-label small fw-semibold text-muted">Company Name *</label><input class="form-control" type="text" name="agent_company" placeholder="Company Name" required></div>
+                            <div class="mb-3"><label class="form-label small fw-semibold text-muted">GST Number (optional)</label><input class="form-control" type="text" name="agent_gst_number" placeholder="GST Number (optional)"></div>
+                            <div class="mb-3"><label class="form-label small fw-semibold text-muted">Agent Email *</label><input class="form-control" type="email" name="agent_email" placeholder="Agent Email" required></div>
+                            <div class="mb-3"><label class="form-label small fw-semibold text-muted">Mobile Number *</label><input class="form-control" type="text" name="agent_phone" placeholder="Mobile Number" required></div>
+                            <div class="mb-3"><label class="form-label small fw-semibold text-muted">Location *</label><input class="form-control" type="text" name="agent_location" placeholder="Enter location" required></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button class="btn btn-success" type="submit"><i class="bi bi-check2 me-1"></i>Register Agent</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Register New Employee -->
+        <div class="modal fade" id="newEmployeeModal" tabindex="-1" aria-labelledby="newEmployeeModalTitle" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content border-0 shadow">
+                    <form method="POST" action="/dashboard.php?date=<?php echo urlencode($selectedDate); ?>">
+                        <input type="hidden" name="action" value="register_employee">
+                        <input type="hidden" name="selected_date" value="<?php echo htmlspecialchars($selectedDate, ENT_QUOTES, 'UTF-8'); ?>">
+                        <div class="modal-header">
+                            <h5 class="modal-title fw-bold text-dark" id="newEmployeeModalTitle"><i class="bi bi-person-badge text-primary me-2"></i>Register New Employee</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row g-3">
+                                <div class="col-md-6"><label class="form-label small fw-semibold text-muted">Employee Name *</label><input class="form-control" type="text" name="emp_name" placeholder="Employee Name" required></div>
+                                <div class="col-md-6"><label class="form-label small fw-semibold text-muted">Employee Email *</label><input class="form-control" type="email" name="emp_email" placeholder="Employee Email" required></div>
+                                <div class="col-md-6"><label class="form-label small fw-semibold text-muted">Phone Number *</label><input class="form-control" type="text" name="emp_phone" placeholder="Phone Number" required></div>
+                                <div class="col-md-6"><label class="form-label small fw-semibold text-muted">Designation *</label><input class="form-control" type="text" name="emp_designation" placeholder="Designation" required></div>
+                                <div class="col-md-6"><label class="form-label small fw-semibold text-muted">Department *</label><input class="form-control" type="text" name="emp_department" placeholder="Department" required></div>
+                                <div class="col-md-6"><label class="form-label small fw-semibold text-muted">Monthly Salary</label><input class="form-control" type="number" step="0.01" name="emp_salary" placeholder="Monthly Salary"></div>
+                                <div class="col-md-6"><label class="form-label small fw-semibold text-muted">Login ID (username) *</label><input class="form-control" type="text" name="emp_username" placeholder="Login ID (username)" required></div>
+                                <div class="col-md-6"><label class="form-label small fw-semibold text-muted">Login Password *</label><input class="form-control" type="text" name="emp_password" placeholder="Login Password" required></div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button class="btn btn-dark" type="submit"><i class="bi bi-check2 me-1"></i>Register Employee & Create Login</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
