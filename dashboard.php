@@ -140,32 +140,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         header('Content-Type: application/json; charset=utf-8');
         $mobileNumber = sanitize_input($_POST['mobileNumber'] ?? '');
         
-        if (!$mobileNumber) {
-            echo json_encode(['success' => false, 'found' => false, 'message' => 'Mobile number required']);
+        $digits = preg_replace('/\D+/', '', (string)$mobileNumber);
+        if ($digits === '' || strlen($digits) !== 10 || !preg_match('/^[6-9]\d{9}$/', $digits)) {
+            echo json_encode(['success' => false, 'found' => false, 'message' => 'Please enter a valid 10-digit mobile number.']);
             exit;
         }
         
         try {
-            $digitsOnly = preg_replace('/\D+/', '', $mobileNumber);
-            $last10 = strlen($digitsOnly) >= 10 ? substr($digitsOnly, -10) : $digitsOnly;
-
             $agentStmt = $conn->prepare(
                 "SELECT id, name, company_name, email, phone, location, gst_number, status, created_by, created_at 
                  FROM agents_details 
-                 WHERE phone = :exact 
-                    OR phone LIKE :like 
-                    OR (LENGTH(:last10) = 10 AND RIGHT(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '+', ''), 10) = :last10)
+                 WHERE RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '+', ''), '(', ''), 10) = :phone10
                  ORDER BY id DESC LIMIT 1"
             );
-            $agentStmt->execute([
-                ':exact' => $mobileNumber,
-                ':like' => '%' . $last10 . '%',
-                ':last10' => $last10,
-            ]);
+            $agentStmt->execute([':phone10' => $digits]);
             $agent = $agentStmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$agent) {
-                echo json_encode(['success' => false, 'found' => false, 'message' => 'Record not found']);
+                echo json_encode(['success' => false, 'found' => false, 'message' => 'Agent not found for this mobile number. Please check and try again.']);
                 exit;
             }
             

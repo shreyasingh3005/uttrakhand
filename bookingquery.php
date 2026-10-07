@@ -286,10 +286,17 @@ try {
         <div id="adminBookingQueryAgentBox" class="border rounded p-3 mb-3" style="display:none;">
             <label for="adminBookingQueryAgentPhone" class="form-label small fw-semibold text-secondary">Agent Mobile Number</label>
             <div class="input-group">
-                <input type="tel" class="form-control" id="adminBookingQueryAgentPhone" maxlength="20" placeholder="Enter registered agent mobile number" oninput="lookupAdminBookingQueryAgent()">
-                <button type="button" class="btn btn-outline-primary" onclick="lookupAdminBookingQueryAgent()">Fetch Agent</button>
+                <input type="tel" class="form-control" id="adminBookingQueryAgentPhone" maxlength="10" placeholder="Enter 10-digit agent mobile number" oninput="handleAdminAgentPhoneInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();lookupAdminBookingQueryAgent();}">
+                <button type="button" class="btn btn-outline-primary" id="adminBookingQueryFetchBtn" onclick="lookupAdminBookingQueryAgent()" disabled>Fetch Agent</button>
             </div>
             <div id="adminBookingQueryAgentStatus" class="small text-muted mt-2">Enter agent mobile number.</div>
+            <div id="adminBookingQueryAgentCard" class="card border-success-subtle bg-success-subtle p-3 mt-3 shadow-sm" style="display:none; border-radius: 8px;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h6 class="fw-bold text-success mb-0"><i class="bi bi-person-check-fill me-2"></i>Verified Agent Details</h6>
+                    <span class="badge bg-success">Registered</span>
+                </div>
+                <div class="small text-dark fw-semibold" id="adminBookingQueryAgentCardContent"></div>
+            </div>
         </div>
 
         <fieldset id="adminBookingQueryDetailsFields">
@@ -401,45 +408,192 @@ function setAdminBookingQueryType(type) {
     adminBookingQueryType = type === 'agent' ? 'agent' : 'admin';
     const agentBox = document.getElementById('adminBookingQueryAgentBox');
     const form = document.getElementById('adminBookingQueryDetailsFields');
+    const card = document.getElementById('adminBookingQueryAgentCard');
+    const status = document.getElementById('adminBookingQueryAgentStatus');
+
     if (agentBox) agentBox.style.display = adminBookingQueryType === 'agent' ? 'block' : 'none';
     if (form) form.disabled = adminBookingQueryType === 'agent' && !adminBookingQueryAgent;
+
     if (adminBookingQueryType === 'admin') {
         adminBookingQueryAgent = null;
-        const status = document.getElementById('adminBookingQueryAgentStatus');
-        if (status) status.textContent = 'Select Agent type to search an agent.';
+        if (card) card.style.display = 'none';
+        if (status) {
+            status.className = 'small text-muted mt-2';
+            status.textContent = 'Select Agent type to search an agent.';
+        }
+    } else {
+        if (!adminBookingQueryAgent) {
+            if (form) form.disabled = true;
+            if (status) {
+                status.className = 'small text-muted mt-2';
+                status.textContent = 'Enter agent mobile number.';
+            }
+            if (card) card.style.display = 'none';
+        }
+        handleAdminAgentPhoneInput();
+    }
+}
+
+function handleAdminAgentPhoneInput() {
+    const input = document.getElementById('adminBookingQueryAgentPhone');
+    const btn = document.getElementById('adminBookingQueryFetchBtn');
+    const status = document.getElementById('adminBookingQueryAgentStatus');
+    const card = document.getElementById('adminBookingQueryAgentCard');
+    const form = document.getElementById('adminBookingQueryDetailsFields');
+
+    // Rule 3: Clear previously shown agent details immediately upon changing input
+    adminBookingQueryAgent = null;
+    if (card) card.style.display = 'none';
+    if (form && adminBookingQueryType === 'agent') form.disabled = true;
+
+    const raw = (input?.value || '').trim();
+    const digits = raw.replace(/\D/g, '');
+
+    if (!raw) {
+        if (status) {
+            status.className = 'small text-muted mt-2';
+            status.textContent = 'Enter agent mobile number.';
+        }
+        if (btn) btn.disabled = true;
+        return;
+    }
+
+    // If non-digits are entered (e.g. "dsfl"), show invalid message
+    if (/[^0-9]/.test(raw)) {
+        if (status) {
+            status.className = 'small text-danger mt-2';
+            status.textContent = 'Please enter a valid 10-digit mobile number.';
+        }
+        // Keep button clickable so clicking Fetch triggers Case C
+        if (btn) btn.disabled = false;
+        return;
+    }
+
+    // Digits only, but less than 10 digits -> disable Fetch button (Rule 4)
+    if (digits.length < 10) {
+        if (status) {
+            status.className = 'small text-muted mt-2';
+            status.textContent = `Enter 10-digit mobile number (${digits.length}/10 digits).`;
+        }
+        if (btn) btn.disabled = true;
+        return;
+    }
+
+    // Exactly 10 digits entered
+    if (digits.length === 10) {
+        if (!/^[6-9]/.test(digits)) {
+            if (status) {
+                status.className = 'small text-danger mt-2';
+                status.textContent = 'Please enter a valid 10-digit mobile number.';
+            }
+            if (btn) btn.disabled = false;
+        } else {
+            if (status) {
+                status.className = 'small text-muted mt-2';
+                status.textContent = 'Click "Fetch Agent" to verify.';
+            }
+            if (btn) btn.disabled = false;
+        }
     }
 }
 
 function lookupAdminBookingQueryAgent() {
-    const phone = document.getElementById('adminBookingQueryAgentPhone')?.value.trim() || '';
+    const input = document.getElementById('adminBookingQueryAgentPhone');
+    const btn = document.getElementById('adminBookingQueryFetchBtn');
     const status = document.getElementById('adminBookingQueryAgentStatus');
-    if (adminBookingQueryAgent && adminBookingQueryAgent.phone !== phone) adminBookingQueryAgent = null;
+    const card = document.getElementById('adminBookingQueryAgentCard');
+    const cardContent = document.getElementById('adminBookingQueryAgentCardContent');
     const form = document.getElementById('adminBookingQueryDetailsFields');
-    if (!adminBookingQueryAgent && form) form.disabled = true;
-    if (!phone) {
-        adminBookingQueryAgent = null;
-        if (status) status.textContent = 'Enter agent mobile number.';
-        return;
+
+    // Clear previously shown agent details
+    adminBookingQueryAgent = null;
+    if (card) card.style.display = 'none';
+    if (form && adminBookingQueryType === 'agent') form.disabled = true;
+
+    const raw = (input?.value || '').trim();
+    const digits = raw.replace(/\D/g, '');
+
+    // Case C: If the field is empty or invalid ->
+    // Show message: "Please enter a valid 10-digit mobile number." Do not call the API.
+    if (!raw || raw !== digits || digits.length !== 10 || !/^[6-9]\d{9}$/.test(digits)) {
+        if (status) {
+            status.className = 'small text-danger mt-2';
+            status.textContent = 'Please enter a valid 10-digit mobile number.';
+        }
+        return; // Do NOT call API!
     }
-    if (status) status.textContent = 'Searching agent...';
-    fetch('employee-dashboard.php', { method: 'POST', body: new URLSearchParams({ action: 'search_agent_by_mobile', mobileNumber: phone }) })
-        .then((response) => response.json())
-        .then((data) => {
-            if (!data.success || !data.found) {
-                adminBookingQueryAgent = null;
-                if (form) form.disabled = true;
-                if (status) status.textContent = data.message || 'Agent mobile number is not registered.';
-                if (status) status.className = 'small text-muted mt-2';
-                return;
+
+    // Rule 5: Show a loading spinner while fetching. Prevent double-clicks.
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Fetching...';
+    }
+    if (status) {
+        status.className = 'small text-muted mt-2';
+        status.textContent = 'Searching agent...';
+    }
+
+    const resetFetchBtn = () => {
+        if (btn) {
+            btn.innerHTML = 'Fetch Agent';
+            btn.disabled = false;
+        }
+    };
+
+    const handleFound = (agent) => {
+        adminBookingQueryAgent = agent;
+        if (form) form.disabled = false;
+        const line = `${agent.name} | ${agent.phone} | GSTIN: ${agent.gst_number || 'N/A'} | ${agent.location || agent.city || 'N/A'} | ${agent.company_name || agent.agency_name || 'N/A'} | ${agent.email || 'N/A'}`;
+        if (cardContent) cardContent.textContent = line;
+        if (card) card.style.display = 'block';
+        if (status) {
+            status.className = 'small text-success mt-2 fw-semibold';
+            status.textContent = line;
+        }
+    };
+
+    const handleNotFound = (msg) => {
+        adminBookingQueryAgent = null;
+        if (form) form.disabled = true;
+        if (card) card.style.display = 'none';
+        if (status) {
+            status.className = 'small text-danger mt-2';
+            status.textContent = msg || 'Agent not found for this mobile number. Please check and try again.';
+        }
+    };
+
+    // Primary endpoint: GET /api/agents/by-mobile/{mobile}
+    fetch(`/api/agents/by-mobile/${encodeURIComponent(digits)}?_t=${Date.now()}`)
+        .then(async (response) => {
+            const data = await response.json().catch(() => ({}));
+            if (response.ok && data.success && data.found && data.agent) {
+                handleFound(data.agent);
+                resetFetchBtn();
+            } else {
+                handleNotFound(data.message);
+                resetFetchBtn();
             }
-            adminBookingQueryAgent = data.agent;
-            if (form) form.disabled = false;
-            if (status) status.className = 'small text-success mt-2';
-            if (status) status.textContent = `${data.agent.name} | ${data.agent.phone} | GSTIN: ${data.agent.gst_number || 'N/A'} | ${data.agent.location || 'Location unavailable'} | ${data.agent.company_name || ''} | ${data.agent.email || ''}`;
         })
         .catch(() => {
-            adminBookingQueryAgent = null;
-            if (status) status.textContent = 'Unable to fetch agent details.';
+            // Fallback to employee-dashboard.php search_agent_by_mobile POST action
+            fetch('employee-dashboard.php', {
+                method: 'POST',
+                body: new URLSearchParams({ action: 'search_agent_by_mobile', mobileNumber: digits })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.found && data.agent) {
+                    handleFound(data.agent);
+                } else {
+                    handleNotFound(data.message);
+                }
+            })
+            .catch(() => {
+                handleNotFound('Agent not found for this mobile number. Please check and try again.');
+            })
+            .finally(() => {
+                resetFetchBtn();
+            });
         });
 }
 

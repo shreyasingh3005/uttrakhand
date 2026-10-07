@@ -270,31 +270,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         http_response_code(200);
         header('Content-Type: application/json; charset=utf-8');
         
-        if (!$mobile) {
-            echo json_encode(['success' => false, 'message' => "Please enter a mobile number"]);
+        $digits = preg_replace('/\D+/', '', (string)$mobile);
+        if ($digits === '' || strlen($digits) !== 10 || !preg_match('/^[6-9]\d{9}$/', $digits)) {
+            echo json_encode(['success' => false, 'found' => false, 'message' => "Please enter a valid 10-digit mobile number."]);
             exit;
         }
         
         try {
-            $digitsOnly = preg_replace('/\D+/', '', $mobile);
-            $last10 = strlen($digitsOnly) >= 10 ? substr($digitsOnly, -10) : $digitsOnly;
             $stmt = $conn->prepare(
                 "SELECT id, name, company_name, gst_number, email, phone, location, status, created_by, created_at 
                  FROM agents_details 
-                 WHERE phone = :exact 
-                    OR phone LIKE :like 
-                    OR (LENGTH(:last10_length) = 10 AND RIGHT(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '+', ''), 10) = :last10)
+                 WHERE RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '+', ''), '(', ''), 10) = :phone10
                  ORDER BY id DESC LIMIT 1"
             );
-            $stmt->execute([
-                ':exact' => $mobile,
-                ':like' => '%' . $last10 . '%',
-                ':last10_length' => $last10, ':last10' => $last10,
-            ]);
+            $stmt->execute([':phone10' => $digits]);
             $agent = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($agent) {
-
                 // Get agent's bookings
                 $bookingsStmt = $conn->prepare("SELECT bd.*, COALESCE(NULLIF(bd.hotel_name_snapshot, ''), h.name) AS hotel_name 
                                                FROM bookings_details bd
@@ -307,16 +299,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 
                 echo json_encode([
                     'success' => true, 
-                    'found' => true,
+                    'found' => true, 
                     'agent' => $agent,
                     'bookings' => $agent_bookings,
                     'booking_count' => count($agent_bookings)
                 ]);
             } else {
-                echo json_encode(['success' => true, 'found' => false, 'message' => "Agent not found. Please register first."]);
+                echo json_encode(['success' => false, 'found' => false, 'message' => "Agent not found for this mobile number. Please check and try again."]);
             }
         } catch (PDOException $e) {
-            echo json_encode(['success' => false, 'message' => 'Database error occurred. Please try again.']);
+            echo json_encode(['success' => false, 'found' => false, 'message' => 'Database error occurred. Please try again.']);
         }
         exit;
     }
@@ -3378,10 +3370,17 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                     <div id="bookingQueryAgentBox" class="border rounded p-3 mb-3" style="display:none;">
                         <label for="bookingQueryAgentPhone" class="form-label small fw-semibold text-secondary">Agent Mobile Number</label>
                         <div class="input-group">
-                            <input type="tel" class="form-control" id="bookingQueryAgentPhone" maxlength="20" placeholder="Enter registered agent mobile number" oninput="lookupBookingQueryAgent()">
-                            <button type="button" class="btn btn-outline-primary" onclick="lookupBookingQueryAgent()">Fetch Agent</button>
+                            <input type="tel" class="form-control" id="bookingQueryAgentPhone" maxlength="10" placeholder="Enter 10-digit agent mobile number" oninput="handleEmployeeAgentPhoneInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();lookupBookingQueryAgent();}">
+                            <button type="button" class="btn btn-outline-primary" id="bookingQueryFetchBtn" onclick="lookupBookingQueryAgent()" disabled>Fetch Agent</button>
                         </div>
                         <div id="bookingQueryAgentStatus" class="small text-muted mt-2">Enter agent mobile number.</div>
+                        <div id="bookingQueryAgentCard" class="card border-success-subtle bg-success-subtle p-3 mt-3 shadow-sm" style="display:none; border-radius: 8px;">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <h6 class="fw-bold text-success mb-0"><i class="bi bi-person-check-fill me-2"></i>Verified Agent Details</h6>
+                                <span class="badge bg-success">Registered</span>
+                            </div>
+                            <div class="small text-dark fw-semibold" id="bookingQueryAgentCardContent"></div>
+                        </div>
                     </div>
 
                     <fieldset id="bookingQueryDetailsFields">
@@ -5082,44 +5081,170 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         const agentBox = document.getElementById('bookingQueryAgentBox');
         if (agentBox) agentBox.style.display = 'block';
         setBookingQueryDetailsDisabled(!bookingQueryAgent);
+        handleEmployeeAgentPhoneInput();
+    }
+
+    function handleEmployeeAgentPhoneInput() {
+        const input = document.getElementById('bookingQueryAgentPhone');
+        const btn = document.getElementById('bookingQueryFetchBtn');
+        const status = document.getElementById('bookingQueryAgentStatus');
+        const card = document.getElementById('bookingQueryAgentCard');
+
+        // Rule 3: Clear previously shown agent details immediately
+        bookingQueryAgent = null;
+        if (card) card.style.display = 'none';
+        setBookingQueryDetailsDisabled(true);
+
+        const raw = (input?.value || '').trim();
+        const digits = raw.replace(/\D/g, '');
+
+        if (!raw) {
+            if (status) {
+                status.className = 'small text-muted mt-2';
+                status.textContent = 'Enter agent mobile number.';
+            }
+            if (btn) btn.disabled = true;
+            return;
+        }
+
+        // If non-digits are entered (e.g. "dsfl"), show invalid message
+        if (/[^0-9]/.test(raw)) {
+            if (status) {
+                status.className = 'small text-danger mt-2';
+                status.textContent = 'Please enter a valid 10-digit mobile number.';
+            }
+            if (btn) btn.disabled = false;
+            return;
+        }
+
+        // Digits only, but less than 10 digits -> disable Fetch button (Rule 4)
+        if (digits.length < 10) {
+            if (status) {
+                status.className = 'small text-muted mt-2';
+                status.textContent = `Enter 10-digit mobile number (${digits.length}/10 digits).`;
+            }
+            if (btn) btn.disabled = true;
+            return;
+        }
+
+        // Exactly 10 digits entered
+        if (digits.length === 10) {
+            if (!/^[6-9]/.test(digits)) {
+                if (status) {
+                    status.className = 'small text-danger mt-2';
+                    status.textContent = 'Please enter a valid 10-digit mobile number.';
+                }
+                if (btn) btn.disabled = false;
+            } else {
+                if (status) {
+                    status.className = 'small text-muted mt-2';
+                    status.textContent = 'Click "Fetch Agent" to verify.';
+                }
+                if (btn) btn.disabled = false;
+            }
+        }
     }
 
     function lookupBookingQueryAgent() {
-        const phone = document.getElementById('bookingQueryAgentPhone')?.value.trim() || '';
+        const input = document.getElementById('bookingQueryAgentPhone');
+        const btn = document.getElementById('bookingQueryFetchBtn');
         const status = document.getElementById('bookingQueryAgentStatus');
-        if (bookingQueryAgent && bookingQueryAgent.phone !== phone) bookingQueryAgent = null;
+        const card = document.getElementById('bookingQueryAgentCard');
+        const cardContent = document.getElementById('bookingQueryAgentCardContent');
+
+        // Clear previously shown agent details
+        bookingQueryAgent = null;
+        if (card) card.style.display = 'none';
         setBookingQueryDetailsDisabled(true);
-        if (!phone) {
-            bookingQueryAgent = null;
-            if (status) status.textContent = 'Please enter the Agent Mobile Number before generating the query.';
-            return;
+
+        const raw = (input?.value || '').trim();
+        const digits = raw.replace(/\D/g, '');
+
+        // Case C: If the field is empty or invalid ->
+        // Show message: "Please enter a valid 10-digit mobile number." Do not call the API.
+        if (!raw || raw !== digits || digits.length !== 10 || !/^[6-9]\d{9}$/.test(digits)) {
+            if (status) {
+                status.className = 'small text-danger mt-2';
+                status.textContent = 'Please enter a valid 10-digit mobile number.';
+            }
+            return; // Do NOT call API!
         }
-        if (status) status.textContent = 'Searching agent...';
-        fetch('employee-dashboard.php', { method: 'POST', body: new URLSearchParams({ action: 'search_agent_by_mobile', mobileNumber: phone }) })
-            .then((response) => response.json())
-            .then((data) => {
-                if (!data.success || !data.found) {
-                    bookingQueryAgent = null;
-                    setBookingQueryDetailsDisabled(true);
-                    if (status) {
-                        status.textContent = data.message || 'Agent not found. Please enter a registered Agent Mobile Number.';
-                        status.className = 'small text-danger mt-2';
-                    }
-                    return;
+
+        // Rule 5: Show a loading spinner while fetching. Prevent double-clicks.
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Fetching...';
+        }
+        if (status) {
+            status.className = 'small text-muted mt-2';
+            status.textContent = 'Searching agent...';
+        }
+
+        const resetFetchBtn = () => {
+            if (btn) {
+                btn.innerHTML = 'Fetch Agent';
+                btn.disabled = false;
+            }
+        };
+
+        const handleFound = (agent) => {
+            bookingQueryAgent = agent;
+            setBookingQueryDetailsDisabled(false);
+            const line = `${agent.name} | ${agent.phone} | GSTIN: ${agent.gst_number || 'N/A'} | ${agent.location || agent.city || 'N/A'} | ${agent.company_name || agent.agency_name || 'N/A'} | ${agent.email || 'N/A'}`;
+            if (cardContent) cardContent.textContent = line;
+            if (card) card.style.display = 'block';
+            if (status) {
+                status.className = 'small text-success mt-2 fw-semibold';
+                status.textContent = line;
+            }
+        };
+
+        const handleNotFound = (msg) => {
+            bookingQueryAgent = null;
+            setBookingQueryDetailsDisabled(true);
+            if (card) card.style.display = 'none';
+            if (status) {
+                status.className = 'small text-danger mt-2';
+                status.textContent = msg || 'Agent not found for this mobile number. Please check and try again.';
+            }
+        };
+
+        // Primary endpoint: GET /api/agents/by-mobile/{mobile}
+        fetch(`/api/agents/by-mobile/${encodeURIComponent(digits)}?_t=${Date.now()}`)
+            .then(async (response) => {
+                const data = await response.json().catch(() => ({}));
+                if (response.ok && data.success && data.found && data.agent) {
+                    handleFound(data.agent);
+                    resetFetchBtn();
+                } else {
+                    handleNotFound(data.message);
+                    resetFetchBtn();
                 }
-                bookingQueryAgent = data.agent;
-                setBookingQueryDetailsDisabled(false);
-                if (status) status.className = 'small text-success mt-2';
-                                if (status) status.innerHTML = `<strong>${escapeQueryHistoryHtml(data.agent.name)}</strong> | ${escapeQueryHistoryHtml(data.agent.phone)} | GST: ${escapeQueryHistoryHtml(data.agent.gst_number || 'N/A')} | ${escapeQueryHistoryHtml(data.agent.location || 'Location unavailable')} | ${escapeQueryHistoryHtml(data.agent.company_name || '')} | ${escapeQueryHistoryHtml(data.agent.email || '')}`;
             })
             .catch(() => {
-                bookingQueryAgent = null;
-                setBookingQueryDetailsDisabled(true);
-                if (status) status.textContent = 'Unable to fetch agent details.';
+                // Fallback to employee-dashboard.php search_agent_by_mobile POST action
+                fetch('employee-dashboard.php', {
+                    method: 'POST',
+                    body: new URLSearchParams({ action: 'search_agent_by_mobile', mobileNumber: digits })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.found && data.agent) {
+                        handleFound(data.agent);
+                    } else {
+                        handleNotFound(data.message);
+                    }
+                })
+                .catch(() => {
+                    handleNotFound('Agent not found for this mobile number. Please check and try again.');
+                })
+                .finally(() => {
+                    resetFetchBtn();
+                });
             });
     }
 
-            setBookingQueryType('agent');
+    setBookingQueryType('agent');
 
     function generateBookingQueryResults() {
         const requiredFields = [

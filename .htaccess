@@ -9,6 +9,9 @@
 RewriteEngine On
 RewriteBase /
 
+# ── API endpoints ─────────────────────────────────────────────────────────
+RewriteRule ^api/agents/by-mobile/([^/]+)/?$ api/agents/by-mobile.php?mobile=$1 [QSA,L]
+
 # ── Block sensitive files ──────────────────────────────────────────────
 RewriteRule ^\.env\.php$ - [F,L]
 RewriteRule ^\.(?!well-known/) - [F,L]
