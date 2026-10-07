@@ -14,7 +14,7 @@
     '/employee-listings.php': { label: 'Hotel Listings', icon: 'bi-building' },
     '/hotel-manager.php': { label: 'Room Manager', icon: 'bi-building-gear' },
     '/hotel_calculator.php': { label: 'Hotel Rates', icon: 'bi-currency-rupee' },
-    'https://buyusnumber.com/uk1.php': { label: 'Hotel Rates', icon: 'bi-currency-rupee' }
+    '/rates.php': { label: 'Hotel Rates', icon: 'bi-currency-rupee' }
   };
 
   function toPath(href) {
@@ -55,12 +55,12 @@
 
   function ensureCalculatorLink() {
     document.querySelectorAll('#adminSidebar').forEach(function (sidebar) {
-      if (sidebar.querySelector('a[data-uv-calculator-link="1"], a[href="https://buyusnumber.com/uk1.php"], a[href$="/hotel_calculator.php"]')) return;
+      if (sidebar.querySelector('a[data-uv-calculator-link="1"], a[href="/rates.php"], a[href$="/rates.php"], a[href$="/hotel_calculator.php"]')) return;
       var list = sidebar.querySelector('ul.nav, .sidebar-nav');
       if (!list) return;
       var item = document.createElement('li');
       item.className = 'nav-item';
-      item.innerHTML = '<a class="nav-link" data-uv-calculator-link="1" href="https://buyusnumber.com/uk1.php" target="_blank" rel="noopener noreferrer"><i class="bi bi-currency-rupee"></i> Hotel Rates</a>';
+      item.innerHTML = '<a class="nav-link" data-uv-calculator-link="1" href="/rates.php" target="_blank" rel="noopener noreferrer"><i class="bi bi-currency-rupee"></i> Hotel Rates</a>';
       list.appendChild(item);
     });
   }

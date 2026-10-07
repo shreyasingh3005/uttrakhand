@@ -16,7 +16,7 @@ $navItems = [
     'bookings'      => ['label' => 'Bookings',       'icon' => 'bi-calendar-check','href' => '/booking-details.php'],
     'query'         => ['label' => 'Booking Query',  'icon' => 'bi-chat-dots',     'href' => '/bookingquery.php'],
     'query-history' => ['label' => 'Query History',  'icon' => 'bi-clock-history', 'href' => '/query-history.php'],
-    'calculator'    => ['label' => 'Hotel Rates',     'icon' => 'bi-currency-rupee', 'href' => 'https://buyusnumber.com/uk1.php', 'new_tab' => true],
+    'calculator'    => ['label' => 'Hotel Rates',     'icon' => 'bi-currency-rupee', 'href' => '/rates.php', 'new_tab' => true],
     'employees'     => ['label' => 'Employees',      'icon' => 'bi-person-vcard',  'href' => '/employees-detail.php'],
     'accounts'      => ['label' => 'Accounts',       'icon' => 'bi-wallet2',       'href' => '/accounts-detail.php'],
     'listing'       => ['label' => 'Hotel Listings', 'icon' => 'bi-building',      'href' => '/listing.php'],

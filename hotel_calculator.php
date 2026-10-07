@@ -1,3 +1,3 @@
 <?php
-header('Location: https://buyusnumber.com/uk1.php');
+header('Location: /rates.php');
 exit;
