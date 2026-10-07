@@ -47,33 +47,106 @@
         return plans.join(', ') || 'Rates on request';
     }
 
+    function parseDateOnly(input) {
+        if (!input) return null;
+        if (input instanceof Date) return new Date(input.getFullYear(), input.getMonth(), input.getDate());
+        const str = String(input).trim();
+        const ymd = str.split('-').map(Number);
+        if (ymd.length === 3 && ymd.every(Number.isFinite)) {
+            return new Date(ymd[0], ymd[1] - 1, ymd[2]);
+        }
+        const cleaned = str.replace(/(\d+)(st|nd|rd|th)/gi, '$1');
+        const parsed = new Date(cleaned);
+        if (!isNaN(parsed.getTime())) {
+            return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+        }
+        return null;
+    }
+
     function formatGroupedDates(dates, prices) {
         const dateText = dates.map((date) => formatDate(date)).join(', ');
         return `${dateText} - ${formatRateValues(prices)}`;
     }
 
-    function formatNightlyRates(nightlyPrices, weekdayPrices, weekendPrices) {
-        const dates = Object.keys(nightlyPrices || {}).sort((a, b) => new Date(a) - new Date(b));
+    function formatNightlyRates(nightlyPrices, weekdayPrices, weekendPrices, checkIn, checkOut) {
+        const checkInDate = parseDateOnly(checkIn);
+        const checkOutDate = parseDateOnly(checkOut);
+
+        let dates = Object.keys(nightlyPrices || {});
+        if (checkOutDate) {
+            dates = dates.filter((d) => {
+                const dt = parseDateOnly(d);
+                if (!dt) return true;
+                if (checkInDate && dt < checkInDate) return false;
+                return dt < checkOutDate;
+            });
+        }
+
+        dates.sort((a, b) => {
+            const da = parseDateOnly(a);
+            const db = parseDateOnly(b);
+            return (da && db) ? da - db : a.localeCompare(b);
+        });
+
         if (!dates.length) {
             const weekday = formatRateValues(weekdayPrices);
             const weekend = formatRateValues(weekendPrices);
+            if (!weekday && !weekend) return [];
             if (weekday === weekend) {
                 return ['*Room Price:*', weekday].filter(Boolean);
             }
             return [
-                '*Room Price:*',
-                weekday ? `*Room Price:(Weekdays)* ${weekday}` : '',
-                weekend ? `*Room Price:(Weekend)* ${weekend}` : ''
+                weekend ? `*Room Price:(Weekend)*\n${weekend}` : '',
+                weekday ? `*Room Price:(Weekdays)*\n${weekday}` : ''
             ].filter(Boolean);
         }
-        const lines = dates.map((date) => {
-            const parts = date.split('-').map(Number);
-            const day = new Date(parts[0], parts[1] - 1, parts[2]).getDay();
-            const dayType = (day === 0 || day === 6) ? 'Weekend' : 'Weekday';
-            const prices = nightlyPrices[date] || {};
-            return `${formatDate(date)} (${dayType}) - ${formatRateValues(prices)}`;
+
+        const weekendDates = [];
+        const weekdayDates = [];
+
+        dates.forEach((dateStr) => {
+            const dt = parseDateOnly(dateStr);
+            const day = dt ? dt.getDay() : 1;
+            if (day === 0 || day === 6) {
+                weekendDates.push(dateStr);
+            } else {
+                weekdayDates.push(dateStr);
+            }
         });
-        return ['*Room Price:*', ...lines];
+
+        function groupDatesByPrice(dateList) {
+            const groups = [];
+            const map = new Map();
+
+            dateList.forEach((d) => {
+                const prices = nightlyPrices[d] || {};
+                const priceStr = formatRateValues(prices);
+                if (!map.has(priceStr)) {
+                    const group = { priceStr, dates: [d] };
+                    map.set(priceStr, group);
+                    groups.push(group);
+                } else {
+                    map.get(priceStr).dates.push(d);
+                }
+            });
+
+            return groups.map((g) => {
+                const dateText = g.dates.map((d) => formatDate(d)).join(', ');
+                return `${dateText} - ${g.priceStr}`;
+            });
+        }
+
+        const result = [];
+        if (weekendDates.length > 0) {
+            result.push('*Room Price:(Weekend)*');
+            result.push(...groupDatesByPrice(weekendDates));
+        }
+        if (weekdayDates.length > 0) {
+            result.push('*Room Price:(Weekdays)*');
+            result.push(...groupDatesByPrice(weekdayDates));
+        }
+
+        return result;
     }
 
     function decodeHtml(value) {
@@ -113,7 +186,9 @@
         const prices = selected.prices;
         const weekdayPrices = value(room, 'weekday_prices', value(hotel, 'weekday_prices', {}));
         const weekendPrices = value(room, 'weekend_prices', value(hotel, 'weekend_prices', {}));
-        const nightlyRates = formatNightlyRates(value(room, 'nightly_prices', value(hotel, 'nightly_prices', {})), weekdayPrices, weekendPrices);
+        const checkIn = value(input, 'checkIn', value(input, 'check_in', ''));
+        const checkOut = value(input, 'checkOut', value(input, 'check_out', ''));
+        const nightlyRates = formatNightlyRates(value(room, 'nightly_prices', value(hotel, 'nightly_prices', {})), weekdayPrices, weekendPrices, checkIn, checkOut);
         const hotelName = decodeHtml(value(input, 'hotelName', value(hotel, 'name', '-')));
         const location = decodeHtml(value(input, 'hotelLocation', value(hotel, 'location', value(hotel, 'city', '-'))));
         const roomCategory = decodeHtml(value(input, 'roomCategory', value(room, 'room_name', value(room, 'name', '-'))));
@@ -164,10 +239,10 @@
             `*Option ${option.optionNumber}: ${option.hotelName}*`,
             `*Location*: ${option.location}`,
             `*Check-In*: ${option.checkIn} | *Check-Out*: ${option.checkOut}`,
-            `*No. of Person*: ${option.people} | *No. of Rooms*: ${option.rooms} Room | *Occupancy*: ${option.occupancy}`,
+            `*No. of Person*: ${option.people} | *No. of Rooms*: ${option.rooms} ${option.rooms > 1 ? 'Rooms' : 'Room'} | *Occupancy*: ${option.occupancy}`,
             `*Room Category*: ${option.roomCategory}`,
             ...(option.priceLines || []),
-            ...(option.extraBedAllowed ? [`*Extra Bed*: ${option.extraBedPrice}/- per extra bed${option.maxExtraBeds > 0 ? ` | Max ${option.maxExtraBeds}` : ''}`] : []),
+            ...(option.extraBedAllowed || Number(option.maxExtraBeds) > 0 || Number(option.extraBedPrice) > 0 ? [`*Extra Bed*: ${option.extraBedPrice}/- per extra bed${option.maxExtraBeds > 0 ? ` | Max ${option.maxExtraBeds}` : ''}`] : []),
             ...(index < options.length - 1 ? ['', '---', ''] : [])
         ]);
         return [
