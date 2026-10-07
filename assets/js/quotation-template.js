@@ -101,52 +101,32 @@
             ].filter(Boolean);
         }
 
-        const weekendDates = [];
-        const weekdayDates = [];
+        const grouped = [];
+        let currentGroup = null;
 
         dates.forEach((dateStr) => {
             const dt = parseDateOnly(dateStr);
             const day = dt ? dt.getDay() : 1;
-            if (day === 0 || day === 6) {
-                weekendDates.push(dateStr);
+            const dayType = (day === 0 || day === 6) ? 'Weekend' : 'Weekday';
+            const prices = nightlyPrices[dateStr] || {};
+            const priceStr = formatRateValues(prices);
+            const key = `${dayType}::${priceStr}`;
+
+            if (currentGroup && currentGroup.key === key) {
+                currentGroup.dates.push(dateStr);
             } else {
-                weekdayDates.push(dateStr);
+                if (currentGroup) grouped.push(currentGroup);
+                currentGroup = { key, dayType, priceStr, dates: [dateStr] };
             }
         });
+        if (currentGroup) grouped.push(currentGroup);
 
-        function groupDatesByPrice(dateList) {
-            const groups = [];
-            const map = new Map();
+        const lines = grouped.map((g) => {
+            const dateText = g.dates.map((d) => formatDate(d)).join(', ');
+            return `${dateText} (${g.dayType}) - ${g.priceStr}`;
+        });
 
-            dateList.forEach((d) => {
-                const prices = nightlyPrices[d] || {};
-                const priceStr = formatRateValues(prices);
-                if (!map.has(priceStr)) {
-                    const group = { priceStr, dates: [d] };
-                    map.set(priceStr, group);
-                    groups.push(group);
-                } else {
-                    map.get(priceStr).dates.push(d);
-                }
-            });
-
-            return groups.map((g) => {
-                const dateText = g.dates.map((d) => formatDate(d)).join(', ');
-                return `${dateText} - ${g.priceStr}`;
-            });
-        }
-
-        const result = [];
-        if (weekendDates.length > 0) {
-            result.push('*Room Price:(Weekend)*');
-            result.push(...groupDatesByPrice(weekendDates));
-        }
-        if (weekdayDates.length > 0) {
-            result.push('*Room Price:(Weekdays)*');
-            result.push(...groupDatesByPrice(weekdayDates));
-        }
-
-        return result;
+        return ['*Room Price:*', ...lines];
     }
 
     function decodeHtml(value) {
