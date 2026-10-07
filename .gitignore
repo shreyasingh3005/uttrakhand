@@ -1,3 +1,4 @@
 .env
 .env.php
 /tests/.runtime/
+/delivery/

@@ -2389,8 +2389,8 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
             <li class="nav-item"><a class="nav-link" data-target="booking-query-view" href="#" onclick="showSection('booking-query-view'); return false;"><i class="bi bi-chat-dots"></i> Booking Query</a></li>
             <li class="nav-item"><a class="nav-link" data-target="query-history-view" href="#" onclick="showSection('query-history-view'); return false;"><i class="bi bi-clock-history"></i> Query History</a></li>
             <li class="nav-item"><a class="nav-link" href="/rates.php" target="_blank" rel="noopener noreferrer"><i class="bi bi-currency-rupee"></i> Hotel Rates</a></li>
-            <li class="nav-item"><a class="nav-link" data-target="my-bookings-view" href="#" click="showSection('my-bookings-view'); return false;"><i class="bi bi-calendar-check"></i> Bookings(soon)</a></li>
-            <li class="nav-item"><a class="nav-link" data-target="create-booking-view" href="#" click="showSection('create-booking-view'); return false;"><i class="bi bi-calendar-plus"></i> Create Booking(soon)</a></li>
+            <li class="nav-item"><a class="nav-link" data-target="my-bookings-view" href="#" onclick="showSection('my-bookings-view'); return false;"><i class="bi bi-calendar-check"></i> Bookings</a></li>
+            <li class="nav-item"><a class="nav-link" data-target="create-booking-view" href="#" onclick="showSection('create-booking-view'); return false;"><i class="bi bi-calendar-plus"></i> Create Booking</a></li>
             
         </ul>
     </div>
@@ -2668,6 +2668,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
 
             <!-- Create Booking View -->
             <div id="create-booking-view" class="view-section">
+<?php require __DIR__.'/includes/booking_workspace.php'; ?>
                 <div class="form-card mb-5">
                     <div class="process-hero">
                         <div class="d-flex align-items-center gap-3">
@@ -2676,8 +2677,8 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                                 <i class="bi bi-calendar-check-fill"></i>
                             </div>
                             <div>
-                                <h3 class="fw-bold text-dark mb-1" style="font-size:1.1rem;">Process Booking</h3>
-                                <p class="text-muted mb-0">Capture complete details and sync instantly with admin panel.
+                                <h3 class="fw-bold text-dark mb-1" style="font-size:1.1rem;">Manual Booking</h3>
+                                <p class="text-muted mb-0">For inventory-backed reservations, use New room booking above. This manual form records the booking without reserving rooms.
                                 </p>
                             </div>
                         </div>
@@ -3860,6 +3861,9 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
     }
 
     function showSection(sectionId) {
+        const selectedSection = document.getElementById(sectionId);
+        if (!selectedSection || !selectedSection.classList.contains('view-section')) return;
+        history.replaceState(null, '', '#' + sectionId);
         document.querySelectorAll('.sidebar .nav-link').forEach(link => {
             link.classList.toggle('active', link.dataset.target === sectionId);
         });
@@ -6299,7 +6303,8 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
     <script>window.AirwaysQuotationContact = <?php echo json_encode($quotationContact, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
     <script src="/assets/js/quotation-template.js?v=20260907-3"></script>
 <script src="/assets/js/ui-common.js?v=20261006"></script>
-<?php require __DIR__.'/includes/booking_workspace.php'; ?>
+<script>document.addEventListener('DOMContentLoaded', function () { if (location.hash) showSection(location.hash.slice(1)); });</script>
+
 </body>
 
 </html>

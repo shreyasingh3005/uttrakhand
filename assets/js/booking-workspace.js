@@ -16,7 +16,7 @@
       event.preventDefault();
       var button=this.querySelector('[type="submit"]'); var msg=id==='crmCreateForm'?'crmCreateMessage':'crmManageMessage';
       button.disabled=true;
-      try { var result=await request(endpoint,{method:'POST',body:new FormData(this)}); message(msg,result.message,true); window.location.reload(); }
+      try { var result=await request(endpoint,{method:'POST',body:new FormData(this)}); message(msg,result.message,true); if (document.getElementById('my-bookings-view')) history.replaceState(null,'','#my-bookings-view'); window.location.reload(); }
       catch(error) { message(msg,error.message,false); button.disabled=false; }
     });
   });

@@ -10,7 +10,7 @@ if (!function_exists('config')) {
         $file = __DIR__ . '/../.env.php';
         if (!file_exists($file)) {
             http_response_code(500);
-            exit('Configuration file missing. Copy .env.example to .env.php.');
+            exit('Configuration file missing. Copy .env.example.php to .env.php.');
         }
         $cfg = require $file;
         date_default_timezone_set('Asia/Kolkata');
@@ -48,6 +48,11 @@ if (!function_exists('abhi_url_rewrite_buffer')) {
         if (stripos($buffer, '<head') !== false && session_status() === PHP_SESSION_ACTIVE) {
             require_once __DIR__ . '/security.php';
             $token = htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8');
+            if (!empty($_SESSION['user_id'])) {
+                $uiCss=htmlspecialchars(site_url('assets/css/ui-hygiene.css?v=20261007'),ENT_QUOTES,'UTF-8');
+                $buffer=preg_replace('~</head>~i','<link rel="stylesheet" href="'.$uiCss.'"></head>',$buffer,1);
+                $buffer=preg_replace('/<body\b/i','<body data-crm-ui="1"',$buffer,1);
+            }
             $script = htmlspecialchars(site_url('assets/js/request-security.js'), ENT_QUOTES, 'UTF-8');
             $buffer = preg_replace('/(<head\b[^>]*>)/i', '$1<meta name="csrf-token" content="' . $token . '"><script src="' . $script . '"></script>', $buffer, 1);
             $buffer = preg_replace('/(<form\b[^>]*\bmethod\s*=\s*["\x27]post["\x27][^>]*>)/i', '$1<input type="hidden" name="_csrf_token" value="' . $token . '">', $buffer);
