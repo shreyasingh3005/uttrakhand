@@ -332,7 +332,7 @@ try {
             <table class="table table-hover table-bordered align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th style="width: 55px;">Select</th>
+                        <th style="width: 55px;"><input type="checkbox" class="form-check-input" id="adminQuerySelectAllHeader" title="Select All" onchange="toggleSelectAllRows('adminQueryResultsBody', this.checked)"></th>
                         <th>Property Name</th>
                         <th>Room Category</th>
                         <th>Location</th>
@@ -346,7 +346,7 @@ try {
         </div>
 
         <div class="mt-3">
-            <button type="button" class="btn btn-success" onclick="sendSelectedAdminQueryQuotes()">Copy</button>
+            <button type="button" class="btn btn-success" onclick="sendSelectedAdminQueryQuotes(this)">Copy</button>
         </div>
     </div>
 
@@ -591,14 +591,13 @@ function generateBookingResultsFromInputs(locationId, categoryId, checkInId, che
         }
 
         resultBody.innerHTML = results.length
-            ? results.flatMap((hotel) => (hotel.rooms || []).map((room) => {
+            ? results.flatMap((hotel) => (hotel.rooms || []).map((room, roomIndex) => {
                 const nightlyPrice = Number(room.prices?.EP || hotel.est_budget || hotel.min_price || 0);
-                const roomIndex = hotel.rooms.indexOf(room);
                 const selectionKey = `${hotel.id}::${roomIndex}`;
                 return `
-                <tr data-hotel-name="${String(hotel.name || '').toLowerCase()}">
+                <tr data-hotel-name="${String(hotel.name || '').toLowerCase()}" style="cursor: pointer;">
                     <td><input class="form-check-input hotel-checkbox" type="checkbox" value="${selectionKey}" id="${resultBodyId}_${hotel.id}_${roomIndex}"></td>
-                    <td><label for="${resultBodyId}_${hotel.id}_${roomIndex}">${hotel.name}</label></td>
+                    <td><label for="${resultBodyId}_${hotel.id}_${roomIndex}" style="cursor: pointer;">${hotel.name}</label></td>
                     <td>${room.name || 'N/A'}</td>
                     <td>${hotel.location || hotel.city || 'N/A'}</td>
                     <td>₹${nightlyPrice.toLocaleString('en-IN')}</td>
@@ -607,6 +606,22 @@ function generateBookingResultsFromInputs(locationId, categoryId, checkInId, che
                 </tr>`;
             })).join('')
             : '<tr><td colspan="8" class="text-center text-muted py-4">No active hotels match this location/category/budget.</td></tr>';
+
+        if (!resultBody._rowClickAttached) {
+            resultBody._rowClickAttached = true;
+            resultBody.addEventListener('click', (e) => {
+                if (e.target.closest('input[type="checkbox"]') || e.target.closest('label') || e.target.closest('a') || e.target.closest('button')) {
+                    return;
+                }
+                const tr = e.target.closest('tr');
+                if (!tr) return;
+                const box = tr.querySelector('.hotel-checkbox');
+                if (box) {
+                    box.checked = !box.checked;
+                    box.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            });
+        }
 
         // Select the first five rows only after the asynchronous results exist.
         if (resultBodyId === 'adminQueryResultsBody') {
@@ -619,6 +634,47 @@ function generateBookingResultsFromInputs(locationId, categoryId, checkInId, che
         console.error('Hotel filter error:', error);
         resultsDataStore[resultBodyId] = [];
         resultBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Unable to load hotels from database.</td></tr>';
+    });
+}
+
+function copyTextToClipboard(text) {
+    if (!text) return false;
+    let successful = false;
+
+    try {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        textarea.style.top = '0';
+        textarea.style.opacity = '0';
+        textarea.style.pointerEvents = 'none';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        textarea.setSelectionRange(0, 999999);
+        successful = document.execCommand('copy');
+        document.body.removeChild(textarea);
+    } catch (e) {
+        successful = false;
+    }
+
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+            successful = true;
+        }).catch(() => {});
+    }
+
+    return successful;
+}
+
+function toggleSelectAllRows(tbodyId, checked) {
+    document.querySelectorAll(`#${tbodyId} tr`).forEach((row) => {
+        if (row.style.display !== 'none') {
+            const box = row.querySelector('.hotel-checkbox');
+            if (box) box.checked = checked;
+        }
     });
 }
 
@@ -681,23 +737,7 @@ function copyAndShareHotelQuotes(prefixIds, resultBodyId) {
         alert('Please select at least one hotel.');
         return;
     }
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).catch(() => {
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-        });
-    } else {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-    }
+    copyTextToClipboard(text);
 }
 
 function sendSelectedBookingQueryQuotes() {
@@ -717,16 +757,22 @@ function selectAdminQueryRows(limit) {
     boxes.forEach((box) => box.checked = false);
     if (limit === 'all') {
         boxes.forEach((box) => box.checked = true);
+        const head = document.getElementById('adminQuerySelectAllHeader');
+        if (head) head.checked = true;
         return;
     }
+    const head = document.getElementById('adminQuerySelectAllHeader');
+    if (head) head.checked = false;
     [...boxes].slice(0, Number(limit) || 0).forEach((box) => box.checked = true);
 }
 
 function clearAdminQueryRows() {
     document.querySelectorAll('#adminQueryResultsBody .hotel-checkbox').forEach((box) => box.checked = false);
+    const head = document.getElementById('adminQuerySelectAllHeader');
+    if (head) head.checked = false;
 }
 
-function sendSelectedAdminQueryQuotes() {
+function sendSelectedAdminQueryQuotes(btn) {
     const resultBodyId = 'adminQueryResultsBody';
     const selectedIds = [...document.querySelectorAll(`#${resultBodyId} .hotel-checkbox:checked`)].map((box) => box.value);
     if (!selectedIds.length) {
@@ -739,6 +785,35 @@ function sendSelectedAdminQueryQuotes() {
         checkIn: 'adminQueryCheckIn', checkOut: 'adminQueryCheckOut', nights: 'adminQueryNights',
         adults: 'adminQueryAdults', children: 'adminQueryChildren', rooms: 'adminQueryRooms', budget: 'adminQueryBudget'
     };
+
+    if (!window.adminBookingQueryNumber) {
+        window.adminBookingQueryNumber = AirwaysQuotation.generateQueryNumber();
+    }
+
+    const { text, count } = buildHotelShareText(prefixIds, resultBodyId);
+    if (!text || !count) {
+        alert('Please select at least one hotel.');
+        return;
+    }
+
+    // 1. Instantly copy to clipboard in user click gesture
+    copyTextToClipboard(text);
+
+    // 2. Visual feedback on Copy button
+    const copyButton = (btn instanceof HTMLElement ? btn : null) || document.querySelector('#adminQueryResultsWrap .btn-success');
+    if (copyButton) {
+        const originalHtml = copyButton.innerHTML;
+        copyButton.innerHTML = '<i class="bi bi-check2 me-1"></i>Copied!';
+        copyButton.classList.remove('btn-success');
+        copyButton.classList.add('btn-dark');
+        setTimeout(() => {
+            copyButton.innerHTML = originalHtml;
+            copyButton.classList.remove('btn-dark');
+            copyButton.classList.add('btn-success');
+        }, 2000);
+    }
+
+    // 3. Save query history in background (non-blocking)
     const results = resultsDataStore[resultBodyId] || [];
     const selectedRows = selectedIds.map((key) => {
         const [hotelId, roomIndex] = String(key).split('::');
@@ -775,7 +850,7 @@ function sendSelectedAdminQueryQuotes() {
         children: document.getElementById(prefixIds.children)?.value || '0',
         rooms: document.getElementById(prefixIds.rooms)?.value || '1',
         budget: document.getElementById(prefixIds.budget)?.value || '0',
-        query_number: window.adminBookingQueryNumber || AirwaysQuotation.generateQueryNumber(),
+        query_number: window.adminBookingQueryNumber,
         query_type: adminBookingQueryType,
         agent_phone: adminBookingQueryAgent?.phone || '',
         matched_hotels: JSON.stringify(matchedHotels)
@@ -783,14 +858,16 @@ function sendSelectedAdminQueryQuotes() {
     fetch('employee-dashboard.php', { method: 'POST', body: params })
         .then((response) => response.json())
         .then((data) => {
-            if (!data.success) throw new Error(data.message || 'Unable to save query history');
-            window.adminBookingQueryId = data.id;
-            window.adminBookingQueryNumber = data.query_number || window.adminBookingQueryNumber;
-            copyAndShareHotelQuotes(prefixIds, resultBodyId);
+            if (data && data.success) {
+                window.adminBookingQueryId = data.id;
+                window.adminBookingQueryNumber = data.query_number || window.adminBookingQueryNumber;
+                if (typeof loadAdminGeneratedQueryHistory === 'function') {
+                    loadAdminGeneratedQueryHistory();
+                }
+            }
         })
         .catch((error) => {
-            console.error('Query history save error:', error);
-            alert('Unable to save query history. Quotes were not sent.');
+            console.warn('Background query history save error:', error);
         });
 }
 
@@ -1126,14 +1203,13 @@ function generateAdminQueryFromForm() {
 function copyAdminGeneratedQuery() {
     const text = document.getElementById('adminGeneratedQueryText')?.value;
     if (!text) return;
-    navigator.clipboard.writeText(text);
+    copyTextToClipboard(text);
 }
 
 function copyQueryText(text) {
     text = AirwaysQuotation.plainText(text || '');
     if (!text) return;
-    try { navigator.clipboard.writeText(text); }
-    catch (e) { const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); }
+    copyTextToClipboard(text);
 }
 
 function viewAdminQuery(id) {
