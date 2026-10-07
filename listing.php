@@ -1309,6 +1309,14 @@ async function loadAvailability(hotelId, force=false) {
 }
 
 function autoSaveCell(hotelId, roomId, date) {
+  const available = document.querySelector(`.avail-input[data-room-id="${roomId}"][data-date="${date}"]`);
+  const blocked = document.querySelector(`.blocked-input[data-room-id="${roomId}"][data-date="${date}"]`);
+  const booked = document.querySelector(`.booked-val[data-room-id="${roomId}"][data-date="${date}"]`);
+  if(available && blocked) {
+    const total=Number(available.max), used=Number(booked?.textContent||0);
+    if(document.activeElement===blocked) available.value=Math.max(0,total-used-Number(blocked.value||0));
+    else blocked.value=Math.max(0,total-used-Number(available.value||0));
+  }
   const key = hotelId+'-'+roomId+'-'+date;
   if (pendingSaves[key]) clearTimeout(pendingSaves[key]);
   const td = document.querySelector(`.avail-input[data-room-id="${roomId}"][data-date="${date}"]`)?.closest('td');
@@ -1329,6 +1337,7 @@ function autoSaveCell(hotelId, roomId, date) {
       if (td) { td.classList.remove('cell-saving','cell-dirty'); td.classList.add('cell-saved'); setTimeout(()=>td.classList.remove('cell-saved'),900); }
     } catch(e) {
       if (td) td.classList.remove('cell-saving');
+      loadAvailability(hotelId, true);
     }
   }, 400);
 }

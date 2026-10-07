@@ -13,9 +13,14 @@ if (!function_exists('config')) {
             exit('Configuration file missing. Copy .env.example to .env.php.');
         }
         $cfg = require $file;
+        date_default_timezone_set('Asia/Kolkata');
         if (!is_array($cfg)) {
             http_response_code(500);
             exit('Invalid configuration file.');
+        }
+        foreach (['DB_HOST','DB_NAME','DB_USER','DB_PASS','APP_URL'] as $key) {
+            $value = getenv('CRM_' . $key);
+            if ($value !== false) $cfg[$key] = $value;
         }
         return $cfg;
     }
@@ -40,6 +45,13 @@ if (!function_exists('redirect')) {
 
 if (!function_exists('abhi_url_rewrite_buffer')) {
     function abhi_url_rewrite_buffer(string $buffer): string {
+        if (stripos($buffer, '<head') !== false && session_status() === PHP_SESSION_ACTIVE) {
+            require_once __DIR__ . '/security.php';
+            $token = htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8');
+            $script = htmlspecialchars(site_url('assets/js/request-security.js'), ENT_QUOTES, 'UTF-8');
+            $buffer = preg_replace('/(<head\b[^>]*>)/i', '$1<meta name="csrf-token" content="' . $token . '"><script src="' . $script . '"></script>', $buffer, 1);
+            $buffer = preg_replace('/(<form\b[^>]*\bmethod\s*=\s*["\x27]post["\x27][^>]*>)/i', '$1<input type="hidden" name="_csrf_token" value="' . $token . '">', $buffer);
+        }
         $base = rtrim((string) (config()['APP_URL'] ?? ''), '/');
         if ($base === '') return $buffer;
 

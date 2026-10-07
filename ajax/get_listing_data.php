@@ -13,6 +13,7 @@ switch ($type) {
     $from_date = s($_GET['from_date'] ?? date('Y-m-d'));
     $to_date   = s($_GET['to_date']   ?? date('Y-m-d', strtotime('+13 days')));
     if ($hotel_id <= 0) hl_err('hotel_id required.');
+    hl_date_range($from_date,$to_date);
     if ($from_date > $to_date) hl_err('Invalid date range.');
 
     $rooms = $pdo->prepare("SELECT id,name,bed_type,total_rooms,available_rooms,booked_rooms,blocked_rooms FROM hotel_room_categories WHERE hotel_id=? AND status='active' ORDER BY id");
@@ -35,7 +36,7 @@ switch ($type) {
         $ds = $cur->format('Y-m-d');
         foreach ($roomList as $rm) {
             $rid = (int)$rm['id'];
-            $result[] = $avMap[$rid][$ds] ?? ['room_category_id'=>$rid,'availability_date'=>$ds,'total_rooms'=>(int)$rm['total_rooms'],'available_rooms'=>(int)$rm['available_rooms'],'booked_rooms'=>(int)$rm['booked_rooms'],'blocked_rooms'=>(int)$rm['blocked_rooms']];
+            $result[] = $avMap[$rid][$ds] ?? ['room_category_id'=>$rid,'availability_date'=>$ds,'total_rooms'=>(int)$rm['total_rooms'],'available_rooms'=>max(0,(int)$rm['total_rooms']-(int)$rm['blocked_rooms']),'booked_rooms'=>0,'blocked_rooms'=>(int)$rm['blocked_rooms']];
         }
         $cur->modify('+1 day');
     }
@@ -48,6 +49,7 @@ switch ($type) {
     $meal_code = s($_GET['meal_plan']  ?? 'EP');
     $year      = i($_GET['year']       ?? date('Y'));
     $month     = i($_GET['month']      ?? date('m'));
+    if ($year < 2000 || $year > 2100 || $month < 1 || $month > 12) hl_err('Invalid calendar month or year.',422);
     if ($room_id <= 0) hl_err('room_id required.');
     if (!in_array($meal_code, MEAL_CODES)) hl_err('Invalid meal_plan.');
 
@@ -77,18 +79,7 @@ switch ($type) {
 
   /* ── GET Bookings ─────────────────────────────────────────────────────── */
   case 'bookings':
-    $hotel_id   = i($_GET['hotel_id']   ?? 0);
-    $booking_id = i($_GET['booking_id'] ?? 0);
-    if ($booking_id > 0) {
-        $s = $pdo->prepare("SELECT hb.*,h.name AS hotel_name,mp.code AS meal_plan_code,hrc.name AS room_name,br.rooms_count,br.price_per_night,br.extra_beds,br.adults,br.children FROM hotel_bookings hb JOIN hotels h ON h.id=hb.hotel_id LEFT JOIN meal_plans mp ON mp.id=hb.meal_plan_id LEFT JOIN booking_rooms br ON br.booking_id=hb.id LEFT JOIN hotel_room_categories hrc ON hrc.id=br.room_category_id WHERE hb.id=?");
-        $s->execute([$booking_id]);
-        $b = $s->fetch();
-        hl_ok(['booking' => $b]);
-    } elseif ($hotel_id > 0) {
-        $s = $pdo->prepare("SELECT hb.id,hb.booking_number,hb.guest_name,hb.guest_phone,hb.guest_email,hb.checkin_date,hb.checkout_date,hb.total_nights,hb.total_amount,hb.booking_status,hb.payment_status,hb.source,hb.created_at,mp.code AS meal_plan_code,hrc.name AS room_name,hrc.id AS room_category_id,br.rooms_count,br.price_per_night,br.adults,br.children,br.extra_beds FROM hotel_bookings hb LEFT JOIN meal_plans mp ON mp.id=hb.meal_plan_id LEFT JOIN booking_rooms br ON br.booking_id=hb.id LEFT JOIN hotel_room_categories hrc ON hrc.id=br.room_category_id WHERE hb.hotel_id=? ORDER BY hb.created_at DESC LIMIT 300");
-        $s->execute([$hotel_id]);
-        hl_ok(['bookings' => $s->fetchAll()]);
-    } else { hl_err('hotel_id or booking_id required.'); }
+    require __DIR__ . '/get_booking.php';
     break;
 
   default:

@@ -1,56 +1,30 @@
 <?php
-/** ajax/get_booking.php — Get booking details */
 require_once __DIR__ . '/helpers.php';
-hl_auth();
-$pdo = hl_pdo();
-
-$hotel_id   = i($_GET['hotel_id']   ?? 0);
-$booking_id = i($_GET['booking_id'] ?? 0);
-
-try {
-    if ($booking_id > 0) {
-        $stmt = $pdo->prepare("
-            SELECT hb.*, h.name AS hotel_name,
-                   hrc.name AS room_name, hrc.bed_type,
-                   br.rooms_count, br.price_per_night, br.extra_beds, br.adults, br.children
-            FROM hotel_bookings hb
-            JOIN hotels h ON h.id=hb.hotel_id
-            LEFT JOIN booking_rooms br ON br.booking_id=hb.id
-            LEFT JOIN hotel_room_categories hrc ON hrc.id=br.room_category_id
-            WHERE hb.id=?
-        ");
-        $stmt->execute([$booking_id]);
-        $booking = $stmt->fetch();
-        if (!$booking) hl_err('Booking not found.', 404);
-        $booking['total_amount'] = (float)$booking['total_amount'];
-        hl_ok(['booking' => $booking]);
-    } elseif ($hotel_id > 0) {
-        $stmt = $pdo->prepare("
-            SELECT hb.id, hb.booking_number, hb.guest_name, hb.guest_email, hb.guest_phone,
-                   hb.checkin_date, hb.checkout_date, hb.total_nights, hb.total_amount,
-                   hb.booking_status, hb.payment_status, hb.source, hb.special_requests, hb.created_at,
-                   mp.code AS meal_plan_code,
-                   hrc.name AS room_name, hrc.id AS room_category_id,
-                   br.rooms_count, br.price_per_night, br.extra_beds, br.adults, br.children
-            FROM hotel_bookings hb
-            LEFT JOIN meal_plans mp ON mp.id=hb.meal_plan_id
-            LEFT JOIN booking_rooms br ON br.booking_id=hb.id
-            LEFT JOIN hotel_room_categories hrc ON hrc.id=br.room_category_id
-            WHERE hb.hotel_id=?
-            ORDER BY hb.created_at DESC
-            LIMIT 200
-        ");
-        $stmt->execute([$hotel_id]);
-        $bookings = $stmt->fetchAll();
-        foreach ($bookings as &$bk) {
-            $bk['total_amount'] = (float)$bk['total_amount'];
-            $bk['total_nights'] = (int)$bk['total_nights'];
-        }
-        unset($bk);
-        hl_ok(['bookings' => $bookings, 'count' => count($bookings)]);
-    } else {
-        hl_err('hotel_id or booking_id is required.');
-    }
-} catch (PDOException $e) {
-    hl_err('Database error occurred. Please try again.', 500);
+require_once __DIR__ . '/../includes/crm_booking.php';
+hl_auth(); $pdo=hl_pdo(); crm_booking_schema($pdo);
+$hotel=i($_GET['hotel_id']??0);$id=i($_GET['booking_id']??0);
+if(!$hotel&&!$id)hl_err('Hotel or booking ID required.',422);
+$params=[$id?:$hotel];$where=$id?'hb.id=?':'hb.hotel_id=?';
+if(($_SESSION['role']??'')!=='admin') {
+ $where.=' AND EXISTS (SELECT 1 FROM crm_booking_workflow w JOIN bookings_details b ON b.id=w.booking_id WHERE w.canonical_booking_id=hb.id AND (b.created_by=? OR w.assigned_user_id=?))';
+ $params[]=$_SESSION['username'];$params[]=(int)$_SESSION['user_id'];
 }
+try {
+ $stmt=$pdo->prepare("SELECT hb.*,h.name AS hotel_name,mp.code AS meal_plan_code FROM hotel_bookings hb JOIN hotels h ON h.id=hb.hotel_id LEFT JOIN meal_plans mp ON mp.id=hb.meal_plan_id WHERE $where ORDER BY hb.created_at DESC LIMIT 200");
+ $stmt->execute($params);$bookings=$stmt->fetchAll();
+ if($id&&!$bookings)hl_err('Booking not found.',404);
+ $roomsByBooking=[];
+ if($bookings) {
+  $ids=array_column($bookings,'id');$marks=implode(',',array_fill(0,count($ids),'?'));
+  $rooms=$pdo->prepare("SELECT br.*,r.name AS room_name,r.bed_type FROM booking_rooms br LEFT JOIN hotel_room_categories r ON r.id=br.room_category_id WHERE br.booking_id IN ($marks) ORDER BY br.id");$rooms->execute($ids);
+  foreach($rooms->fetchAll() as $room)$roomsByBooking[$room['booking_id']][]=$room;
+ }
+ foreach($bookings as &$booking) {
+  $booking['rooms']=$roomsByBooking[$booking['id']]??[];
+  $first=$booking['rooms'][0]??[];
+  foreach(['room_name','room_category_id','bed_type','rooms_count','adults','children','extra_beds','price_per_night'] as $field)$booking[$field]=$first[$field]??null;
+  $booking['total_amount']=(float)$booking['total_amount'];
+ }
+ unset($booking);
+ hl_ok($id?['booking'=>$bookings[0]]:['bookings'=>$bookings,'count'=>count($bookings)]);
+} catch(Throwable $e) {error_log('Booking lookup: '.$e->getMessage());hl_err('Unable to load bookings.',500);}

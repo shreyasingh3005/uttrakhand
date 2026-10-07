@@ -230,176 +230,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit;
     }
     
-    if ($_POST['action'] === 'create_booking') {
-        $client_name = sanitize_input($_POST['clientName'] ?? '');
-        $client_phone = sanitize_input($_POST['clientPhone'] ?? '');
-        $client_email = sanitize_input($_POST['clientEmail'] ?? '');
-        $hotel_id = intval($_POST['hotelId'] ?? 0);
-        $agent_id = intval($_POST['agentId'] ?? 0);
-        $check_in = sanitize_input($_POST['checkIn'] ?? '');
-        $check_out = sanitize_input($_POST['checkOut'] ?? '');
-        $booking_date = sanitize_input($_POST['bookingDate'] ?? date('Y-m-d'));
-        $amount = floatval($_POST['amount'] ?? 0);
-        $status = sanitize_input($_POST['status'] ?? 'Confirmed');
-        $booking_source = sanitize_input($_POST['bookingSource'] ?? 'Direct');
-        $guest_count = intval($_POST['guestCount'] ?? 1);
-        $room_count = intval($_POST['roomCount'] ?? 1);
-        $special_request = sanitize_input($_POST['specialRequest'] ?? '');
-        $payment_note = sanitize_input($_POST['paymentNote'] ?? '');
-        $paid_amount = floatval($_POST['paidAmount'] ?? 0);
-        if ($paid_amount < 0) {
-            $paid_amount = 0;
-        }
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $booking_date)) {
-            $booking_date = date('Y-m-d');
-        }
-        if ($guest_count < 1) {
-            $guest_count = 1;
-        }
-        if ($room_count < 1) {
-            $room_count = 1;
-        }
-
-        $allowedStatuses = ['Pending', 'Completed', 'Cancelled'];
-        $booking_status = in_array($status, $allowedStatuses, true) ? $status : 'Pending';
-        $legacy_status = $booking_status === 'Completed' ? 'Confirmed' : ($booking_status === 'Cancelled' ? 'Cancelled' : 'Pending Payment');
-
-        if ($client_name && $client_phone && $hotel_id && $agent_id && $check_in && $check_out && $amount > 0) {
-            try {
-                $hotelSnapshotStmt = $conn->prepare('SELECT h.name AS hotel_name, CONCAT_WS(", ", NULLIF(h.city, ""), NULLIF(h.state, "")) AS location, "" AS room_type, "" AS category FROM hotels h WHERE h.id = :id LIMIT 1');
-                $hotelSnapshotStmt->execute([':id' => $hotel_id]);
-                $hotelSnapshot = $hotelSnapshotStmt->fetch(PDO::FETCH_ASSOC);
-                if (!$hotelSnapshot) {
-                    http_response_code(200);
-                    header('Content-Type: application/json; charset=utf-8');
-                    echo json_encode(['success' => false, 'message' => "Selected hotel not found"]);
-                    exit;
-                }
-
-                $booking_code = 'BK-' . date('YmdHis') . '-' . random_int(1000, 9999);
-                
-                $query = "INSERT INTO bookings_details 
-                         (booking_code, client_name, client_phone, client_email, hotel_listing_id, agent_id, 
-                          check_in, check_out, amount, booking_source, guest_count, room_count, special_request, paid_amount, due_amount, payment_status, booking_status, status, booking_date, payment_note, hotel_name_snapshot, hotel_location_snapshot, room_type_snapshot, hotel_category_snapshot, created_by, payment_updated_by, payment_updated_at) 
-                         VALUES (:code, :client_name, :client_phone, :client_email, :hotel_id, :agent_id, 
-                              :check_in, :check_out, :amount, :booking_source, :guest_count, :room_count, :special_request, :paid_amount, :due_amount, :payment_status, :booking_status, :status, :booking_date, :payment_note, :hotel_name_snapshot, :hotel_location_snapshot, :room_type_snapshot, :hotel_category_snapshot, :created_by, :payment_updated_by, NOW())";
-                $stmt = $conn->prepare($query);
-                $due_amount = max($amount - $paid_amount, 0);
-                $payment_status = $paid_amount <= 0 ? 'Pending' : (($paid_amount >= $amount) ? 'Paid' : 'Partial');
-                $stmt->execute([
-                    ':code' => $booking_code,
-                    ':client_name' => $client_name,
-                    ':client_phone' => $client_phone,
-                    ':client_email' => $client_email,
-                    ':hotel_id' => $hotel_id,
-                    ':agent_id' => $agent_id,
-                    ':check_in' => $check_in,
-                    ':check_out' => $check_out,
-                    ':amount' => $amount,
-                    ':booking_source' => $booking_source,
-                    ':guest_count' => $guest_count,
-                    ':room_count' => $room_count,
-                    ':special_request' => $special_request,
-                    ':paid_amount' => $paid_amount,
-                    ':due_amount' => $due_amount,
-                    ':payment_status' => $payment_status,
-                    ':booking_status' => $booking_status,
-                    ':status' => $legacy_status,
-                    ':booking_date' => $booking_date,
-                    ':payment_note' => $payment_note,
-                    ':hotel_name_snapshot' => (string) ($hotelSnapshot['hotel_name'] ?? ''),
-                    ':hotel_location_snapshot' => (string) ($hotelSnapshot['location'] ?? ''),
-                    ':room_type_snapshot' => (string) ($hotelSnapshot['room_type'] ?? ''),
-                    ':hotel_category_snapshot' => (string) ($hotelSnapshot['category'] ?? ''),
-                    ':created_by' => $username,
-                    ':payment_updated_by' => $username
-                ]);
-                http_response_code(200);
-                header('Content-Type: application/json; charset=utf-8');
-                echo json_encode(['success' => true, 'message' => "Booking created successfully! Code: $booking_code"]);
-                exit;
-            } catch (PDOException $e) {
-                http_response_code(200);
-                header('Content-Type: application/json; charset=utf-8');
-                echo json_encode(['success' => false, 'message' => "Booking already exists or database error"]);
-                exit;
-            }
-        }
-        http_response_code(200);
+    if (($_POST['action'] ?? '') === 'create_booking') {
+        require_once __DIR__ . '/includes/crm_booking.php';
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(['success' => false, 'message' => "Please fill all required fields"]);
-        exit;
-    }
-
-    if ($_POST['action'] === 'update_payment_status') {
-        $booking_id = intval($_POST['bookingId'] ?? 0);
-        $payment_amount = floatval($_POST['paidAmount'] ?? 0);
-        $payment_note = sanitize_input($_POST['paymentNote'] ?? '');
-
-        http_response_code(200);
-        header('Content-Type: application/json; charset=utf-8');
-
-        if ($booking_id <= 0) {
-            echo json_encode(['success' => false, 'message' => 'Invalid booking selected']);
-            exit;
-        }
-
-        if ($payment_amount <= 0) {
-            echo json_encode(['success' => false, 'message' => 'Enter a valid payment amount greater than 0']);
-            exit;
-        }
-
         try {
-            $findStmt = $conn->prepare('SELECT id, amount, paid_amount FROM bookings_details WHERE id = :id AND created_by = :username LIMIT 1');
-            $findStmt->execute([':id' => $booking_id, ':username' => $username]);
-            $booking = $findStmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$booking) {
-                echo json_encode(['success' => false, 'message' => 'Booking not found']);
-                exit;
-            }
-
-            $amount = (float) $booking['amount'];
-            $existing_paid = (float) $booking['paid_amount'];
-            $pending_due = max($amount - $existing_paid, 0);
-
-            if ($payment_amount > $pending_due) {
-                $maxAllowed = number_format($pending_due, 0, '.', ',');
-                echo json_encode(['success' => false, 'message' => "Entered amount exceeds pending due amount. Maximum allowed is ₹{$maxAllowed}"]);
-                exit;
-            }
-
-            $new_paid_amount = $existing_paid + $payment_amount;
-            $new_due_amount = max($amount - $new_paid_amount, 0);
-            $payment_status = $new_paid_amount <= 0 ? 'Pending' : (($new_paid_amount >= $amount) ? 'Paid' : 'Partial');
-
-            $updateStmt = $conn->prepare(
-                'UPDATE bookings_details
-                 SET paid_amount = :paid_amount,
-                     due_amount = :due_amount,
-                     payment_status = :payment_status,
-                     payment_note = :payment_note,
-                     payment_updated_by = :updated_by,
-                     payment_updated_at = NOW()
-                 WHERE id = :id AND created_by = :username'
-            );
-            $updateStmt->execute([
-                ':paid_amount' => $new_paid_amount,
-                ':due_amount' => $new_due_amount,
-                ':payment_status' => $payment_status,
-                ':payment_note' => $payment_note,
-                ':updated_by' => $username,
-                ':id' => $booking_id,
-                ':username' => $username,
-            ]);
-
-            echo json_encode(['success' => true, 'message' => 'Payment status updated successfully']);
-        } catch (PDOException $e) {
-            echo json_encode(['success' => false, 'message' => 'Unable to update payment status']);
+            crm_booking_schema($conn);
+            $result = crm_booking_create($conn, $_POST);
+            echo json_encode(['success'=>true,'message'=>'Booking created: '.$result['booking_code'],'data'=>$result]);
+        } catch (InvalidArgumentException | DomainException $e) {
+            http_response_code(422);
+            echo json_encode(['success'=>false,'message'=>$e->getMessage()]);
+        } catch (Throwable $e) {
+            error_log('CRM booking: '.$e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success'=>false,'message'=>'Booking could not be saved. Please try again.']);
         }
         exit;
     }
-    
+    if (($_POST['action'] ?? '') === 'update_payment_status') {
+        require_once __DIR__ . '/includes/crm_booking.php';
+        header('Content-Type: application/json; charset=utf-8');
+        try {
+            crm_booking_schema($conn);
+            if (!is_numeric($_POST['paidAmount'] ?? null) || (float)$_POST['paidAmount'] <= 0) throw new InvalidArgumentException('Enter a positive payment.');
+            crm_booking_update($conn, (int)($_POST['bookingId'] ?? 0), ['paid_amount'=>$_POST['paidAmount'],'increment_payment'=>true,'payment_note'=>$_POST['paymentNote'] ?? '']);
+            echo json_encode(['success'=>true,'message'=>'Payment recorded.']);
+        } catch (InvalidArgumentException | DomainException $e) {
+            http_response_code(422); echo json_encode(['success'=>false,'message'=>$e->getMessage()]);
+        } catch (Throwable $e) {
+            error_log('CRM payment: '.$e->getMessage());
+            http_response_code(500); echo json_encode(['success'=>false,'message'=>'Payment could not be saved.']);
+        }
+        exit;
+    }
+
     // Search Agent by Mobile Number
     if ($_POST['action'] === 'search_agent_by_mobile') {
         $mobile = sanitize_input($_POST['mobileNumber'] ?? '');
@@ -419,13 +283,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                  FROM agents_details 
                  WHERE phone = :exact 
                     OR phone LIKE :like 
-                    OR (LENGTH(:last10) = 10 AND RIGHT(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '+', ''), 10) = :last10)
+                    OR (LENGTH(:last10_length) = 10 AND RIGHT(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '+', ''), 10) = :last10)
                  ORDER BY id DESC LIMIT 1"
             );
             $stmt->execute([
                 ':exact' => $mobile,
                 ':like' => '%' . $last10 . '%',
-                ':last10' => $last10,
+                ':last10_length' => $last10, ':last10' => $last10,
             ]);
             $agent = $stmt->fetch(PDO::FETCH_ASSOC);
             
@@ -1543,16 +1407,18 @@ $hotel_category_options = array_values(array_unique(array_merge(
     }, $hotels))
 )));
 
-// Fetch employee's own bookings
+require_once __DIR__.'/includes/crm_booking.php';
+crm_booking_schema($conn);
+// Fetch employee's own and assigned bookings
  $my_bookings_query = "SELECT bd.*, COALESCE(NULLIF(bd.hotel_name_snapshot, ''), h.name) AS hotel_name, a.name as agent_name, COALESCE(a.company_name, '') as agent_company, a.location as agent_location, a.phone as agent_phone 
                       FROM bookings_details bd
                       LEFT JOIN hotels h ON bd.hotel_listing_id = h.id
                       LEFT JOIN agents_details a ON bd.agent_id = a.id
-                      WHERE bd.created_by = :username
+                      WHERE (bd.created_by = :username OR EXISTS (SELECT 1 FROM crm_booking_workflow cw WHERE cw.booking_id=bd.id AND cw.assigned_user_id=:assigned_user))
                       ORDER BY bd.created_at DESC
                       LIMIT 20";
 $stmt = $conn->prepare($my_bookings_query);
-$stmt->execute([':username' => $username]);
+$stmt->execute([':username' => $username, ':assigned_user' => (int)$user_id]);
 $my_bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $employeeMetrics = get_employee_live_metrics($conn, $username);
@@ -3350,7 +3216,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                                     <tr data-booking-code="<?php echo htmlspecialchars($booking['booking_code'] ?? ''); ?>" data-agent-phone="<?php echo htmlspecialchars($booking['agent_phone'] ?? ''); ?>" data-booking-date="<?php echo htmlspecialchars($booking['booking_date'] ?? ''); ?>" data-client="<?php echo htmlspecialchars($booking['client_name'] ?? ''); ?>" data-hotel="<?php echo htmlspecialchars($booking['hotel_name'] ?? ''); ?>" data-payment-status="<?php echo htmlspecialchars($booking['payment_status'] ?? ''); ?>" data-booking-status="<?php echo htmlspecialchars($booking['booking_status'] ?? ''); ?>">
                                     <td><span
                                             class="fw-bold text-dark"><?php echo htmlspecialchars($booking['booking_code']); ?></span>
-                                    </td>
+                                    <br><button type="button" class="btn btn-sm btn-outline-primary" onclick="manageCrmBooking(<?php echo (int)$booking['id']; ?>)">Details / workflow</button></td>
                                     <td>
                                         <div class="fw-medium text-dark">
                                             <?php echo htmlspecialchars($booking['client_name']); ?></div>
@@ -6433,6 +6299,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
     <script>window.AirwaysQuotationContact = <?php echo json_encode($quotationContact, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
     <script src="/assets/js/quotation-template.js?v=20260907-3"></script>
 <script src="/assets/js/ui-common.js?v=20261006"></script>
+<?php require __DIR__.'/includes/booking_workspace.php'; ?>
 </body>
 
 </html>

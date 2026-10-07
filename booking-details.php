@@ -6,67 +6,20 @@ require_role('admin');
 $flashMessage = '';
 $flashType = 'success';
 
+require_once __DIR__ . '/includes/crm_booking.php';
+crm_booking_schema($conn);
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'admin_update_payment') {
-	$bookingId = (int) ($_POST['booking_id'] ?? 0);
-	$paidAmount = (float) ($_POST['paid_amount'] ?? 0);
-	$bookingStatus = sanitize_input($_POST['booking_status'] ?? 'Pending');
-	$paymentNote = sanitize_input($_POST['payment_note'] ?? '');
-	$returnQuery = sanitize_input($_POST['return_query'] ?? '');
-	$redirectUrl = '/booking-details.php' . ($returnQuery !== '' ? '?' . $returnQuery : '');
-	$allowedBookingStatuses = ['Pending', 'Completed', 'Cancelled'];
-	if (!in_array($bookingStatus, $allowedBookingStatuses, true)) {
-		$bookingStatus = 'Pending';
-	}
-
-	if ($bookingId > 0 && $paidAmount >= 0) {
-		try {
-			$findStmt = $conn->prepare('SELECT amount FROM bookings_details WHERE id = :id LIMIT 1');
-			$findStmt->execute([':id' => $bookingId]);
-			$bookingBase = $findStmt->fetch();
-
-			if ($bookingBase) {
-				$totalAmount = (float) $bookingBase['amount'];
-				$dueAmount = max($totalAmount - $paidAmount, 0);
-				$paymentStatus = $paidAmount <= 0 ? 'Pending' : (($paidAmount >= $totalAmount) ? 'Paid' : 'Partial');
-				if ($bookingStatus === 'Cancelled') {
-					$paymentStatus = 'Cancelled';
-					$dueAmount = 0;
-				}
-
-				$updateStmt = $conn->prepare(
-					'UPDATE bookings_details
-					 SET paid_amount = :paid_amount,
-						 due_amount = :due_amount,
-						 payment_status = :payment_status,
-						 booking_status = :booking_status,
-						 status = :legacy_status,
-						 payment_note = :payment_note,
-						 payment_updated_by = :updated_by,
-						 payment_updated_at = NOW()
-					 WHERE id = :id'
-				);
-				$updateStmt->execute([
-					':paid_amount' => $paidAmount,
-					':due_amount' => $dueAmount,
-					':payment_status' => $paymentStatus,
-					':booking_status' => $bookingStatus,
-					':legacy_status' => $bookingStatus === 'Completed' ? 'Confirmed' : ($bookingStatus === 'Cancelled' ? 'Cancelled' : 'Pending Payment'),
-					':payment_note' => $paymentNote,
-					':updated_by' => $_SESSION['username'],
-					':id' => $bookingId,
-				]);
-
-				header('Location: ' . $redirectUrl . (str_contains($redirectUrl, '?') ? '&' : '?') . 'updated=1');
-				exit;
-			}
-		} catch (PDOException $e) {
-			header('Location: ' . $redirectUrl . (str_contains($redirectUrl, '?') ? '&' : '?') . 'error=1');
-			exit;
-		}
-	}
-
-	header('Location: ' . $redirectUrl . (str_contains($redirectUrl, '?') ? '&' : '?') . 'error=1');
-	exit;
+    try {
+        $data = ['stage'=>$_POST['booking_status'] ?? 'Pending','payment_note'=>$_POST['payment_note'] ?? ''];
+        if ($data['stage'] !== 'Cancelled') $data['paid_amount'] = $_POST['paid_amount'] ?? 0;
+        crm_booking_update($conn, (int)($_POST['booking_id'] ?? 0), $data);
+        redirect('/booking-details.php?updated=1');
+    } catch (InvalidArgumentException | DomainException $e) {
+        $flashMessage = $e->getMessage(); $flashType = 'danger';
+    } catch (Throwable $e) {
+        error_log('Booking payment: '.$e->getMessage());
+        $flashMessage = 'Payment update failed. Please try again.'; $flashType = 'danger';
+    }
 }
 
 if (isset($_GET['updated'])) {
@@ -86,6 +39,9 @@ $fromDateFilter = sanitize_input($_GET['from_date'] ?? '');
 $toDateFilter = sanitize_input($_GET['to_date'] ?? '');
 $filterClauses = [];
 $filterParams = [];
+$page = max(1, (int)($_GET['page'] ?? 1));
+$pageSize = 50;
+$offset = ($page - 1) * $pageSize;
 
 if ($bookingSearch !== '') {
 	$filterClauses[] = 'CONCAT_WS(" ", b.booking_code, b.client_name, h.hotel_name, a.name, a.phone, e.name, b.created_by, b.booking_status, b.payment_status) LIKE :search';
@@ -97,8 +53,8 @@ if ($bookingCodeFilter !== '') {
 	$filterParams[':booking_code'] = '%' . $bookingCodeFilter . '%';
 }
 
-if ($bookingStatusFilter !== '' && in_array($bookingStatusFilter, ['Pending', 'Completed', 'Cancelled'], true)) {
-	$filterClauses[] = 'b.booking_status = :booking_status';
+if ($bookingStatusFilter !== '' && in_array($bookingStatusFilter, ['Pending', 'Assigned', 'Processing', 'Confirmed', 'Completed', 'Cancelled'], true)) {
+	$filterClauses[] = 'COALESCE(w.stage, b.booking_status) = :booking_status';
 	$filterParams[':booking_status'] = $bookingStatusFilter;
 }
 
@@ -126,12 +82,14 @@ $bookingWhereSql = count($filterClauses) > 0 ? ' WHERE ' . implode(' AND ', $fil
 
 $bookingsStmt = $conn->prepare(
 	'SELECT b.id, b.booking_code, b.client_name, b.amount, b.paid_amount, b.due_amount, b.payment_status, b.payment_note, b.payment_updated_by, b.booking_status, b.status, b.booking_date, b.check_in, b.check_out, b.created_by, b.booking_source, b.guest_count, b.room_count, b.special_request,
-			COALESCE(NULLIF(b.hotel_name_snapshot, ""), h.hotel_name) AS hotel_name, a.name AS agent_name, a.phone AS agent_phone, a.location AS agent_location, e.name AS employee_name
+			COALESCE(NULLIF(b.hotel_name_snapshot, ""), h.hotel_name) AS hotel_name, a.name AS agent_name, a.phone AS agent_phone, a.location AS agent_location, COALESCE(assigned.username,e.name) AS employee_name, COALESCE(w.stage,b.booking_status) AS workflow_stage
 	 FROM bookings_details b
-	 JOIN hotel_listings_details h ON h.id = b.hotel_listing_id
-	 JOIN agents_details a ON a.id = b.agent_id
-	 LEFT JOIN employees_details e ON e.id = b.employee_id' . $bookingWhereSql . '
-	 ORDER BY b.booking_date DESC, b.id DESC'
+	 LEFT JOIN hotel_listings_details h ON h.id = b.hotel_listing_id
+	 LEFT JOIN agents_details a ON a.id = b.agent_id
+	 LEFT JOIN employees_details e ON e.id = b.employee_id
+ LEFT JOIN crm_booking_workflow w ON w.booking_id=b.id
+ LEFT JOIN users assigned ON assigned.id=w.assigned_user_id' . $bookingWhereSql . '
+	 ORDER BY b.booking_date DESC, b.id DESC LIMIT ' . $pageSize . ' OFFSET ' . $offset
 );
 $bookingsStmt->execute($filterParams);
 $bookings = $bookingsStmt->fetchAll();
@@ -147,19 +105,24 @@ $summaryStmt = $conn->prepare(
 		SUM(CASE WHEN booking_status = "Pending" THEN 1 ELSE 0 END) AS pending_count,
 		SUM(CASE WHEN booking_status = "Cancelled" THEN 1 ELSE 0 END) AS cancelled_count
 	 FROM bookings_details b
-	 JOIN hotel_listings_details h ON h.id = b.hotel_listing_id
-	 JOIN agents_details a ON a.id = b.agent_id
-	 LEFT JOIN employees_details e ON e.id = b.employee_id' . $bookingWhereSql
+	 LEFT JOIN hotel_listings_details h ON h.id = b.hotel_listing_id
+	 LEFT JOIN agents_details a ON a.id = b.agent_id
+	 LEFT JOIN employees_details e ON e.id = b.employee_id
+ LEFT JOIN crm_booking_workflow w ON w.booking_id=b.id
+ LEFT JOIN users assigned ON assigned.id=w.assigned_user_id' . $bookingWhereSql
 );
 $summaryStmt->execute($filterParams);
 $summary = $summaryStmt->fetch();
+$totalPages = max(1, (int)ceil((int)$summary['total_bookings'] / $pageSize));
 
 $statusChartStmt = $conn->prepare(
 	'SELECT booking_status, COUNT(*) AS total
 	 FROM bookings_details b
-	 JOIN hotel_listings_details h ON h.id = b.hotel_listing_id
-	 JOIN agents_details a ON a.id = b.agent_id
-	 LEFT JOIN employees_details e ON e.id = b.employee_id' . $bookingWhereSql . '
+	 LEFT JOIN hotel_listings_details h ON h.id = b.hotel_listing_id
+	 LEFT JOIN agents_details a ON a.id = b.agent_id
+	 LEFT JOIN employees_details e ON e.id = b.employee_id
+ LEFT JOIN crm_booking_workflow w ON w.booking_id=b.id
+ LEFT JOIN users assigned ON assigned.id=w.assigned_user_id' . $bookingWhereSql . '
 	 GROUP BY booking_status'
 );
 $statusChartStmt->execute($filterParams);
@@ -181,7 +144,7 @@ $bookingReturnQuery = http_build_query(array_filter([
 	'to_date' => $toDateFilter,
 ], static fn($value) => $value !== '' && $value !== null));
 
-$statusLabels = ['Pending', 'Completed', 'Cancelled'];
+$statusLabels = ['Pending', 'Assigned', 'Processing', 'Confirmed', 'Completed', 'Cancelled'];
 $statusValues = [
 	(int) $statusCountsMap['Pending'],
 	(int) $statusCountsMap['Completed'],
@@ -299,6 +262,7 @@ function booking_status_badge($status) {
 	</header>
 
 	<div class="container-fluid p-4">
+<?php require __DIR__.'/includes/booking_workspace.php'; ?>
 		<?php if ($flashMessage !== ''): ?>
 			<div class="alert alert-<?php echo htmlspecialchars($flashType, ENT_QUOTES, 'UTF-8'); ?> shadow-sm mb-4"><?php echo htmlspecialchars($flashMessage, ENT_QUOTES, 'UTF-8'); ?></div>
 		<?php endif; ?>
@@ -323,16 +287,16 @@ function booking_status_badge($status) {
 				<h6 class="fw-bold mb-0">Search & Filters</h6>
 				<span class="text-muted small">Find bookings by name, booking code, agent number, date or status</span>
 			</div>
-			<div class="row g-3 filter-grid">
-				<div class="col-lg-3 col-md-6"><input class="form-control" id="bkFilterQ" placeholder="Booking, client, hotel, agent" onkeyup="bkLiveFilter()"></div>
-				<div class="col-lg-2 col-md-6"><input class="form-control" id="bkFilterCode" placeholder="Booking code" onkeyup="bkLiveFilter()"></div>
-				<div class="col-lg-2 col-md-6"><input class="form-control" id="bkFilterAgent" placeholder="Agent number" onkeyup="bkLiveFilter()"></div>
-				<div class="col-lg-1 col-md-6"><select class="form-select" id="bkFilterStatus" onchange="bkLiveFilter()"><option value="">Status</option><option value="Pending">Pending</option><option value="Completed">Completed</option><option value="Cancelled">Cancelled</option></select></div>
-				<div class="col-lg-2 col-md-6"><select class="form-select" id="bkFilterPayment" onchange="bkLiveFilter()"><option value="">Payment</option><option value="Pending">Pending</option><option value="Partial">Partial</option><option value="Paid">Paid</option><option value="Cancelled">Cancelled</option></select></div>
-				<div class="col-lg-2 col-md-6 d-flex gap-2">
-					<button class="btn btn-outline-secondary" type="button" onclick="document.getElementById('bkFilterQ').value=''; document.getElementById('bkFilterCode').value=''; document.getElementById('bkFilterAgent').value=''; document.getElementById('bkFilterStatus').value=''; document.getElementById('bkFilterPayment').value=''; bkLiveFilter();"><i class="bi bi-x-circle"></i> Reset</button>
-				</div>
-			</div>
+<form method="get" id="bookingFilters" class="row g-3 filter-grid">
+<div class="col-lg-3 col-md-6"><input aria-label="Search bookings" class="form-control" name="q" id="bkFilterQ" placeholder="Booking, client, hotel, agent" value="<?= htmlspecialchars($bookingSearch,ENT_QUOTES,'UTF-8') ?>"></div>
+<div class="col-lg-2 col-md-6"><input aria-label="Booking code" class="form-control" name="booking_code" placeholder="Booking code" value="<?= htmlspecialchars($bookingCodeFilter,ENT_QUOTES,'UTF-8') ?>"></div>
+<div class="col-lg-2 col-md-6"><input aria-label="Agent phone" class="form-control" name="agent_phone" placeholder="Agent number" value="<?= htmlspecialchars($agentPhoneFilter,ENT_QUOTES,'UTF-8') ?>"></div>
+<div class="col-lg-2 col-md-6"><select aria-label="Workflow status" class="form-select" name="booking_status"><option value="">All statuses</option><?php foreach(['Pending','Assigned','Processing','Confirmed','Completed','Cancelled'] as $value): ?><option <?= $bookingStatusFilter===$value?'selected':'' ?>><?= $value ?></option><?php endforeach ?></select></div>
+<div class="col-lg-2 col-md-6"><select aria-label="Payment status" class="form-select" name="payment_status"><option value="">All payments</option><?php foreach(['Pending','Partial','Paid','Cancelled'] as $value): ?><option <?= $paymentStatusFilter===$value?'selected':'' ?>><?= $value ?></option><?php endforeach ?></select></div>
+<div class="col-md-3"><label class="form-label" for="filterFrom">Booked from</label><input class="form-control" type="date" id="filterFrom" name="from_date" value="<?= htmlspecialchars($fromDateFilter,ENT_QUOTES,'UTF-8') ?>"></div>
+<div class="col-md-3"><label class="form-label" for="filterTo">Booked through</label><input class="form-control" type="date" id="filterTo" name="to_date" value="<?= htmlspecialchars($toDateFilter,ENT_QUOTES,'UTF-8') ?>"></div>
+<div class="col-md-6 d-flex gap-2 align-items-end"><button class="btn btn-primary" type="submit">Apply filters</button><a class="btn btn-outline-secondary" href="<?= htmlspecialchars(site_url('booking-details.php'),ENT_QUOTES,'UTF-8') ?>">Reset</a></div>
+</form>
 		</div>
 
 		<div class="row g-4">
@@ -347,7 +311,7 @@ function booking_status_badge($status) {
 							<?php else: ?>
 								<?php foreach ($bookings as $booking): ?>
 									<tr>
-										<td>#<?php echo htmlspecialchars($booking['booking_code'], ENT_QUOTES, 'UTF-8'); ?></td>
+										<td>#<?php echo htmlspecialchars($booking['booking_code'], ENT_QUOTES, 'UTF-8'); ?><br><button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="manageCrmBooking(<?php echo (int)$booking['id']; ?>)">Details / workflow</button></td>
 										<td>
 											<?php echo htmlspecialchars($booking['client_name'], ENT_QUOTES, 'UTF-8'); ?>
 											<span class="meta-inline">Source: <?php echo htmlspecialchars((string)($booking['booking_source'] ?? 'Direct'), ENT_QUOTES, 'UTF-8'); ?></span>
@@ -369,7 +333,7 @@ function booking_status_badge($status) {
 												type="button"
 												class="btn btn-sm btn-light border rounded-circle ms-1"
 												title="Edit payment"
-												onclick="openAdminPaymentEditor(<?php echo (int)$booking['id']; ?>, <?php echo (float)$booking['amount']; ?>, <?php echo (float)($booking['paid_amount'] ?? 0); ?>, '<?php echo htmlspecialchars((string)($booking['payment_note'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>', '<?php echo htmlspecialchars((string)($booking['booking_status'] ?? 'Pending'), ENT_QUOTES, 'UTF-8'); ?>')">
+												onclick="openAdminPaymentEditor(<?php echo (int)$booking['id']; ?>, <?php echo (float)$booking['amount']; ?>, <?php echo (float)($booking['paid_amount'] ?? 0); ?>, <?php echo htmlspecialchars(json_encode((string)($booking['payment_note'] ?? '')), ENT_QUOTES, 'UTF-8'); ?>, '<?php echo htmlspecialchars((string)($booking['workflow_stage'] ?? 'Pending'), ENT_QUOTES, 'UTF-8'); ?>')">
 												<i class="bi bi-pencil"></i>
 											</button>
 											<?php if (($booking['booking_status'] ?? 'Pending') !== 'Cancelled'): ?>
@@ -381,7 +345,7 @@ function booking_status_badge($status) {
 										<td><?php echo htmlspecialchars($booking['agent_name'], ENT_QUOTES, 'UTF-8'); ?></td>
 										<td><?php echo htmlspecialchars((string) ($booking['employee_name'] ?? 'N/A'), ENT_QUOTES, 'UTF-8'); ?></td>
 										<td><span class="badge badge-created"><i class="bi bi-person-fill me-1"></i><?php echo htmlspecialchars($booking['created_by'], ENT_QUOTES, 'UTF-8'); ?></span></td>
-										<td><span class="badge <?php echo booking_status_badge($booking['booking_status'] ?? 'Pending'); ?>"><?php echo htmlspecialchars($booking['booking_status'] ?? 'Pending', ENT_QUOTES, 'UTF-8'); ?></span></td>
+										<td><span class="badge <?php echo booking_status_badge($booking['workflow_stage'] ?? 'Pending'); ?>"><?php echo htmlspecialchars($booking['workflow_stage'] ?? 'Pending', ENT_QUOTES, 'UTF-8'); ?></span></td>
 										<td>
 											<button
 												type="button"
@@ -418,6 +382,10 @@ function booking_status_badge($status) {
 							<?php endif; ?>
 							</tbody>
 						</table>
+<nav class="d-flex flex-wrap gap-2 justify-content-between align-items-center" aria-label="Booking pages">
+<span class="small text-muted"><?= (int)$summary['total_bookings'] ?> bookings · Page <?= $page ?> of <?= $totalPages ?></span>
+<div class="d-flex gap-2"><?php if($page>1): ?><a class="btn btn-sm btn-outline-primary" href="?<?= htmlspecialchars($bookingReturnQuery.'&page='.($page-1),ENT_QUOTES,'UTF-8') ?>">Previous</a><?php endif ?><?php if($page<$totalPages): ?><a class="btn btn-sm btn-outline-primary" href="?<?= htmlspecialchars($bookingReturnQuery.'&page='.($page+1),ENT_QUOTES,'UTF-8') ?>">Next</a><?php endif ?></div>
+</nav>
 					</div>
 				</div>
 			</div>
@@ -441,14 +409,14 @@ function booking_status_badge($status) {
 					<div class="mb-3">
 						<label class="form-label">Booking Status</label>
 						<select class="form-select" name="booking_status" id="adminEditBookingStatus" required>
-							<option value="Pending">Pending</option>
+							<option value="Pending">Pending</option><option>Assigned</option><option>Processing</option><option>Confirmed</option>
 							<option value="Completed">Completed</option>
 							<option value="Cancelled">Cancelled</option>
 						</select>
 					</div>
 					<div class="mb-3">
 						<label class="form-label">Paid Amount</label>
-						<input type="number" class="form-control" name="paid_amount" id="adminEditPaidAmount" min="0" step="100" required>
+						<input type="number" class="form-control" name="paid_amount" id="adminEditPaidAmount" min="0" step="0.01" required>
 					</div>
 					<div class="mb-1">
 						<label class="form-label">Payment Note / Reference</label>
@@ -467,27 +435,11 @@ function booking_status_badge($status) {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+let bookingSearchTimer;
 function liveSearchBookings(q) {
-	q = q.toLowerCase().trim();
-	document.getElementById('bkFilterQ').value = q;
-	bkLiveFilter();
-}
-
-function bkLiveFilter() {
-	var q = (document.getElementById('bkFilterQ').value || '').toLowerCase().trim();
-	var code = (document.getElementById('bkFilterCode').value || '').toLowerCase().trim();
-	var agent = (document.getElementById('bkFilterAgent').value || '').toLowerCase().trim();
-	var status = (document.getElementById('bkFilterStatus').value || '').trim();
-	var payment = (document.getElementById('bkFilterPayment').value || '').trim();
-	document.querySelectorAll('.table tbody tr').forEach(row => {
-		var text = row.textContent.toLowerCase();
-		var matchQ = !q || text.includes(q);
-		var matchCode = !code || text.includes(code);
-		var matchAgent = !agent || text.includes(agent);
-		var matchStatus = !status || text.includes(status.toLowerCase());
-		var matchPayment = !payment || text.includes(payment.toLowerCase());
-		row.style.display = (matchQ && matchCode && matchAgent && matchStatus && matchPayment) ? '' : 'none';
-	});
+  document.getElementById('bkFilterQ').value=q;
+  clearTimeout(bookingSearchTimer);
+  bookingSearchTimer=setTimeout(()=>document.getElementById('bookingFilters').requestSubmit(),500);
 }
 
 let adminPaymentModal = null;

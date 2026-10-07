@@ -43,7 +43,7 @@ $image_urls = array_values(array_filter(array_map(static function ($u) {
 }));
 $image_json = !empty($image_urls) ? json_encode($image_urls, JSON_UNESCAPED_UNICODE) : null;
 
-$hotel_code = $hotel_code_in !== '' ? strtoupper(preg_replace('/[^A-Z0-9\-]/', '', $hotel_code_in)) : gen_hotel_code($pdo, $city, $name);
+$hotel_code = $hotel_code_in !== '' ? preg_replace('/[^A-Z0-9\-]/', '', strtoupper($hotel_code_in)) : gen_hotel_code($pdo, $city, $name);
 if ($hotel_code === '') {
     $hotel_code = gen_hotel_code($pdo, $city, $name);
 }

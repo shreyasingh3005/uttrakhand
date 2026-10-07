@@ -183,75 +183,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit;
     }
     
-    if ($action === 'create_booking') {
-        http_response_code(200);
+    if (($_POST['action'] ?? '') === 'create_booking') {
+        require_once __DIR__ . '/includes/crm_booking.php';
         header('Content-Type: application/json; charset=utf-8');
-        
-        $clientName = sanitize_input($_POST['clientName'] ?? '');
-        $clientPhone = sanitize_input($_POST['clientPhone'] ?? '');
-        $clientEmail = sanitize_input($_POST['clientEmail'] ?? '');
-        $hotelId = intval($_POST['hotelId'] ?? 0);
-        $agentId = intval($_POST['agentId'] ?? 0);
-        $checkIn = sanitize_input($_POST['checkIn'] ?? '');
-        $checkOut = sanitize_input($_POST['checkOut'] ?? '');
-        $bookingDate = sanitize_input($_POST['bookingDate'] ?? date('Y-m-d'));
-        $amount = floatval($_POST['amount'] ?? 0);
-        $paidAmount = floatval($_POST['paidAmount'] ?? 0);
-        $guestCount = intval($_POST['guestCount'] ?? 1);
-        $roomCount = intval($_POST['roomCount'] ?? 1);
-        $specialRequest = sanitize_input($_POST['specialRequest'] ?? '');
-        $bookingSource = sanitize_input($_POST['bookingSource'] ?? 'Admin Query');
-        $roomType = sanitize_input($_POST['roomType'] ?? '');
-        $hotelSnapshot = sanitize_input($_POST['hotelNameSnapshot'] ?? '');
-        
-        if (!$clientName || !$clientPhone || !$hotelId || !$agentId || !$checkIn || !$checkOut || !$amount) {
-            echo json_encode(['success' => false, 'message' => 'Required fields missing']);
-            exit;
-        }
-        
         try {
-            $bookingCode = 'BK-' . date('YmdHis') . '-' . rand(1000, 9999);
-            $dueAmount = max($amount - $paidAmount, 0);
-            $paymentStatus = $paidAmount <= 0 ? 'Pending' : (($paidAmount >= $amount) ? 'Paid' : 'Partial');
-
-            $insertStmt = $conn->prepare(
-                'INSERT INTO bookings_details (booking_code, client_name, client_phone, client_email, hotel_listing_id, agent_id, 
-                 check_in, check_out, booking_date, amount, paid_amount, due_amount, payment_status, guest_count, room_count, special_request, 
-                 booking_source, hotel_name_snapshot, room_type_snapshot, created_by, booking_status, status, created_at)
-                 VALUES (:booking_code, :client_name, :client_phone, :client_email, :hotel_id, :agent_id,
-                 :check_in, :check_out, :booking_date, :amount, :paid_amount, :due_amount, :payment_status, :guest_count, :room_count, :special_request,
-                 :booking_source, :hotel_snapshot, :room_type, :created_by, "Pending", "Pending Payment", NOW())'
-            );
-            
-            $insertStmt->execute([
-                ':booking_code' => $bookingCode,
-                ':client_name' => $clientName,
-                ':client_phone' => $clientPhone,
-                ':client_email' => $clientEmail,
-                ':hotel_id' => $hotelId,
-                ':agent_id' => $agentId,
-                ':check_in' => $checkIn,
-                ':check_out' => $checkOut,
-                ':booking_date' => $bookingDate,
-                ':amount' => $amount,
-                ':paid_amount' => $paidAmount,
-                ':due_amount' => $dueAmount,
-                ':payment_status' => $paymentStatus,
-                ':guest_count' => $guestCount,
-                ':room_count' => $roomCount,
-                ':special_request' => $specialRequest,
-                ':booking_source' => $bookingSource,
-                ':hotel_snapshot' => $hotelSnapshot,
-                ':room_type' => $roomType,
-                ':created_by' => $_SESSION['username'] ?? 'admin'
-            ]);
-            
-            echo json_encode(['success' => true, 'message' => $bookingCode]);
-        } catch (PDOException $e) {
-            echo json_encode(['success' => false, 'message' => 'Booking creation failed. Please try again.']);
+            crm_booking_schema($conn);
+            $result = crm_booking_create($conn, $_POST);
+            echo json_encode(['success'=>true,'message'=>'Booking created: '.$result['booking_code'],'data'=>$result]);
+        } catch (InvalidArgumentException | DomainException $e) {
+            http_response_code(422);
+            echo json_encode(['success'=>false,'message'=>$e->getMessage()]);
+        } catch (Throwable $e) {
+            error_log('CRM booking: '.$e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success'=>false,'message'=>'Booking could not be saved. Please try again.']);
         }
         exit;
     }
+
 }
 
 $flashSuccess = $_SESSION['dashboard_success'] ?? '';

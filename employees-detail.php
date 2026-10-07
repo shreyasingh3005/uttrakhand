@@ -50,7 +50,7 @@ $employeeFilterClauses = [];
 $employeeFilterParams = [];
 
 if ($employeeSearch !== '') {
-	$employeeFilterClauses[] = '(e.name LIKE :search OR e.phone LIKE :search OR e.email LIKE :search OR e.designation LIKE :search OR e.department LIKE :search)';
+	$employeeFilterClauses[] = 'CONCAT_WS(CHAR(32),e.name,e.phone,e.email,e.designation,e.department) LIKE :search';
 	$employeeFilterParams[':search'] = '%' . $employeeSearch . '%';
 }
 

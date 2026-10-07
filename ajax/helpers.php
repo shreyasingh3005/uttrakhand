@@ -9,6 +9,7 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 
 /* ── DB ─────────────────────────────────────────────────────────────────── */
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/security.php';
 function hl_pdo(): PDO {
     static $pdo = null;
     if ($pdo) return $pdo;
@@ -46,6 +47,17 @@ function hl_err(string $msg, int $code = 400): never {
 /* ── Auth ────────────────────────────────────────────────────────────────── */
 function hl_auth(): void {
     if (empty($_SESSION['user_id'])) hl_err('Unauthorized. Please log in.', 401);
+    if (isset($_SESSION['login_at']) && time() - (int)$_SESSION['login_at'] > 28800) {
+        $_SESSION = [];
+        session_destroy();
+        hl_err('Session expired. Please log in again.', 401);
+    }
+    if (!in_array($_SESSION['role'] ?? '', ['admin', 'employee'], true)) hl_err('Access denied.', 403);
+    if (!session_account_valid(hl_pdo())) {
+        $_SESSION=[];
+        session_destroy();
+        hl_err('Please sign in again.',401);
+    }
 }
 
 /** Require admin role for structural edits (add/delete hotels, room categories). */
@@ -62,14 +74,25 @@ function hl_require_admin_or_manager(): void {
 
 /* ── Input ───────────────────────────────────────────────────────────────── */
 function hl_body(): array {
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') hl_err('POST required.', 405);
+    verify_csrf();
     $ct = $_SERVER['CONTENT_TYPE'] ?? '';
-    if (stripos($ct, 'application/json') !== false)
-        return json_decode(file_get_contents('php://input'), true) ?? [];
+    if (stripos($ct, 'application/json') !== false) {
+        $body = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($body)) hl_err('Invalid JSON body.', 422);
+        return $body;
+    }
     return $_POST;
 }
 function s(mixed $v): string { return trim((string)$v); }
 function f(mixed $v): float  { return max(0.0, (float)$v); }
 function i(mixed $v): int    { return (int)$v; }
+
+function hl_date_range(string $from, string $to): void {
+    $a=DateTimeImmutable::createFromFormat('!Y-m-d',$from);
+    $b=DateTimeImmutable::createFromFormat('!Y-m-d',$to);
+    if (!$a || !$b || $a->format('Y-m-d')!==$from || $b->format('Y-m-d')!==$to || $a>$b || $a->diff($b)->days>366) hl_err('Choose a valid date range of at most 366 days.',422);
+}
 
 /* ── Constants ───────────────────────────────────────────────────────────── */
 const MEAL_CODES = ['EP','CP','MAP','AP'];

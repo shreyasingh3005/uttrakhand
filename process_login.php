@@ -44,7 +44,6 @@ $stmt->execute([$username]);
 $user = $stmt->fetch();
 
 if (!$user || !verify_password($password, $user['password'])) {
-    record_failed_login($username);
     redirect('/index.php?error=Invalid username or password.');
 }
 
@@ -60,6 +59,7 @@ $_SESSION['username']  = $user['username'];
 $_SESSION['email']     = $user['email'];
 $_SESSION['role']      = $user['role'];
 $_SESSION['login_at']  = time();
+$_SESSION['credential_signature'] = hash('sha256', $user['password']);
 
 try {
     $conn->prepare('UPDATE users SET is_logged_in = 1, last_login_at = NOW() WHERE id = :id')

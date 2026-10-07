@@ -1,5 +1,6 @@
 (function () {
   'use strict';
+  var notificationUrl = new URL('../../ajax/notifications.php', document.currentScript.src).href;
 
   var navMap = {
     '/dashboard.php': { label: 'Dashboard', icon: 'bi-grid-1x2' },
@@ -54,7 +55,7 @@
 
   function ensureCalculatorLink() {
     document.querySelectorAll('#adminSidebar').forEach(function (sidebar) {
-      if (sidebar.querySelector('a[data-uv-calculator-link="1"]')) return;
+      if (sidebar.querySelector('a[data-uv-calculator-link="1"], a[href="https://buyusnumber.com/uk1.php"], a[href$="/hotel_calculator.php"]')) return;
       var list = sidebar.querySelector('ul.nav, .sidebar-nav');
       if (!list) return;
       var item = document.createElement('li');
@@ -129,7 +130,8 @@
     document.documentElement.dataset.themeClickBound = '1';
     window.toggleCrmTheme = function () {
       var isDark = document.documentElement.getAttribute('data-theme') !== 'dark';
-      document.documentElement.toggleAttribute('data-theme', isDark);
+      if (isDark) document.documentElement.setAttribute('data-theme', 'dark');
+      else document.documentElement.removeAttribute('data-theme');
       document.documentElement.classList.toggle('dark-theme', isDark);
       document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
       if (isDark) localStorage.setItem('crm-theme', 'dark');
@@ -148,6 +150,26 @@
     });
   }
 
+  function bindNotifications() {
+    document.querySelectorAll('[aria-label="Notifications"]').forEach(function(button) {
+      button.addEventListener('click', async function() {
+        var panel=document.getElementById('crmAlerts');
+        if(panel) { panel.remove(); button.setAttribute('aria-expanded','false'); return; }
+        panel=document.createElement('section'); panel.id='crmAlerts'; panel.setAttribute('aria-label','Recent booking activity');
+        panel.style.cssText='position:fixed;right:12px;top:64px;width:min(360px,calc(100vw - 24px));max-height:70vh;overflow:auto;z-index:1200;padding:16px;border:1px solid #cbd5e1;border-radius:12px;background:var(--crm-surface,#fff);color:var(--crm-text,#0f172a);box-shadow:0 8px 30px #0003';
+        var close=document.createElement('button');close.type='button';close.className='btn btn-sm btn-outline-secondary float-end';close.textContent='Close';close.onclick=function(){panel.remove();button.setAttribute('aria-expanded','false');};panel.appendChild(close);
+        var title=document.createElement('h6');title.textContent='Recent booking activity';panel.appendChild(title);
+        var content=document.createElement('div');content.textContent='Loading…';panel.appendChild(content);document.body.appendChild(panel);button.setAttribute('aria-expanded','true');
+        try {
+          var response=await fetch(notificationUrl);var data=await response.json();if(!response.ok||!data.success)throw new Error(data.message||'Unable to load alerts.');
+          content.replaceChildren();
+          if(!data.items.length)content.textContent='No booking activity yet.';
+          data.items.forEach(function(item){var row=document.createElement('p');row.className='small border-bottom py-2 mb-0';row.textContent=item.booking_code+' · '+item.action+' · '+item.stage+' · '+item.action_at;content.appendChild(row);});
+        } catch(error) {content.textContent=error.message;}
+      });
+    });
+  }
+
   function run() {
     var savedTheme = localStorage.getItem('crm-theme') === 'dark';
     if (savedTheme) {
@@ -160,6 +182,7 @@
     ensureProfileMenuOption();
     ensureThemeControls();
     bindThemeToggle();
+    bindNotifications();
   }
 
   if (document.readyState === 'loading') {

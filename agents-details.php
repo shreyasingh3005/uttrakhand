@@ -67,7 +67,7 @@ $agentFilterClauses = [];
 $agentFilterParams = [];
 
 if ($agentSearch !== '') {
-	$agentFilterClauses[] = '(name LIKE :search OR phone LIKE :search OR email LIKE :search OR location LIKE :search OR created_by LIKE :search)';
+	$agentFilterClauses[] = 'CONCAT_WS(CHAR(32),name,phone,email,location,created_by) LIKE :search';
 	$agentFilterParams[':search'] = '%' . $agentSearch . '%';
 }
 

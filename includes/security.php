@@ -5,6 +5,14 @@
  */
 declare(strict_types=1);
 
+function session_account_valid(PDO $pdo): bool {
+    $stmt=$pdo->prepare('SELECT role,password FROM users WHERE id=?');
+    $stmt->execute([(int)($_SESSION['user_id']??0)]);
+    $user=$stmt->fetch(PDO::FETCH_ASSOC);
+    return $user && $user['role']===($_SESSION['role']??'') &&
+        (!isset($_SESSION['credential_signature']) || hash_equals($_SESSION['credential_signature'],hash('sha256',$user['password'])));
+}
+
 /* ── Rate Limiting ─────────────────────────────────────────────────────── */
 /**
  * Simple file-based rate limiter.
@@ -110,7 +118,7 @@ function csrf_field(): string {
 function verify_csrf(): void {
     if (session_status() === PHP_SESSION_NONE) session_start();
     $token = $_POST['_csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-    if (empty($token) || !hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+    if (!is_string($token) || $token === '' || !hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
         http_response_code(403);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['status' => 'error', 'message' => 'Invalid security token. Please refresh and try again.']);

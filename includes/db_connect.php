@@ -194,7 +194,11 @@ function ensure_booking_payment_columns(PDO $conn) {
         if (!empty($alterParts)) {
             $conn->exec("ALTER TABLE bookings_details " . implode(', ', $alterParts));
         }
-        $conn->exec("UPDATE bookings_details SET paid_amount = COALESCE(paid_amount, 0), due_amount = GREATEST(COALESCE(amount, 0) - COALESCE(paid_amount, 0), 0), payment_status = CASE WHEN COALESCE(paid_amount, 0) >= COALESCE(amount, 0) AND COALESCE(amount, 0) > 0 THEN 'Paid' WHEN COALESCE(paid_amount, 0) > 0 THEN 'Partial' ELSE 'Pending' END, booking_status = CASE WHEN booking_status IS NOT NULL AND booking_status <> '' THEN booking_status WHEN status = 'Cancelled' THEN 'Cancelled' WHEN status = 'Confirmed' THEN 'Completed' WHEN status = 'Pending Payment' THEN 'Pending' ELSE COALESCE(booking_status, 'Pending') END, booking_source = COALESCE(booking_source, 'Direct'), guest_count = CASE WHEN guest_count IS NULL OR guest_count < 1 THEN 1 ELSE guest_count END, room_count = CASE WHEN room_count IS NULL OR room_count < 1 THEN 1 ELSE room_count END");
+        // Backfill only when adding compatibility fields; ordinary reads must not rewrite payments.
+        if (!empty($alterParts)) {
+            $conn->exec("UPDATE bookings_details SET booking_status = COALESCE(NULLIF(booking_status, ''), CASE WHEN status='Cancelled' THEN 'Cancelled' WHEN status='Confirmed' THEN 'Completed' ELSE 'Pending' END)");
+            $conn->exec("UPDATE bookings_details SET due_amount = CASE WHEN booking_status='Cancelled' THEN 0 ELSE GREATEST(amount-paid_amount,0) END, payment_status = CASE WHEN booking_status='Cancelled' THEN 'Cancelled' WHEN paid_amount>=amount AND amount>0 THEN 'Paid' WHEN paid_amount>0 THEN 'Partial' ELSE 'Pending' END");
+        }
     } catch (PDOException $e) {
         // Non-blocking
     }

@@ -18,6 +18,8 @@ if (!in_array($meal_code, MEAL_CODES))   hl_err('Invalid meal_plan code.');
 if (!$from_date || !$to_date)            hl_err('from_date and to_date required.');
 if ($from_date > $to_date)               hl_err('from_date must be <= to_date.');
 if ($price < 0)                          hl_err('price must be >= 0.');
+hl_date_range($from_date, $to_date);
+if (!is_numeric($d['price'] ?? null) || !is_finite($price)) hl_err('A valid price is required.',422);
 
 $plan_id = get_plan_id($pdo, $meal_code);
 if (!$plan_id) hl_err('Meal plan not found.');
@@ -40,6 +42,9 @@ if ($room_id_raw === 'all') {
 } else {
     $rid = i($room_id_raw);
     if ($rid <= 0) hl_err('Invalid room_id.');
+    $roomCheck=$pdo->prepare("SELECT id FROM hotel_room_categories WHERE id=? AND hotel_id=? AND status='active'");
+    $roomCheck->execute([$rid,$hotel_id]);
+    if (!$roomCheck->fetchColumn()) hl_err('Room does not belong to this hotel.',422);
     $roomIds = [$rid];
 }
 

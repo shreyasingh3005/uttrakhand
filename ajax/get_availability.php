@@ -9,6 +9,7 @@ $from_date = s($_GET['from_date'] ?? date('Y-m-d'));
 $to_date   = s($_GET['to_date']   ?? date('Y-m-d', strtotime('+13 days')));
 
 if ($hotel_id <= 0) hl_err('hotel_id is required.');
+hl_date_range($from_date,$to_date);
 
 $dtFrom = DateTime::createFromFormat('Y-m-d', $from_date);
 $dtTo   = DateTime::createFromFormat('Y-m-d', $to_date);
@@ -48,8 +49,8 @@ try {
                 'room_category_id' => $rid,
                 'availability_date'=> $ds,
                 'total_rooms'      => (int)$def['total_rooms'],
-                'available_rooms'  => (int)$def['available_rooms'],
-                'booked_rooms'     => (int)$def['booked_rooms'],
+                'available_rooms'  => max(0,(int)$def['total_rooms']-(int)$def['blocked_rooms']),
+                'booked_rooms'     => 0,
                 'blocked_rooms'    => (int)$def['blocked_rooms'],
             ];
         }

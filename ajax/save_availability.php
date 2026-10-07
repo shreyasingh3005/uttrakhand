@@ -1,59 +1,34 @@
 <?php
-/** ajax/save_availability.php — Batch upsert room availability */
 require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/../includes/booking_service.php';
 hl_require_admin_or_manager();
-$pdo     = hl_pdo();
-$d       = hl_body();
-$updates = $d['updates'] ?? [];
-
-if (!is_array($updates) || empty($updates)) hl_err('updates array required.');
-
+$d=hl_body(); $pdo=hl_pdo(); $updates=$d['updates']??[];
+if (!is_array($updates) || !$updates || count($updates)>2000) hl_err('Provide 1–2000 availability updates.',422);
+usort($updates,static fn($a,$b)=>[(int)($a['room_id']??0),$a['date']??$a['availability_date']??''] <=> [(int)($b['room_id']??0),$b['date']??$b['availability_date']??'']);
 try {
     $pdo->beginTransaction();
-    $stmt = $pdo->prepare("INSERT INTO room_availability (hotel_id,room_category_id,availability_date,total_rooms,available_rooms,booked_rooms,blocked_rooms) VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE available_rooms=VALUES(available_rooms),blocked_rooms=VALUES(blocked_rooms),updated_at=NOW()");
-    $rcStmt = $pdo->prepare("UPDATE hotel_room_categories SET available_rooms=?,blocked_rooms=?,updated_at=NOW() WHERE id=?");
-
-    $cnt = 0;
-    $summaryUpdated = [];
-    foreach ($updates as $u) {
-        $rid      = i($u['room_id']       ?? 0);
-        $date     = s($u['date']          ?? $u['availability_date'] ?? '');
-        $avail    = max(0, i($u['available_rooms'] ?? 0));
-        $booked   = max(0, i($u['booked_rooms']   ?? 0));
-        $blocked  = max(0, i($u['blocked_rooms']  ?? 0));
-        $total    = max(0, i($u['total_rooms']     ?? 0));
-        if ($rid <= 0 || !$date) continue;
-
-        // Get hotel_id and total_rooms if not provided
-        if (!empty($u['hotel_id'])) {
-            $hotel_id = i($u['hotel_id']);
-        } else {
-            $hq = $pdo->prepare("SELECT hotel_id FROM hotel_room_categories WHERE id=?");
-            $hq->execute([$rid]);
-            $hr = $hq->fetch();
-            if (!$hr) continue;
-            $hotel_id = (int)$hr['hotel_id'];
-        }
-        if ($total === 0) {
-            $tq = $pdo->prepare("SELECT total_rooms FROM hotel_room_categories WHERE id=?");
-            $tq->execute([$rid]);
-            $tr = $tq->fetch();
-            $total = $tr ? (int)$tr['total_rooms'] : 0;
-        }
-
-        $stmt->execute([$hotel_id,$rid,$date,$total,$avail,$booked,$blocked]);
-        $cnt++;
-        $summaryUpdated[$rid] = ['avail' => $avail, 'blocked' => $blocked];
+    $roomStmt=$pdo->prepare("SELECT * FROM hotel_room_categories WHERE id=? AND status='active' FOR UPDATE");
+    $calendar=$pdo->prepare('SELECT * FROM room_availability WHERE room_category_id=? AND availability_date=? FOR UPDATE');
+    $save=$pdo->prepare('INSERT INTO room_availability (hotel_id,room_category_id,availability_date,total_rooms,available_rooms,booked_rooms,blocked_rooms) VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE total_rooms=VALUES(total_rooms),available_rooms=VALUES(available_rooms),blocked_rooms=VALUES(blocked_rooms),updated_at=NOW()');
+    foreach($updates as $update) {
+        $rid=booking_integer($update,'room_id',0,1,PHP_INT_MAX);
+        $date=(string)($update['date']??$update['availability_date']??'');
+        $dt=DateTimeImmutable::createFromFormat('!Y-m-d',$date);
+        if(!$dt || $dt->format('Y-m-d')!==$date) throw new InvalidArgumentException('Invalid availability date.');
+        $roomStmt->execute([$rid]);$room=$roomStmt->fetch();
+        if(!$room || (!empty($update['hotel_id']) && (int)$update['hotel_id']!==(int)$room['hotel_id'])) throw new InvalidArgumentException('Room does not belong to the selected hotel.');
+        $calendar->execute([$rid,$date]);$existing=$calendar->fetch();
+        $booked=(int)($existing['booked_rooms']??0);
+        $total=(int)$room['total_rooms'];
+        $avail=booking_integer($update,'available_rooms',0,0,$total);
+        // The UI edits available inventory; the remaining unbooked capacity is blocked.
+        if($avail+$booked>$total) throw new DomainException('Availability cannot overwrite rooms already reserved. Refresh the calendar.');
+        $blocked=$total-$avail-$booked;
+        $save->execute([$room['hotel_id'],$rid,$date,$total,$avail,$booked,$blocked]);
     }
-
-    // Update room_categories summary
-    foreach ($summaryUpdated as $rid => $vals) {
-        $rcStmt->execute([$vals['avail'], $vals['blocked'], $rid]);
-    }
-
-    $pdo->commit();
-    hl_ok(['count' => $cnt], "$cnt availability record(s) saved.");
-} catch (PDOException $e) {
-    if ($pdo->inTransaction()) $pdo->rollBack();
-    hl_err('Database error occurred. Please try again.', 500);
+    $pdo->commit(); hl_ok(['count'=>count($updates)],'Availability saved.');
+} catch(InvalidArgumentException|DomainException $e) {
+    if($pdo->inTransaction())$pdo->rollBack(); hl_err($e->getMessage(),422);
+} catch(Throwable $e) {
+    if($pdo->inTransaction())$pdo->rollBack(); error_log('Availability: '.$e->getMessage()); hl_err('Unable to save availability.',500);
 }

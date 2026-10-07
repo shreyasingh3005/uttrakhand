@@ -11,7 +11,7 @@ $accountFilterClauses = [];
 $accountFilterParams = [];
 
 if ($accountSearch !== '') {
-	$accountFilterClauses[] = '(a.notes LIKE :search OR e.name LIKE :search OR a.entry_type LIKE :search OR a.amount LIKE :search)';
+	$accountFilterClauses[] = 'CONCAT_WS(CHAR(32),a.notes,e.name,a.entry_type,a.amount) LIKE :search';
 	$accountFilterParams[':search'] = '%' . $accountSearch . '%';
 }
 

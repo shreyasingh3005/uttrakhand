@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/security.php';
 /**
  * Session security helpers — Uttarakhand Ventures CRM
  */
@@ -10,12 +12,18 @@ function require_login() {
     if (empty($_SESSION['user_id'])) {
         redirect('/index.php');
     }
+    if (isset($GLOBALS['conn']) && !session_account_valid($GLOBALS['conn'])) {
+        $_SESSION=[];
+        session_destroy();
+        redirect('/index.php?error=Please%20sign%20in%20again.');
+    }
     // Enforce session timeout (8 hours)
     if (isset($_SESSION['login_at']) && time() - $_SESSION['login_at'] > 28800) {
         session_unset();
         session_destroy();
         redirect('/index.php?error=Session expired. Please log in again.');
     }
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') verify_csrf();
 }
 
 function require_role($role) {

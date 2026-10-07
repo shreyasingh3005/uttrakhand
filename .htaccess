@@ -19,6 +19,8 @@ RewriteRule ^\.htpasswd$ - [F,L]
 # ── Block database and SQL files ──────────────────────────────────────
 RewriteRule ^database/ - [F,L]
 RewriteRule ^scripts/ - [F,L]
+RewriteRule ^tests/ - [F,L]
+RewriteRule ^(?:seed_data|test_[^/]+)\.php$ - [F,L]
 RewriteRule ^.*\.sql$ - [F,L]
 
 # ── Block backup files ────────────────────────────────────────────────
@@ -44,6 +46,9 @@ Options -Indexes
 
 # ── Prevent PHP from exposing errors ──────────────────────────────────
 php_flag display_errors Off
+php_flag session.cookie_httponly On
+php_flag session.use_strict_mode On
+php_value session.cookie_samesite Lax
 php_flag expose_php Off
 php_value error_log "C:\xampp\php\logs\crm_error.log"
 
