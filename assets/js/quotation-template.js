@@ -53,34 +53,27 @@
     }
 
     function formatNightlyRates(nightlyPrices, weekdayPrices, weekendPrices) {
-        const dates = Object.keys(nightlyPrices || {}).sort();
+        const dates = Object.keys(nightlyPrices || {}).sort((a, b) => new Date(a) - new Date(b));
         if (!dates.length) {
             const weekday = formatRateValues(weekdayPrices);
             const weekend = formatRateValues(weekendPrices);
             if (weekday === weekend) {
-                return { weekday: `*Room Price:* ${weekday}`, weekend: '' };
+                return ['*Room Price:*', weekday].filter(Boolean);
             }
-            return {
-                weekday: `*Room Price:(Weekdays)* ${weekday}`,
-                weekend: `*Room Price:(Weekend)* ${weekend}`
-            };
+            return [
+                '*Room Price:*',
+                weekday ? `*Room Price:(Weekdays)* ${weekday}` : '',
+                weekend ? `*Room Price:(Weekend)* ${weekend}` : ''
+            ].filter(Boolean);
         }
-        const grouped = { weekday: new Map(), weekend: new Map() };
-        dates.forEach((date) => {
+        const lines = dates.map((date) => {
             const parts = date.split('-').map(Number);
             const day = new Date(parts[0], parts[1] - 1, parts[2]).getDay();
+            const dayType = (day === 0 || day === 6) ? 'Weekend' : 'Weekday';
             const prices = nightlyPrices[date] || {};
-            const group = day === 0 || day === 6 ? grouped.weekend : grouped.weekday;
-            const signature = JSON.stringify(Object.entries(prices).sort(([a], [b]) => a.localeCompare(b)));
-            if (!group.has(signature)) group.set(signature, { dates: [], prices });
-            group.get(signature).dates.push(date);
+            return `${formatDate(date)} (${dayType}) - ${formatRateValues(prices)}`;
         });
-        const weekday = [...grouped.weekday.values()].map((group) => formatGroupedDates(group.dates, group.prices));
-        const weekend = [...grouped.weekend.values()].map((group) => formatGroupedDates(group.dates, group.prices));
-        return {
-            weekday: weekday.length ? ['*Room Price:(Weekdays)*', ...weekday].join('\n') : '',
-            weekend: weekend.length ? ['*Room Price:(Weekend)*', ...weekend].join('\n') : ''
-        };
+        return ['*Room Price:*', ...lines];
     }
 
     function decodeHtml(value) {
@@ -143,8 +136,7 @@
             occupancy: decodeHtml(occupancy),
             roomCategory,
             roomPrice: formatPrice(roomPrice),
-            weekdayPriceLine: nightlyRates.weekday,
-            weekendPriceLine: nightlyRates.weekend,
+            priceLines: nightlyRates,
             extraBedAllowed,
             extraBedPrice: formatPrice(extraBedPrice),
             maxExtraBeds: Number(maxExtraBeds) || 0,
@@ -174,8 +166,7 @@
             `*Check-In*: ${option.checkIn} | *Check-Out*: ${option.checkOut}`,
             `*No. of Person*: ${option.people} | *No. of Rooms*: ${option.rooms} Room | *Occupancy*: ${option.occupancy}`,
             `*Room Category*: ${option.roomCategory}`,
-            option.weekendPriceLine,
-            option.weekdayPriceLine,
+            ...(option.priceLines || []),
             ...(option.extraBedAllowed ? [`*Extra Bed*: ${option.extraBedPrice}/- per extra bed${option.maxExtraBeds > 0 ? ` | Max ${option.maxExtraBeds}` : ''}`] : []),
             ...(index < options.length - 1 ? ['', '---', ''] : [])
         ]);
