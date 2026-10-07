@@ -626,3 +626,50 @@ h1, h2, h3, h4 { color: var(--crm-text); font-weight: 700; letter-spacing: -.02e
   @media (max-width: 992px) {
     .sidebar, .left-sidebar { width: min(82vw, 260px) !important; }
   }
+
+/* Checkbox & Radio fix for CRM forms and tables */
+input[type="checkbox"], input[type="radio"], .form-check-input, .hotel-checkbox {
+  min-height: unset !important;
+  height: 20px !important;
+  width: 20px !important;
+  border-radius: 4px !important;
+  border: 2px solid #94a3b8 !important;
+  background-color: #fff !important;
+  cursor: pointer !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+}
+input[type="radio"], .form-check-input[type="radio"] {
+  border-radius: 50% !important;
+}
+input[type="checkbox"]:checked, .form-check-input:checked, .hotel-checkbox:checked {
+  background-color: #ea580c !important;
+  border-color: #ea580c !important;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m5 10 3.5 3.5 7-7'/%3e%3c/svg%3e") !important;
+  background-position: center !important;
+  background-size: 14px 14px !important;
+  background-repeat: no-repeat !important;
+}
+input[type="radio"]:checked, .form-check-input[type="radio"]:checked {
+  background-color: #ea580c !important;
+  border-color: #ea580c !important;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='2.5' fill='%23fff'/%3e%3c/svg%3e") !important;
+  background-position: center !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+}
+
+/* Selected query row highlights */
+tr.query-row-selected, tr:has(.hotel-checkbox:checked) {
+  background-color: #fff7ed !important;
+}
+tr.query-row-selected td, tr:has(.hotel-checkbox:checked) td {
+  background-color: #fff7ed !important;
+  color: #7c2d12 !important;
+}
+tr.query-row-selected td:first-child, tr:has(.hotel-checkbox:checked) td:first-child {
+  border-left: 4px solid #ea580c !important;
+}

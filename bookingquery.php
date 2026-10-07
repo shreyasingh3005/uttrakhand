@@ -166,6 +166,42 @@ try {
             .panel { padding: 14px; border-radius: 12px; }
             .top-header { padding: 10px 14px; }
         }
+
+        /* ── Checkbox & Selected Query Row Highlight ── */
+        .hotel-checkbox, .form-check-input {
+            width: 20px !important;
+            height: 20px !important;
+            min-height: 20px !important;
+            max-height: 20px !important;
+            border: 2px solid #94a3b8 !important;
+            border-radius: 4px !important;
+            background-color: #fff !important;
+            cursor: pointer !important;
+            display: inline-block !important;
+            vertical-align: middle !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            flex-shrink: 0 !important;
+        }
+        .hotel-checkbox:checked, .form-check-input:checked {
+            background-color: #ea580c !important;
+            border-color: #ea580c !important;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m5 10 3.5 3.5 7-7'/%3e%3c/svg%3e") !important;
+            background-position: center !important;
+            background-size: 14px 14px !important;
+            background-repeat: no-repeat !important;
+        }
+        tr.query-row-selected, tr:has(.hotel-checkbox:checked) {
+            background-color: #fff7ed !important;
+        }
+        tr.query-row-selected td, tr:has(.hotel-checkbox:checked) td {
+            background-color: #fff7ed !important;
+            color: #7c2d12 !important;
+        }
+        tr.query-row-selected td:first-child, tr:has(.hotel-checkbox:checked) td:first-child {
+            border-left: 4px solid #ea580c !important;
+        }
     </style>
 </head>
 <body>
@@ -332,7 +368,7 @@ try {
             <table class="table table-hover table-bordered align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th style="width: 55px;"><input type="checkbox" class="form-check-input" id="adminQuerySelectAllHeader" title="Select All" onchange="toggleSelectAllRows('adminQueryResultsBody', this.checked)"></th>
+                        <th style="width: 55px; text-align: center;"><input type="checkbox" class="form-check-input" id="adminQuerySelectAllHeader" title="Select All" onchange="toggleSelectAllRows('adminQueryResultsBody', this.checked)"></th>
                         <th>Property Name</th>
                         <th>Room Category</th>
                         <th>Location</th>
@@ -346,7 +382,7 @@ try {
         </div>
 
         <div class="mt-3">
-            <button type="button" class="btn btn-success" onclick="sendSelectedAdminQueryQuotes(this)">Copy</button>
+            <button type="button" class="btn btn-success fw-semibold" id="adminQueryCopyBtn" onclick="sendSelectedAdminQueryQuotes(this)"><i class="bi bi-clipboard me-1"></i>Copy</button>
         </div>
     </div>
 
@@ -596,8 +632,8 @@ function generateBookingResultsFromInputs(locationId, categoryId, checkInId, che
                 const selectionKey = `${hotel.id}::${roomIndex}`;
                 return `
                 <tr data-hotel-name="${String(hotel.name || '').toLowerCase()}" style="cursor: pointer;">
-                    <td><input class="form-check-input hotel-checkbox" type="checkbox" value="${selectionKey}" id="${resultBodyId}_${hotel.id}_${roomIndex}"></td>
-                    <td><label for="${resultBodyId}_${hotel.id}_${roomIndex}" style="cursor: pointer;">${hotel.name}</label></td>
+                    <td style="text-align: center; vertical-align: middle;"><input class="form-check-input hotel-checkbox" type="checkbox" value="${selectionKey}" id="${resultBodyId}_${hotel.id}_${roomIndex}"></td>
+                    <td><label for="${resultBodyId}_${hotel.id}_${roomIndex}" style="cursor: pointer; margin-bottom: 0;">${hotel.name}</label></td>
                     <td>${room.name || 'N/A'}</td>
                     <td>${hotel.location || hotel.city || 'N/A'}</td>
                     <td>₹${nightlyPrice.toLocaleString('en-IN')}</td>
@@ -610,15 +646,19 @@ function generateBookingResultsFromInputs(locationId, categoryId, checkInId, che
         if (!resultBody._rowClickAttached) {
             resultBody._rowClickAttached = true;
             resultBody.addEventListener('click', (e) => {
-                if (e.target.closest('input[type="checkbox"]') || e.target.closest('label') || e.target.closest('a') || e.target.closest('button')) {
-                    return;
-                }
+                if (e.target.closest('a') || e.target.closest('button')) return;
                 const tr = e.target.closest('tr');
                 if (!tr) return;
                 const box = tr.querySelector('.hotel-checkbox');
-                if (box) {
+                if (!box) return;
+                if (!e.target.closest('input[type="checkbox"]')) {
                     box.checked = !box.checked;
-                    box.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                updateAdminQuerySelectionState();
+            });
+            resultBody.addEventListener('change', (e) => {
+                if (e.target.classList.contains('hotel-checkbox')) {
+                    updateAdminQuerySelectionState();
                 }
             });
         }
@@ -635,6 +675,38 @@ function generateBookingResultsFromInputs(locationId, categoryId, checkInId, che
         resultsDataStore[resultBodyId] = [];
         resultBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Unable to load hotels from database.</td></tr>';
     });
+}
+
+function updateAdminQuerySelectionState() {
+    const tbody = document.getElementById('adminQueryResultsBody');
+    if (!tbody) return;
+    const rows = tbody.querySelectorAll('tr');
+    let totalVisible = 0;
+    let checkedCount = 0;
+
+    rows.forEach(tr => {
+        const box = tr.querySelector('.hotel-checkbox');
+        if (!box) return;
+        if (tr.style.display !== 'none') totalVisible++;
+        if (box.checked) {
+            checkedCount++;
+            tr.classList.add('query-row-selected');
+        } else {
+            tr.classList.remove('query-row-selected');
+        }
+    });
+
+    const head = document.getElementById('adminQuerySelectAllHeader');
+    if (head) {
+        head.checked = totalVisible > 0 && checkedCount === totalVisible;
+    }
+
+    const copyBtn = document.getElementById('adminQueryCopyBtn');
+    if (copyBtn && !copyBtn.dataset.copying) {
+        copyBtn.innerHTML = checkedCount > 0
+            ? `<i class="bi bi-clipboard-check me-1"></i>Copy (${checkedCount} Selected)`
+            : `<i class="bi bi-clipboard me-1"></i>Copy`;
+    }
 }
 
 function copyTextToClipboard(text) {
@@ -676,6 +748,11 @@ function toggleSelectAllRows(tbodyId, checked) {
             if (box) box.checked = checked;
         }
     });
+    if (tbodyId === 'adminQueryResultsBody') {
+        updateAdminQuerySelectionState();
+    } else if (typeof updateBookingQuerySelectionState === 'function') {
+        updateBookingQuerySelectionState();
+    }
 }
 
 function filterAdminQueryResults() {
@@ -683,6 +760,7 @@ function filterAdminQueryResults() {
     document.querySelectorAll('#adminQueryResultsBody tr[data-hotel-name]').forEach((row) => {
         row.style.display = !query || row.dataset.hotelName.includes(query) ? '' : 'none';
     });
+    updateAdminQuerySelectionState();
 }
 
 function selectBookingQueryRows(limit) {
@@ -734,7 +812,7 @@ function buildHotelShareText(prefixIds, resultBodyId) {
 function copyAndShareHotelQuotes(prefixIds, resultBodyId) {
     const { text, count } = buildHotelShareText(prefixIds, resultBodyId);
     if (!count) {
-        alert('Please select at least one hotel.');
+        alert('Please select at least one hotel to copy.');
         return;
     }
     copyTextToClipboard(text);
@@ -757,26 +835,22 @@ function selectAdminQueryRows(limit) {
     boxes.forEach((box) => box.checked = false);
     if (limit === 'all') {
         boxes.forEach((box) => box.checked = true);
-        const head = document.getElementById('adminQuerySelectAllHeader');
-        if (head) head.checked = true;
-        return;
+    } else {
+        [...boxes].slice(0, Number(limit) || 0).forEach((box) => box.checked = true);
     }
-    const head = document.getElementById('adminQuerySelectAllHeader');
-    if (head) head.checked = false;
-    [...boxes].slice(0, Number(limit) || 0).forEach((box) => box.checked = true);
+    updateAdminQuerySelectionState();
 }
 
 function clearAdminQueryRows() {
     document.querySelectorAll('#adminQueryResultsBody .hotel-checkbox').forEach((box) => box.checked = false);
-    const head = document.getElementById('adminQuerySelectAllHeader');
-    if (head) head.checked = false;
+    updateAdminQuerySelectionState();
 }
 
 function sendSelectedAdminQueryQuotes(btn) {
     const resultBodyId = 'adminQueryResultsBody';
     const selectedIds = [...document.querySelectorAll(`#${resultBodyId} .hotel-checkbox:checked`)].map((box) => box.value);
     if (!selectedIds.length) {
-        alert('Please select at least one hotel.');
+        alert('Please select at least one query to copy.');
         return;
     }
 
@@ -792,7 +866,7 @@ function sendSelectedAdminQueryQuotes(btn) {
 
     const { text, count } = buildHotelShareText(prefixIds, resultBodyId);
     if (!text || !count) {
-        alert('Please select at least one hotel.');
+        alert('Please select at least one query to copy.');
         return;
     }
 
@@ -800,16 +874,17 @@ function sendSelectedAdminQueryQuotes(btn) {
     copyTextToClipboard(text);
 
     // 2. Visual feedback on Copy button
-    const copyButton = (btn instanceof HTMLElement ? btn : null) || document.querySelector('#adminQueryResultsWrap .btn-success');
+    const copyButton = document.getElementById('adminQueryCopyBtn') || (btn instanceof HTMLElement ? btn : null);
     if (copyButton) {
-        const originalHtml = copyButton.innerHTML;
-        copyButton.innerHTML = '<i class="bi bi-check2 me-1"></i>Copied!';
+        copyButton.dataset.copying = '1';
+        copyButton.innerHTML = `<i class="bi bi-check2 me-1"></i>Copied (${selectedIds.length} Selected)!`;
         copyButton.classList.remove('btn-success');
         copyButton.classList.add('btn-dark');
         setTimeout(() => {
-            copyButton.innerHTML = originalHtml;
+            delete copyButton.dataset.copying;
             copyButton.classList.remove('btn-dark');
             copyButton.classList.add('btn-success');
+            updateAdminQuerySelectionState();
         }, 2000);
     }
 

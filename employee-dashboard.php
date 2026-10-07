@@ -2343,6 +2343,42 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         .main-wrapper { margin-left: 0 !important; }
         .top-header { min-height: 58px !important; height: auto !important; padding: 10px 14px !important; }
     }
+
+    /* ── Checkbox & Selected Query Row Highlight ── */
+    .hotel-checkbox, .form-check-input {
+        width: 20px !important;
+        height: 20px !important;
+        min-height: 20px !important;
+        max-height: 20px !important;
+        border: 2px solid #94a3b8 !important;
+        border-radius: 4px !important;
+        background-color: #fff !important;
+        cursor: pointer !important;
+        display: inline-block !important;
+        vertical-align: middle !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        flex-shrink: 0 !important;
+    }
+    .hotel-checkbox:checked, .form-check-input:checked {
+        background-color: #ea580c !important;
+        border-color: #ea580c !important;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m5 10 3.5 3.5 7-7'/%3e%3c/svg%3e") !important;
+        background-position: center !important;
+        background-size: 14px 14px !important;
+        background-repeat: no-repeat !important;
+    }
+    tr.query-row-selected, tr:has(.hotel-checkbox:checked) {
+        background-color: #fff7ed !important;
+    }
+    tr.query-row-selected td, tr:has(.hotel-checkbox:checked) td {
+        background-color: #fff7ed !important;
+        color: #7c2d12 !important;
+    }
+    tr.query-row-selected td:first-child, tr:has(.hotel-checkbox:checked) td:first-child {
+        border-left: 4px solid #ea580c !important;
+    }
     </style>
 </head>
 
@@ -3424,7 +3460,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                         <table class="table table-hover table-bordered align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th style="width: 55px;"><input type="checkbox" class="form-check-input" id="bookingQuerySelectAllHeader" title="Select All" onchange="toggleSelectAllRows('bookingQueryResultsBody', this.checked)"></th>
+                                    <th style="width: 55px; text-align: center;"><input type="checkbox" class="form-check-input hotel-checkbox" id="bookingQuerySelectAllHeader" title="Select All" onchange="toggleSelectAllRows('bookingQueryResultsBody', this.checked)"></th>
                                     <th>Property Name</th>
                                     <th>Room Category</th>
                                     <th>Location</th>
@@ -3438,8 +3474,8 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                     </div>
 
                     <div class="mt-3">
-                        <button class="btn btn-success" type="button" onclick="sendSelectedBookingQueryQuotes(this)">
-                            Copy
+                        <button class="btn btn-success" id="employeeBookingQueryCopyBtn" type="button" onclick="sendSelectedBookingQueryQuotes(this)">
+                            <i class="bi bi-clipboard me-1"></i> Copy
                         </button>
                     </div>
                 </div>
@@ -5158,8 +5194,8 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                         const selectionKey = `${hotel.id}::${roomIndex}`;
                         return `
                         <tr data-hotel-name="${String(hotel.name || '').toLowerCase()}" style="cursor: pointer;">
-                            <td><input class="form-check-input hotel-checkbox" type="checkbox" value="${selectionKey}" id="hotel_${selectionKey}"></td>
-                            <td><label for="hotel_${selectionKey}" style="cursor: pointer;">${hotel.name}</label></td>
+                            <td style="text-align: center; vertical-align: middle;"><input class="form-check-input hotel-checkbox" type="checkbox" value="${selectionKey}" id="hotel_${selectionKey}"></td>
+                            <td><label for="hotel_${selectionKey}" style="cursor: pointer; margin-bottom: 0;">${hotel.name}</label></td>
                             <td>${room.name || 'N/A'}</td>
                             <td>${hotel.location || hotel.city || 'N/A'}</td>
                             <td>₹${nightlyPrice.toLocaleString('en-IN')}</td>
@@ -5173,15 +5209,21 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                 if (!resultBody._rowClickAttached) {
                     resultBody._rowClickAttached = true;
                     resultBody.addEventListener('click', (e) => {
-                        if (e.target.closest('input[type="checkbox"]') || e.target.closest('label') || e.target.closest('a') || e.target.closest('button')) {
+                        if (e.target.closest('a') || e.target.closest('button')) {
                             return;
                         }
                         const tr = e.target.closest('tr');
                         if (!tr) return;
                         const box = tr.querySelector('.hotel-checkbox');
-                        if (box) {
+                        if (!box) return;
+                        if (!e.target.closest('input[type="checkbox"]')) {
                             box.checked = !box.checked;
-                            box.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                        updateBookingQuerySelectionState();
+                    });
+                    resultBody.addEventListener('change', (e) => {
+                        if (e.target.classList.contains('hotel-checkbox')) {
+                            updateBookingQuerySelectionState();
                         }
                     });
                 }
@@ -5194,6 +5236,38 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                 bookingQueryLastResults = [];
                 resultBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Unable to load hotels from database.</td></tr>';
             });
+    }
+
+    function updateBookingQuerySelectionState() {
+        const tbody = document.getElementById('bookingQueryResultsBody');
+        if (!tbody) return;
+        const rows = tbody.querySelectorAll('tr');
+        let totalVisible = 0;
+        let checkedCount = 0;
+
+        rows.forEach(tr => {
+            const box = tr.querySelector('.hotel-checkbox');
+            if (!box) return;
+            if (tr.style.display !== 'none') totalVisible++;
+            if (box.checked) {
+                checkedCount++;
+                tr.classList.add('query-row-selected');
+            } else {
+                tr.classList.remove('query-row-selected');
+            }
+        });
+
+        const head = document.getElementById('bookingQuerySelectAllHeader');
+        if (head) {
+            head.checked = totalVisible > 0 && checkedCount === totalVisible;
+        }
+
+        const copyBtn = document.getElementById('employeeBookingQueryCopyBtn');
+        if (copyBtn && !copyBtn.dataset.copying) {
+            copyBtn.innerHTML = checkedCount > 0
+                ? `<i class="bi bi-clipboard-check me-1"></i>Copy (${checkedCount} Selected)`
+                : `<i class="bi bi-clipboard me-1"></i>Copy`;
+        }
     }
 
     function copyTextToClipboard(text) {
@@ -5235,6 +5309,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                 if (box) box.checked = checked;
             }
         });
+        updateBookingQuerySelectionState();
     }
 
     function filterBookingQueryResults() {
@@ -5242,6 +5317,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         document.querySelectorAll('#bookingQueryResultsBody tr[data-hotel-name]').forEach((row) => {
             row.style.display = !query || row.dataset.hotelName.includes(query) ? '' : 'none';
         });
+        updateBookingQuerySelectionState();
     }
 
     function selectBookingQueryRows(limit) {
@@ -5249,19 +5325,15 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         boxes.forEach((box) => box.checked = false);
         if (limit === 'all') {
             boxes.forEach((box) => box.checked = true);
-            const head = document.getElementById('bookingQuerySelectAllHeader');
-            if (head) head.checked = true;
-            return;
+        } else {
+            [...boxes].slice(0, Number(limit) || 0).forEach((box) => box.checked = true);
         }
-        const head = document.getElementById('bookingQuerySelectAllHeader');
-        if (head) head.checked = false;
-        [...boxes].slice(0, Number(limit) || 0).forEach((box) => box.checked = true);
+        updateBookingQuerySelectionState();
     }
 
     function clearBookingQueryRows() {
         document.querySelectorAll('#bookingQueryResultsBody .hotel-checkbox').forEach((box) => box.checked = false);
-        const head = document.getElementById('bookingQuerySelectAllHeader');
-        if (head) head.checked = false;
+        updateBookingQuerySelectionState();
     }
 
     function buildBookingQueryShareText(selectedIds) {
@@ -5349,7 +5421,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
     function sendSelectedBookingQueryQuotes(btn) {
         const selected = [...document.querySelectorAll('#bookingQueryResultsBody .hotel-checkbox:checked')].map((box) => box.value);
         if (!selected.length) {
-            alert('Please select at least one hotel.');
+            alert('Please select at least one query to copy.');
             return;
         }
 
@@ -5359,7 +5431,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
 
         const message = buildBookingQueryShareText(selected);
         if (!message) {
-            alert('Please select at least one hotel.');
+            alert('Please select at least one query to copy.');
             return;
         }
 
@@ -5367,16 +5439,17 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         copyTextToClipboard(message);
 
         // 2. Visual feedback on Copy button
-        const copyButton = (btn instanceof HTMLElement ? btn : null) || document.querySelector('#bookingQueryResultsWrap .btn-success');
+        const copyButton = document.getElementById('employeeBookingQueryCopyBtn') || (btn instanceof HTMLElement ? btn : null) || document.querySelector('#bookingQueryResultsWrap .btn-success');
         if (copyButton) {
-            const originalHtml = copyButton.innerHTML;
-            copyButton.innerHTML = '<i class="bi bi-check2 me-1"></i>Copied!';
+            copyButton.dataset.copying = '1';
+            copyButton.innerHTML = `<i class="bi bi-check2 me-1"></i>Copied (${selected.length} Selected)!`;
             copyButton.classList.remove('btn-success');
             copyButton.classList.add('btn-dark');
             setTimeout(() => {
-                copyButton.innerHTML = originalHtml;
+                delete copyButton.dataset.copying;
                 copyButton.classList.remove('btn-dark');
                 copyButton.classList.add('btn-success');
+                updateBookingQuerySelectionState();
             }, 2000);
         }
 
