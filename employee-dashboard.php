@@ -3475,7 +3475,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
 
                     <div class="mt-3">
                         <button class="btn btn-success" id="employeeBookingQueryCopyBtn" type="button" onclick="sendSelectedBookingQueryQuotes(this)">
-                            <i class="bi bi-clipboard me-1"></i> Copy
+                            <i class="bi bi-clipboard me-1"></i> Copy (0 Selected)
                         </button>
                     </div>
                 </div>
@@ -5228,8 +5228,8 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
                     });
                 }
 
-                // Select the first five rows by default so user has initial selection
-                selectBookingQueryRows(5);
+                // Never auto-select any item by default. Initial selected count = 0.
+                updateBookingQuerySelectionState();
             })
             .catch((error) => {
                 console.error('Hotel filter error:', error);
@@ -5266,7 +5266,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
         if (copyBtn && !copyBtn.dataset.copying) {
             copyBtn.innerHTML = checkedCount > 0
                 ? `<i class="bi bi-clipboard-check me-1"></i>Copy (${checkedCount} Selected)`
-                : `<i class="bi bi-clipboard me-1"></i>Copy`;
+                : `<i class="bi bi-clipboard me-1"></i>Copy (0 Selected)`;
         }
     }
 
@@ -5421,7 +5421,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
     function sendSelectedBookingQueryQuotes(btn) {
         const selected = [...document.querySelectorAll('#bookingQueryResultsBody .hotel-checkbox:checked')].map((box) => box.value);
         if (!selected.length) {
-            alert('Please select at least one query to copy.');
+            alert('Please select at least one item.');
             return;
         }
 
@@ -5431,7 +5431,7 @@ $employeeMetrics = get_employee_live_metrics($conn, $username);
 
         const message = buildBookingQueryShareText(selected);
         if (!message) {
-            alert('Please select at least one query to copy.');
+            alert('Please select at least one item.');
             return;
         }
 

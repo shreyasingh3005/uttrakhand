@@ -161,14 +161,10 @@
         const contactPerson = decodeHtml(value(first, 'contactPerson', value(first, 'createdByName', value(first, 'created_by_username', quotationContact.name || 'Manish Bhatia'))));
         const contactPhone = decodeHtml(value(first, 'contactPhone', value(first, 'createdByPhone', quotationContact.name ? quotationContact.phone : '919999831144')));
         const contactEmail = decodeHtml(value(first, 'contactEmail', value(first, 'createdByEmail', quotationContact.name ? quotationContact.email : 'manish@airwaystravels.com')));
-        const seen = new Set();
         const options = [];
-        quotations.forEach((item) => {
-            const option = getOption(item, options.length + 1);
-            const optionKey = `${option.hotelName}|${option.location}|${option.roomCategory}|${option.weekdayPriceLine}|${option.weekendPriceLine}`;
-            if (seen.has(optionKey)) return;
-            seen.add(optionKey);
-            option.optionNumber = options.length + 1;
+        quotations.forEach((item, index) => {
+            const option = getOption(item, index + 1);
+            option.optionNumber = index + 1;
             options.push(option);
         });
 

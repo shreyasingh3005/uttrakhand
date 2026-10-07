@@ -382,7 +382,7 @@ try {
         </div>
 
         <div class="mt-3">
-            <button type="button" class="btn btn-success fw-semibold" id="adminQueryCopyBtn" onclick="sendSelectedAdminQueryQuotes(this)"><i class="bi bi-clipboard me-1"></i>Copy</button>
+            <button type="button" class="btn btn-success fw-semibold" id="adminQueryCopyBtn" onclick="sendSelectedAdminQueryQuotes(this)"><i class="bi bi-clipboard me-1"></i>Copy (0 Selected)</button>
         </div>
     </div>
 
@@ -663,11 +663,11 @@ function generateBookingResultsFromInputs(locationId, categoryId, checkInId, che
             });
         }
 
-        // Select the first five rows only after the asynchronous results exist.
+        // Never auto-select any item by default. Initial selected count = 0.
         if (resultBodyId === 'adminQueryResultsBody') {
-            selectAdminQueryRows(5);
-        } else {
-            selectBookingQueryRows(5);
+            updateAdminQuerySelectionState();
+        } else if (typeof updateBookingQuerySelectionState === 'function') {
+            updateBookingQuerySelectionState();
         }
     })
     .catch((error) => {
@@ -705,7 +705,7 @@ function updateAdminQuerySelectionState() {
     if (copyBtn && !copyBtn.dataset.copying) {
         copyBtn.innerHTML = checkedCount > 0
             ? `<i class="bi bi-clipboard-check me-1"></i>Copy (${checkedCount} Selected)`
-            : `<i class="bi bi-clipboard me-1"></i>Copy`;
+            : `<i class="bi bi-clipboard me-1"></i>Copy (0 Selected)`;
     }
 }
 
@@ -812,7 +812,7 @@ function buildHotelShareText(prefixIds, resultBodyId) {
 function copyAndShareHotelQuotes(prefixIds, resultBodyId) {
     const { text, count } = buildHotelShareText(prefixIds, resultBodyId);
     if (!count) {
-        alert('Please select at least one hotel to copy.');
+        alert('Please select at least one item.');
         return;
     }
     copyTextToClipboard(text);
@@ -850,7 +850,7 @@ function sendSelectedAdminQueryQuotes(btn) {
     const resultBodyId = 'adminQueryResultsBody';
     const selectedIds = [...document.querySelectorAll(`#${resultBodyId} .hotel-checkbox:checked`)].map((box) => box.value);
     if (!selectedIds.length) {
-        alert('Please select at least one query to copy.');
+        alert('Please select at least one item.');
         return;
     }
 
@@ -866,7 +866,7 @@ function sendSelectedAdminQueryQuotes(btn) {
 
     const { text, count } = buildHotelShareText(prefixIds, resultBodyId);
     if (!text || !count) {
-        alert('Please select at least one query to copy.');
+        alert('Please select at least one item.');
         return;
     }
 
